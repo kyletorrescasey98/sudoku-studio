@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seed Default Puzzles</title>
+  <meta name="description" content="Sudoku Studio - Administrative tools" />
+  <meta property="og:title" content="Sudoku Studio" />
+  <meta property="og:description" content="Challenge your mind with engaging Sudoku puzzles" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://sudokusocial.web.app/" />
+  <meta property="og:image" content="https://sudokusocial.web.app/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Sudoku Studio" />
+  <meta name="twitter:description" content="Challenge your mind with engaging Sudoku puzzles" />
+  <meta name="twitter:image" content="https://sudokusocial.web.app/og-image.png" />
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8f9fa; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+    .card { background: #fff; border: 1px solid #d1d5db; border-radius: 16px; padding: 32px 40px; max-width: 500px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,.07); text-align: center; }
+    h1 { font-size: 1.4rem; margin-bottom: 8px; }
+    p { color: #6b7280; font-size: .88rem; margin-bottom: 24px; }
+    button { padding: 12px 28px; background: #2563eb; color: #fff; border: none; border-radius: 9px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: filter .15s; }
+    button:hover { filter: brightness(1.1); }
+    button:disabled { background: #93c5fd; cursor: not-allowed; }
+    #log { margin-top: 24px; text-align: left; font-size: .8rem; color: #374151; max-height: 300px; overflow-y: auto; background: #f0f2f5; border-radius: 8px; padding: 12px; display: none; line-height: 1.8; }
+    .ok  { color: #16a34a; }
+    .err { color: #dc2626; }
+    .info { color: #2563eb; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🌱 Seed Default Puzzles</h1>
+  <p>Generates and uploads <strong>10 puzzles per difficulty level</strong> (40 total) to Firestore as AI-authored puzzles. Only run this once.</p>
+  <button id="seedBtn" onclick="runSeed()">Seed Puzzles</button>
+  <div id="log"></div>
+</div>
+
+<script type="module">
+import { initializeApp }    from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { firebaseConfig } from './firebase-config.js';
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ── Puzzle generator (same logic as game.html) ──────────────
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function isValid(g,r,c,n){for(let i=0;i<9;i++)if(g[r][i]===n||g[i][c]===n)return false;const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let rr=br;rr<br+3;rr++)for(let cc=bc;cc<bc+3;cc++)if(g[rr][cc]===n)return false;return true;}
+function findEmpty(g){for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(g[r][c]===0)return[r,c];return null;}
+function solveFill(g){const pos=findEmpty(g);if(!pos)return true;const[r,c]=pos;for(const n of shuffle([1,2,3,4,5,6,7,8,9])){if(isValid(g,r,c,n)){g[r][c]=n;if(solveFill(g))return true;g[r][c]=0;}}return false;}
+function countSols(g,limit=2){const pos=findEmpty(g);if(!pos)return 1;const[r,c]=pos;let count=0;for(let n=1;n<=9;n++){if(isValid(g,r,c,n)){g[r][c]=n;count+=countSols(g,limit);g[r][c]=0;if(count>=limit)return count;}}return count;}
+function generateSolution(){const g=Array.from({length:9},()=>Array(9).fill(0));solveFill(g);return g;}
+function createPuzzle(sol,difficulty){const targets={easy:38,medium:30,hard:25,expert:21};const target=targets[difficulty]??30;const p=sol.map(r=>[...r]);let clues=81;for(const pos of shuffle([...Array(81).keys()])){if(clues<=target)break;const r=Math.floor(pos/9),c=pos%9,bak=p[r][c];p[r][c]=0;if(countSols(p.map(row=>[...row]))!==1)p[r][c]=bak;else clues--;}return p;}
+function flattenPuzzle(arr){return arr.flat().join('');}
+function countClues(p){return p.flat().filter(v=>v!==0).length;}
+
+// ── Name lists ──────────────────────────────────────────────
+const ADJECTIVES = [
+  'Ancient','Blazing','Crystal','Dazzling','Electric',
+  'Frosty','Golden','Hidden','Icy','Jade',
+  'Kinetic','Lunar','Mystic','Neon','Obsidian',
+  'Phantom','Quiet','Radiant','Solar','Twilight',
+  'Umbral','Vivid','Whirling','Xenon','Yellow',
+  'Zenith','Arctic','Breezy','Cobalt','Dusty'
+];
+const NOUNS = [
+  'Abyss','Beacon','Cascade','Delta','Eclipse',
+  'Frontier','Galaxy','Horizon','Iris','Jungle',
+  'Kraken','Labyrinth','Mirage','Nebula','Orbit',
+  'Pinnacle','Quest','Riddle','Summit','Tempest',
+  'Undertow','Vortex','Wanderer','Xenos','Yearning',
+  'Zenith','Blizzard','Cipher','Dusk','Enigma'
+];
+const usedNames = new Set();
+function randomName() {
+  let name;
+  do {
+    const adj  = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+    const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+    name = `${adj} ${noun}`;
+  } while (usedNames.has(name));
+  usedNames.add(name);
+  return name;
+}
+
+// ── Logging ─────────────────────────────────────────────────
+function log(msg, cls='') {
+  const logEl = document.getElementById('log');
+  logEl.style.display = 'block';
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = msg;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ── Main seeder ─────────────────────────────────────────────
+window.runSeed = async function() {
+  const btn = document.getElementById('seedBtn');
+  btn.disabled = true;
+  btn.textContent = 'Seeding…';
+
+  const difficulties = ['easy','medium','hard','expert'];
+  const PER_DIFF = 10;
+  let uploaded = 0, skipped = 0;
+
+  for (const diff of difficulties) {
+    log(`── ${diff.toUpperCase()} ──`, 'info');
+    for (let i = 0; i < PER_DIFF; i++) {
+      const name = randomName();
+      log(`  Generating "${name}" (${diff})…`);
+
+      try {
+        const sol = generateSolution();
+        const puz = createPuzzle(sol, diff);
+        const clueCount = countClues(puz);
+
+        await addDoc(collection(db, 'puzzles'), {
+          name,
+          puzzle:     flattenPuzzle(puz),
+          author:     'AI',
+          authorUid:  'ai-seed',
+          difficulty: diff.charAt(0).toUpperCase() + diff.slice(1),
+          clueCount,
+          isAI:       true,
+          createdAt:  serverTimestamp()
+        });
+
+        log(`  ✅ Uploaded "${name}" (${clueCount} clues)`, 'ok');
+        uploaded++;
+      } catch(err) {
+        log(`  ❌ Failed: ${err.message}`, 'err');
+        skipped++;
+      }
+
+      // Small yield to keep UI responsive
+      await new Promise(r => setTimeout(r, 50));
+    }
+  }
+
+  log(``, '');
+  log(`Done! ${uploaded} uploaded, ${skipped} failed.`, uploaded > 0 ? 'ok' : 'err');
+  btn.textContent = '✅ Done';
+};
+</script>
+</body>
+</html>

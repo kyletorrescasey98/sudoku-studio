@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "sudoku-459d3"
+  },
+  "targets": {
+    "sudoku-459d3": {
+      "hosting": {
+        "main-site": [
+          "sudokusocial"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

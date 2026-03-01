@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Sudoku &mdash; Sign In</title>
+  <meta name="description" content="Sign in to Sudoku Studio - Challenge your mind with engaging Sudoku puzzles" />
+  <meta property="og:title" content="Sudoku Studio - Sign In" />
+  <meta property="og:description" content="Join Sudoku Studio and challenge your mind with engaging puzzles" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://sudokusocial.web.app/" />
+  <meta property="og:image" content="https://sudokusocial.web.app/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Sudoku Studio - Sign In" />
+  <meta name="twitter:description" content="Join Sudoku Studio and challenge your mind with engaging puzzles" />
+  <meta name="twitter:image" content="https://sudokusocial.web.app/og-image.png" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg:#f8f9fa; --surface:#ffffff; --surface2:#f0f2f5;
+      --accent:#2563eb; --accent2:#7c3aed; --text:#111827; --text2:#6b7280;
+      --error:#dc2626; --success:#16a34a; --border:#d1d5db;
+    }
+    body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:calc(24px + env(safe-area-inset-top)) 16px 24px; }
+    .logo { font-size:2.2rem; font-weight:900; letter-spacing:10px; text-transform:uppercase; background:linear-gradient(120deg,var(--accent) 30%,var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin:6px 0 4px; text-align:center; }
+    .tagline { font-size:.65rem; color:var(--text2); letter-spacing:3px; text-transform:uppercase; text-align:center; margin-bottom:32px; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:32px 36px; width:100%; max-width:400px; box-shadow:0 4px 24px rgba(0,0,0,.07); max-height:calc(100vh - 180px); overflow-y:auto; }
+    .tabs { display:flex; background:var(--surface2); border-radius:10px; padding:3px; margin-bottom:24px; }
+    .tab { flex:1; padding:8px; border:none; background:transparent; border-radius:8px; font-size:.82rem; font-weight:700; color:var(--text2); cursor:pointer; transition:all .15s; }
+    .tab.active { background:var(--surface); color:var(--accent); box-shadow:0 1px 4px rgba(0,0,0,.10); }
+    .form-group { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
+    label { font-size:.72rem; font-weight:700; color:var(--text2); letter-spacing:.5px; text-transform:uppercase; }
+    input { padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:.9rem; background:var(--surface); color:var(--text); outline:none; transition:border-color .15s; }
+    input:focus { border-color:var(--accent); }
+    input.error { border-color:var(--error); }
+    .btn { width:100%; padding:11px; border:none; border-radius:9px; font-size:.9rem; font-weight:700; cursor:pointer; transition:filter .15s; margin-top:4px; }
+    .btn-primary { background:var(--accent); color:#fff; }
+    .btn-primary:hover { filter:brightness(1.1); }
+    .btn-google { background:var(--surface); color:var(--text); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px; }
+    .btn-google:hover { border-color:var(--accent); }
+    .divider { display:flex; align-items:center; gap:10px; margin:16px 0; color:var(--text2); font-size:.72rem; }
+    .divider::before, .divider::after { content:''; flex:1; height:1px; background:var(--border); }
+    .msg { font-size:.78rem; padding:9px 12px; border-radius:8px; margin-top:12px; text-align:center; display:none; }
+    .msg.error { background:#fef2f2; color:var(--error); border:1px solid #fecaca; display:block; }
+    .msg.success { background:#f0fdf4; color:var(--success); border:1px solid #bbf7d0; display:block; }
+    .forgot { font-size:.73rem; color:var(--accent); cursor:pointer; text-align:right; margin-top:-8px; margin-bottom:8px; }
+    .forgot:hover { text-decoration:underline; }
+    .play-guest { font-size:.73rem; color:var(--text2); text-align:center; margin-top:16px; }
+    .play-guest a { color:var(--accent); cursor:pointer; text-decoration:none; font-weight:600; }
+    .play-guest a:hover { text-decoration:underline; }
+    .spinner-sm { width:16px; height:16px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; vertical-align:middle; margin-right:6px; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+  </style>
+</head>
+<body>
+  <div class="logo">Sudoku Social</div>
+  <div class="tagline">Challenge your mind</div>
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" id="tab-signin" onclick="switchTab('signin')">Sign In</button>
+      <button class="tab" id="tab-signup" onclick="switchTab('signup')">Create Account</button>
+    </div>
+
+    <!-- Sign In Form -->
+    <div id="form-signin">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="si-email" placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="si-password" placeholder="••••••••" />
+      </div>
+      <div class="forgot" onclick="forgotPassword()">Forgot password?</div>
+      <button class="btn btn-primary" id="si-btn" onclick="signIn()">Sign In</button>
+      <div class="divider">or</div>
+      <button class="btn btn-google" onclick="signInGoogle()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.1 0 5.9 1.1 8.1 2.9l6-6C34.4 3.1 29.5 1 24 1 14.7 1 6.9 6.6 3.4 14.5l7 5.4C12.1 13.5 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.5c-.5 2.8-2.1 5.1-4.5 6.7l7 5.4C43.4 36.9 46.1 31.1 46.1 24.5z"/><path fill="#FBBC05" d="M10.4 28.1c-.6-1.7-.9-3.5-.9-5.3s.3-3.6.9-5.3l-7-5.4C1.6 15.1 0 19.4 0 24s1.6 8.9 3.4 11.9l7-5.8z"/><path fill="#34A853" d="M24 47c5.5 0 10.1-1.8 13.5-4.9l-7-5.4c-1.9 1.3-4.3 2-6.5 2-6.4 0-11.9-4-13.7-9.5l-7 5.8C6.9 41.4 14.7 47 24 47z"/></svg>
+        Continue with Google
+      </button>
+      <div class="msg" id="si-msg"></div>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div id="form-signup" style="display:none">
+      <div class="form-group">
+        <label>Display Name</label>
+        <input type="text" id="su-name" placeholder="Your name" />
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="su-email" placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="su-password" placeholder="Min 6 characters" />
+      </div>
+      <button class="btn btn-primary" id="su-btn" onclick="signUp()">Create Account</button>
+      <div class="divider">or</div>
+      <button class="btn btn-google" onclick="signInGoogle()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.1 0 5.9 1.1 8.1 2.9l6-6C34.4 3.1 29.5 1 24 1 14.7 1 6.9 6.6 3.4 14.5l7 5.4C12.1 13.5 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.5c-.5 2.8-2.1 5.1-4.5 6.7l7 5.4C43.4 36.9 46.1 31.1 46.1 24.5z"/><path fill="#FBBC05" d="M10.4 28.1c-.6-1.7-.9-5.3s.3-3.6.9-5.3l-7-5.4C1.6 15.1 0 19.4 0 24s1.6 8.9 3.4 11.9l7-5.8z"/><path fill="#34A853" d="M24 47c5.5 0 10.1-1.8 13.5-4.9l-7-5.4c-1.9 1.3-4.3 2-6.5 2-6.4 0-11.9-4-13.7-9.5l-7 5.8C6.9 41.4 14.7 47 24 47z"/></svg>
+        Continue with Google
+      </button>
+      <div class="msg" id="su-msg"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
+    import { firebaseConfig } from './firebase-config.js';
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const googleProvider = new GoogleAuthProvider();
+
+    // Redirect if already signed in
+    onAuthStateChanged(auth, user => { if(user) window.location.href = 'game.html'; });
+
+    window.switchTab = function(tab) {
+      document.getElementById('form-signin').style.display = tab==='signin' ? '' : 'none';
+      document.getElementById('form-signup').style.display = tab==='signup' ? '' : 'none';
+      document.getElementById('tab-signin').classList.toggle('active', tab==='signin');
+      document.getElementById('tab-signup').classList.toggle('active', tab==='signup');
+    };
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      btn.disabled = loading;
+      btn.innerHTML = loading ? '<span class="spinner-sm"></span>Loading…' : (btnId==='si-btn' ? 'Sign In' : 'Create Account');
+    }
+
+    function showMsg(id, text, type) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = 'msg ' + type;
+    }
+
+    window.signIn = async function() {
+      const email = document.getElementById('si-email').value.trim();
+      const pass  = document.getElementById('si-password').value;
+      if(!email || !pass) { showMsg('si-msg','Please fill in all fields.','error'); return; }
+      setLoading('si-btn', true);
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        window.location.href = 'game.html';
+      } catch(e) {
+        showMsg('si-msg', friendlyError(e.code), 'error');
+        setLoading('si-btn', false);
+      }
+    };
+
+    window.signUp = async function() {
+      const name  = document.getElementById('su-name').value.trim();
+      const email = document.getElementById('su-email').value.trim();
+      const pass  = document.getElementById('su-password').value;
+      if(!name || !email || !pass) { showMsg('su-msg','Please fill in all fields.','error'); return; }
+      if(pass.length < 6) { showMsg('su-msg','Password must be at least 6 characters.','error'); return; }
+      setLoading('su-btn', true);
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        await updateProfile(cred.user, { displayName: name });
+        window.location.href = 'game.html';
+      } catch(e) {
+        showMsg('su-msg', friendlyError(e.code), 'error');
+        setLoading('su-btn', false);
+      }
+    };
+
+    window.signInGoogle = async function() {
+      try {
+        await signInWithPopup(auth, googleProvider);
+        window.location.href = 'game.html';
+      } catch(e) {
+        showMsg('si-msg', friendlyError(e.code), 'error');
+      }
+    };
+
+    window.forgotPassword = async function() {
+      const email = document.getElementById('si-email').value.trim();
+      if(!email) { showMsg('si-msg','Enter your email above first.','error'); return; }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        showMsg('si-msg', 'Password reset email sent!', 'success');
+      } catch(e) {
+        showMsg('si-msg', friendlyError(e.code), 'error');
+      }
+    };
+
+    // Enter key support
+    document.addEventListener('keydown', e => {
+      if(e.key !== 'Enter') return;
+      const signinVisible = document.getElementById('form-signin').style.display !== 'none';
+      if(signinVisible) window.signIn(); else window.signUp();
+    });
+
+    function friendlyError(code) {
+      const map = {
+        'auth/invalid-email':          'Invalid email address.',
+        'auth/user-not-found':         'No account found with this email.',
+        'auth/wrong-password':         'Incorrect password.',
+        'auth/invalid-credential':     'Incorrect email or password.',
+        'auth/email-already-in-use':   'An account already exists with this email.',
+        'auth/weak-password':          'Password must be at least 6 characters.',
+        'auth/popup-closed-by-user':   'Sign-in popup was closed.',
+        'auth/too-many-requests':      'Too many attempts. Please try again later.',
+        'auth/network-request-failed': 'Network error. Check your connection.',
+      };
+      return map[code] || 'Something went wrong. Please try again.';
+    }
+  </script>
+</body>
+</html>

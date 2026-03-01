@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Sudoku</title>
+  <meta name="description" content="Play Sudoku - Challenge your mind with engaging number puzzles" />
+  <meta property="og:title" content="Sudoku Social - Play Game" />
+  <meta property="og:description" content="Challenge your mind with engaging Sudoku puzzles" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://sudokusocial.web.app/" />
+  <meta property="og:image" content="https://sudokusocial.web.app/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Sudoku Social - Play Game" />
+  <meta name="twitter:description" content="Challenge your mind with engaging Sudoku puzzles" />
+  <meta name="twitter:image" content="https://sudokusocial.web.app/og-image.png" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg:#f8f9fa; --surface:#ffffff; --surface2:#f0f2f5; --surface3:#e4e6ea;
+      --accent:#2563eb; --accent2:#7c3aed; --text:#111827; --text2:#6b7280;
+      --error:#dc2626; --warning:#d97706; --success:#16a34a;
+      --border:#d1d5db; --cell-ln:#e5e7eb; --box-ln:#6b7280;
+    }
+    body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:0 0 28px; gap:0; touch-action:pan-x pan-y; }
+    .navbar { width:100%; background:var(--surface); border-bottom:1px solid var(--border); padding:0 20px; height:52px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-shrink:0; margin-bottom:10px; }
+    .nav-logo { font-size:1.1rem; font-weight:900; letter-spacing:6px; text-transform:uppercase; background:linear-gradient(120deg,var(--accent) 30%,var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .nav-right { display:flex; align-items:center; gap:10px; }
+    .nav-user { font-size:.78rem; color:var(--text2); font-weight:600; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .guest-badge { font-size:.68rem; background:#fef3c7; color:#92400e; border:1px solid #fcd34d; border-radius:999px; padding:2px 8px; font-weight:700; }
+    .nav-btn { padding:5px 12px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:.75rem; font-weight:600; cursor:pointer; transition:all .15s; text-decoration:none; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+    .nav-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .page-content { display:flex; flex-direction:column; align-items:center; padding:0 12px; gap:10px; width:100%; }
+    .top-bar { display:flex; gap:7px; align-items:center; flex-wrap:wrap; justify-content:center; }
+    select { padding:6px 28px 6px 10px; border-radius:7px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:.82rem; cursor:pointer; outline:none; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7280' d='M1 1l5 5 5-5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; background-size:10px; }
+    select:focus { border-color:var(--accent); }
+    button { padding:6px 12px; border-radius:7px; border:none; cursor:pointer; font-size:.82rem; font-weight:600; transition:filter .15s,background .15s,color .15s,border-color .15s; outline:none; line-height:1.3; }
+    .btn-primary { background:var(--accent); color:#fff; }
+    .btn-primary:hover { filter:brightness(1.12); }
+    .btn-ghost { background:var(--surface); color:var(--text2); border:1px solid var(--border); }
+    .btn-ghost:hover { border-color:var(--accent); color:var(--accent); }
+    .timer { background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:6px 12px; font-size:.88rem; font-weight:700; font-variant-numeric:tabular-nums; color:var(--accent); min-width:60px; text-align:center; }
+    .game-area { display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; justify-content:center; width:100%; max-width:1000px; }
+    .board-wrap { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .board-container { position:relative; }
+    .constraint-svg { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:visible; z-index:10; }
+    .cell.odd-cell::before { content:''; position:absolute; inset:10%; border-radius:50%; background:rgba(120,120,120,.2); pointer-events:none; z-index:0; }
+    .cell.even-cell::before { content:''; position:absolute; inset:10%; background:rgba(120,120,120,.2); pointer-events:none; z-index:0; }
+    .constraint-chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+    .cchip { font-size:.63rem; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--surface2); border:1px solid var(--border); color:var(--text2); }
+    .mode-bar { display:flex; gap:4px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:4px; transition:border-color .2s; }
+    .mode-tab { padding:6px 13px; border-radius:7px; border:none; background:transparent; color:var(--text2); font-size:.78rem; font-weight:700; cursor:pointer; transition:all .15s; white-space:nowrap; }
+    .mode-tab:hover { color:var(--text); }
+    .mode-tab.active { box-shadow:0 1px 3px rgba(0,0,0,.08); }
+    .mode-tab.active.m-digit  { background:#dbeafe; color:#2563eb; }
+    .mode-tab.active.m-corner { background:#fef3c7; color:#d97706; }
+    .mode-tab.active.m-center { background:#ede9fe; color:#7c3aed; }
+    .mode-tab.active.m-color  { background:#dcfce7; color:#16a34a; }
+    .board { display:grid; grid-template-rows:repeat(9,1fr); border:3px solid #374151; border-radius:6px; overflow:hidden; width:min(576px,min(calc(100vw - 270px),calc(100vh - 250px))); height:min(576px,min(calc(100vw - 270px),calc(100vh - 250px))); background:var(--surface); user-select:none; touch-action:none; }
+    .board.has-background {
+      background-image:linear-gradient(rgba(255,255,255,.80),rgba(255,255,255,.80)),var(--board-bg-image);
+      background-size:cover;
+      background-position:center;
+      background-repeat:no-repeat;
+    }
+    .board-row { display:grid; grid-template-columns:repeat(9,1fr); }
+    .cell { position:relative; display:flex; align-items:center; justify-content:center; border-right:1px solid var(--cell-ln); border-bottom:1px solid var(--cell-ln); cursor:pointer; overflow:hidden; -webkit-tap-highlight-color:transparent; }
+    .cell:last-child { border-right:none; }
+    .board-row:last-child .cell { border-bottom:none; }
+    .cell.box-right  { border-right: 2px solid var(--box-ln) !important; }
+    .cell.box-bottom { border-bottom:2px solid var(--box-ln) !important; }
+    .cell::after { content:''; position:absolute; inset:0; pointer-events:none; transition:background .07s; }
+    .cell.selected::after  { background:rgba(37,99,235,.20); }
+    .cell.multi-sel::after { background:rgba(37,99,235,.12); }
+    .cell.peer::after      { background:rgba(37,99,235,.05); }
+    .cell.same-val::after  { background:rgba(37,99,235,.14); }
+    .cell.conflict::after  { background:rgba(220,38,38,.12) !important; }
+    .cell.mistake::after   { background:rgba(217,119,6,.09)  !important; }
+    .cell-color { position:absolute; inset:0; pointer-events:none; }
+    .cell-number { position:relative; font-size:clamp(14px,3.8vw,32px); font-weight:700; line-height:1; pointer-events:none; z-index:1; }
+    .cell.given    .cell-number { color:#1f2937; }
+    .cell.filled   .cell-number { color:var(--accent); }
+    .cell.conflict .cell-number { color:var(--error)   !important; }
+    .cell.mistake  .cell-number { color:var(--warning) !important; }
+    .centre-notes { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; pointer-events:none; z-index:1; padding:1px; line-height:1; }
+    .cn-digit { font-size:clamp(10px,2.1vw,17px); font-weight:700; color:var(--accent); padding:0 .4px; }
+    .cn-digit.note-conflict { color:var(--error) !important; }
+    .corner-notes { position:absolute; inset:0; pointer-events:none; z-index:1; }
+    .corner-notes span { position:absolute; font-size:clamp(10px,2.0vw,15px); font-weight:800; color:var(--accent); line-height:1; }
+    .corner-notes span.note-conflict { color:var(--error) !important; }
+    .cn-tl { top:6%;  left:5%; }
+    .cn-tc { top:6%;  left:50%; transform:translateX(-50%); }
+    .cn-tr { top:6%;  right:5%; }
+    .cn-ml { top:50%; left:5%;  transform:translateY(-50%); }
+    .cn-mr { top:50%; right:5%; transform:translateY(-50%); }
+    .cn-bl { bottom:6%; left:5%; }
+    .cn-bc { bottom:6%; left:50%; transform:translateX(-50%); }
+    .cn-br { bottom:6%; right:5%; }
+    .side-panel { display:flex; flex-direction:column; gap:10px; width:190px; flex-shrink:0; }
+    .panel-card { background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:10px; display:flex; flex-direction:column; gap:6px; }
+    .panel-label { font-size:.62rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--text2); padding-bottom:4px; border-bottom:1px solid var(--border); }
+    .numpad { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+    .num-btn { aspect-ratio:1; background:var(--surface2); border:1px solid transparent; border-radius:7px; color:var(--text); font-size:1.05rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .12s; }
+    .num-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .num-btn.active-num { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .erase-btn { grid-column:1/-1; background:var(--surface2); border:1px solid transparent; border-radius:7px; color:var(--text2); font-size:.77rem; font-weight:600; padding:6px; cursor:pointer; transition:all .12s; }
+    .erase-btn:hover { border-color:var(--error); color:var(--error); }
+    .toggle-btn { display:flex; align-items:center; gap:7px; padding:7px 9px; background:var(--surface2); border:1px solid transparent; border-radius:8px; color:var(--text2); font-size:.76rem; font-weight:600; cursor:pointer; transition:all .15s; text-align:left; width:100%; }
+    .toggle-btn:hover { border-color:var(--border); color:var(--text); }
+    .toggle-btn.on { border-color:var(--accent); background:rgba(37,99,235,.07); color:var(--accent); }
+    .pill { margin-left:auto; width:28px; height:16px; background:var(--surface3); border-radius:999px; position:relative; flex-shrink:0; transition:background .2s; }
+    .toggle-btn.on .pill { background:var(--accent); }
+    .pill::after { content:''; position:absolute; width:12px; height:12px; background:#fff; border-radius:50%; top:2px; left:2px; transition:transform .2s; }
+    .toggle-btn.on .pill::after { transform:translateX(12px); }
+    .action-row { display:flex; gap:5px; }
+    .action-btn { flex:1; background:var(--surface2); border:1px solid transparent; border-radius:7px; color:var(--text2); font-size:.73rem; font-weight:600; padding:7px 4px; cursor:pointer; transition:all .15s; text-align:center; }
+    .action-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .puzzle-title-card { background:linear-gradient(135deg,rgba(37,99,235,.07),rgba(124,58,237,.07)); border:1px solid var(--accent); border-radius:11px; padding:14px 14px 12px; display:flex; flex-direction:column; gap:4px; }
+    .puzzle-title-name { font-size:1.45rem; font-weight:900; background:linear-gradient(120deg,var(--accent) 30%,var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1.2; word-break:break-word; }
+    .puzzle-title-meta { font-size:.7rem; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+    .puzzle-title-desc { font-size:.76rem; color:var(--text); line-height:1.55; margin-top:6px; padding-top:8px; border-top:1px solid rgba(37,99,235,.15); white-space:pre-wrap; word-break:break-word; }
+    .color-palette { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+    .color-swatch { aspect-ratio:1; background:var(--surface2); border:1px solid transparent; border-radius:7px; color:var(--text); font-size:1.05rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform .1s,border-color .1s; }
+    .color-swatch:hover  { transform:scale(1.06); }
+    .color-swatch.active { border-color:#1f2937; transform:scale(1.06); }
+    .color-swatch.none-sw { background:var(--surface2); border:2px dashed var(--border); display:flex; align-items:center; justify-content:center; font-size:.85rem; color:var(--text2); }
+    .color-swatch.none-sw:hover { border-color:var(--error); color:var(--error); }
+    .shortcuts { font-size:.63rem; color:var(--text2); text-align:center; line-height:2.1; }
+    kbd { background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:1px 4px; font-size:.62rem; font-family:inherit; color:var(--text); }
+    .rules-section { width:100%; max-width:860px; background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:16px 20px; margin-top:4px; }
+    .rules-header { display:flex; align-items:center; justify-content:space-between; cursor:pointer; gap:8px; user-select:none; }
+    .rules-title { font-size:.82rem; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--text); display:flex; align-items:center; gap:7px; }
+    .rules-title span { font-size:1rem; }
+    .rules-chevron { font-size:.7rem; color:var(--text2); transition:transform .25s; }
+    .rules-section.open .rules-chevron { transform:rotate(180deg); }
+    .rules-body { display:none; margin-top:12px; }
+    .rules-section.open .rules-body { display:block; }
+    .rules-name { font-size:1.15rem; font-weight:900; color:var(--accent); margin-bottom:4px; }
+    .rules-subtitle { font-size:.72rem; color:var(--text2); margin-bottom:12px; letter-spacing:.5px; }
+    .rules-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+    .rule-item { display:flex; gap:9px; align-items:flex-start; background:var(--surface2); border-radius:9px; padding:9px 11px; }
+    .rule-icon { font-size:1.1rem; flex-shrink:0; margin-top:1px; }
+    .rule-text strong { font-size:.78rem; font-weight:700; color:var(--text); display:block; margin-bottom:2px; }
+    .rule-text span { font-size:.72rem; color:var(--text2); line-height:1.5; }
+    .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); backdrop-filter:blur(6px); z-index:200; align-items:center; justify-content:center; }
+    .overlay.show { display:flex; }
+    .win-card { background:var(--surface); border:2px solid var(--accent); border-radius:18px; padding:34px 40px; text-align:center; animation:popIn .4s cubic-bezier(.34,1.56,.64,1); max-width:340px; width:90%; }
+    @keyframes popIn { from{transform:scale(.5) translateY(30px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
+    .win-icon { font-size:2.5rem; margin-bottom:5px; }
+    .win-card h2 { font-size:1.6rem; color:var(--success); margin-bottom:12px; }
+    .win-stats { color:var(--text2); font-size:.86rem; line-height:2; margin-bottom:20px; background:var(--surface2); border-radius:9px; padding:9px 12px; }
+    .win-stats strong { color:var(--text); }
+    .win-save-msg { font-size:.75rem; color:var(--success); margin-bottom:14px; display:none; }
+    .win-save-msg.show { display:block; }
+    .win-rating-wrap { margin:0 0 14px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--surface2); text-align:center; }
+    .win-rating-title { font-size:.76rem; color:var(--text2); margin-bottom:8px; font-weight:700; }
+    .win-stars { display:flex; justify-content:center; gap:6px; margin-bottom:8px; }
+    .star-btn { border:none; background:transparent; font-size:1.45rem; line-height:1; cursor:pointer; color:#d1d5db; padding:0 2px; }
+    .star-btn.on { color:#f59e0b; }
+    .win-rating-actions { display:flex; justify-content:center; gap:8px; }
+    .win-rating-msg { font-size:.72rem; color:var(--text2); min-height:1.1em; }
+    .win-btns { display:flex; gap:9px; justify-content:center; }
+    .loading { display:none; position:fixed; inset:0; background:rgba(255,255,255,.88); z-index:300; align-items:center; justify-content:center; flex-direction:column; gap:12px; font-size:.96rem; color:var(--text); }
+    .loading.show { display:flex; }
+    .spinner { width:38px; height:38px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .pregame-card { background:var(--surface); border:2px solid var(--accent); border-radius:16px; padding:18px 20px; width:min(92vw,480px); box-shadow:0 10px 30px rgba(0,0,0,.16); display:flex; flex-direction:column; gap:10px; }
+    .pregame-title { font-size:1.2rem; font-weight:900; color:var(--accent); line-height:1.25; }
+    .pregame-meta { font-size:.78rem; color:var(--text2); line-height:1.5; }
+    .pregame-rules { font-size:.8rem; color:var(--text); line-height:1.55; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; max-height:180px; overflow:auto; white-space:pre-wrap; }
+    .pregame-actions { display:flex; justify-content:flex-end; }
+    @media (max-width:720px) {
+      html, body { overflow:hidden; height:100%; position:fixed; width:100%; }
+      .navbar { display:none; }
+      .mobile-topbar { display:none; }
+      .mobile-topbar.show { display:flex; }
+      /* Make mobile input buttons shorter: fixed height for consistency */
+      .mobile-input-row .mobile-num-btn,
+      .mobile-input-row .mobile-color-swatch {
+        height:50px;
+        padding:6px 0;
+        font-size:1.05rem;
+        line-height:1;
+      }
+      /* when topbar is visible, push page content down so it doesn't cover the board */
+      body.has-mobile-topbar .page-content { padding-top: calc(48px + env(safe-area-inset-top)); }
+      /* nudge welcome card down on small devices so full title is visible
+        and respect the notch / safe area on iOS */
+      .welcome-card { padding-top: calc(44px + env(safe-area-inset-top)); margin-top:6px; }
+      .welcome-logo { margin-top: calc(env(safe-area-inset-top)); }
+      .shortcuts { display:none; }
+      .rules-section { display:none; }
+      body { padding:0; gap:0; display:flex; flex-direction:column; }
+      .page-content { padding:0; gap:0; flex:1; display:flex; flex-direction:column; overflow:hidden; }
+      .top-bar { display:none; }
+      .game-area { flex-direction:column; align-items:center; gap:0; padding:0; flex-shrink:0; }
+      .board-wrap { width:100vw; align-items:center; gap:0; }
+      .board { width:min(100vw, 58vh) !important; height:min(100vw, 58vh) !important; max-width:100vw; border-radius:0; border-left:none; border-right:none; }
+      .side-panel { display:none; }
+      .mode-bar { display:none; }
+      .mobile-controls { display:flex !important; }
+    }
+    .mobile-topbar { display:none; width:100%; background:var(--accent2); height:48px; align-items:center; justify-content:space-between; padding:0 14px; flex-shrink:0; gap:8px; position:fixed; top:0; left:0; right:0; z-index:510; }
+    .mobile-back-btn { background:transparent; border:none; color:#fff; font-size:1.3rem; cursor:pointer; padding:4px 8px; border-radius:6px; line-height:1; }
+    .mobile-puzzle-name { flex:1; text-align:center; font-size:.95rem; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .mobile-timer-wrap { display:flex; align-items:center; gap:6px; color:#fff; font-size:.9rem; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .mobile-pause-btn { background:transparent; border:none; color:#fff; font-size:1.1rem; cursor:pointer; padding:4px; line-height:1; }
+    .mobile-gear-btn { background:transparent; border:none; color:#fff; font-size:1.25rem; cursor:pointer; padding:4px 6px; border-radius:6px; line-height:1; flex-shrink:0; margin-right:8px; }
+    /* Mobile Settings Panel */
+    .mobile-settings-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; }
+    .mobile-settings-overlay.open { display:block; }
+    .mobile-settings-panel { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-radius:20px 20px 0 0; padding:0 0 32px; z-index:520; transform:translateY(100%); transition:transform .28s cubic-bezier(.32,1,.4,1); max-height:88vh; overflow-y:auto; }
+    .mobile-settings-panel.open { transform:translateY(0); }
+    .mobile-settings-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:12px auto 4px; }
+    .mobile-settings-header { display:flex; align-items:center; justify-content:space-between; padding:10px 18px 10px; border-bottom:1px solid var(--border); }
+    .mobile-settings-title { font-size:1rem; font-weight:800; color:var(--text); }
+    .mobile-settings-close { background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text2); font-size:.8rem; font-weight:700; padding:6px 14px; cursor:pointer; }
+    .mobile-settings-close:active { background:var(--surface3); }
+    .mobile-settings-section { padding:14px 18px 4px; }
+    .mobile-settings-label { font-size:.6rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--text2); margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--border); }
+    .mobile-settings-toggle { display:flex; align-items:center; gap:10px; padding:11px 12px; background:var(--surface2); border:1px solid transparent; border-radius:10px; color:var(--text2); font-size:.85rem; font-weight:600; cursor:pointer; width:100%; margin-bottom:7px; text-align:left; }
+    .mobile-settings-toggle:active { background:var(--surface3); }
+    .mobile-settings-toggle.on { border-color:var(--accent); background:rgba(37,99,235,.07); color:var(--accent); }
+    .mobile-settings-toggle .ms-pill { margin-left:auto; width:32px; height:18px; background:var(--surface3); border-radius:999px; position:relative; flex-shrink:0; transition:background .2s; }
+    .mobile-settings-toggle.on .ms-pill { background:var(--accent); }
+    .mobile-settings-toggle .ms-pill::after { content:''; position:absolute; width:14px; height:14px; background:#fff; border-radius:50%; top:2px; left:2px; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+    .mobile-settings-toggle.on .ms-pill::after { transform:translateX(14px); }
+    .mobile-settings-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:4px 0 0; }
+    .mobile-settings-action { padding:13px 8px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:.82rem; font-weight:700; cursor:pointer; text-align:center; display:flex; flex-direction:column; align-items:center; gap:5px; transition:all .15s; }
+    .mobile-settings-action:active { background:var(--surface3); }
+    .mobile-settings-action .ms-action-icon { font-size:1.4rem; line-height:1; }
+    .mobile-settings-action.danger { border-color:#fca5a5; color:var(--error); background:#fff5f5; }
+    .mobile-settings-action.danger:active { background:#fee2e2; }
+    .mobile-controls { display:none; flex-direction:column; width:100%; background:var(--surface); border-top:1px solid var(--border); padding:6px 8px 10px; gap:5px; flex-shrink:0; }
+    .mobile-mode-row { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
+    .mobile-mode-btn { padding:5px 4px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:.68rem; font-weight:700; cursor:pointer; text-align:center; }
+    .mobile-mode-btn.active { border-color:var(--accent); background:#dbeafe; color:var(--accent); }
+    .mobile-mode-btn.active.m-corner { background:#fef3c7; color:#d97706; border-color:#d97706; }
+    .mobile-mode-btn.active.m-center { background:#ede9fe; color:var(--accent2); border-color:var(--accent2); }
+    .mobile-mode-btn.active.m-color  { background:#dcfce7; color:#16a34a; border-color:#16a34a; }
+    .mobile-grid4 { display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:4px; }
+    .mobile-input-row { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; grid-column:1/4; }
+    .mobile-action-col { grid-column:4; grid-row:1/4; display:flex; flex-direction:column; gap:4px; }
+    .mobile-action-side { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--text2); font-size:1.1rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .mobile-action-side:active { background:var(--surface3); }
+    .mobile-num-btn { padding:10px 0; background:var(--accent2); border:none; border-radius:10px; color:#fff; font-size:1.3rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:filter .1s; }
+    .mobile-num-btn:active { filter:brightness(1.2); }
+    .mobile-num-btn.erase-mobile { background:var(--surface2); color:var(--text2); border:1px solid var(--border); font-size:1.1rem; }
+    .mobile-color-swatch { aspect-ratio:1; border-radius:10px; border:1px solid transparent; cursor:pointer; transition:transform .08s; display:flex; align-items:center; justify-content:center; width:100%; box-sizing:border-box; font-size:1.3rem; font-weight:800; padding:10px 0; }
+    /* Ensure color swatches and number buttons inside mobile rows have identical sizing */
+    .mobile-input-row .mobile-num-btn,
+    .mobile-input-row .mobile-color-swatch {
+      aspect-ratio:1; padding:10px 0; font-size:1.3rem; font-weight:800; display:flex; align-items:center; justify-content:center; width:100%; box-sizing:border-box;
+    }
+    .mobile-color-swatch.active { border-color:#1f2937; transform:scale(1.04); }
+    .welcome-overlay { display:flex; position:fixed; inset:0; z-index:400; align-items:center; justify-content:center; background:var(--bg); }
+    .welcome-overlay.hidden { display:none; }
+    .welcome-card { background:var(--surface); border:1px solid var(--border); border-radius:22px; padding:44px 40px 36px; text-align:center; max-width:420px; width:90%; box-shadow:0 8px 40px rgba(0,0,0,.10); animation:popIn .45s cubic-bezier(.34,1.56,.64,1); }
+    .welcome-logo { font-size:2.6rem; font-weight:900; letter-spacing:12px; text-transform:uppercase; background:linear-gradient(120deg,var(--accent) 30%,var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:4px; }
+    .welcome-sub { font-size:.68rem; color:var(--text2); letter-spacing:4px; text-transform:uppercase; margin-bottom:28px; }
+    .puzzle-card { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all .15s; }
+    .puzzle-card:hover { border-color:var(--accent); background:rgba(37,99,235,.06); transform:translateX(4px); }
+    .puzzle-info { display:flex; flex-direction:column; gap:3px; flex:1; }
+    .puzzle-name { font-size:.88rem; font-weight:700; color:var(--text); }
+    .puzzle-meta { font-size:.7rem; color:var(--text2); }
+    .puzzle-author { font-size:.68rem; color:var(--accent); font-weight:600; }
+    .puzzle-status { font-size:.65rem; padding:2px 6px; border-radius:4px; font-weight:600; }
+    .status-completed { background:#dcfce7; color:var(--success); }
+    .status-incomplete { background:#fef3c3; color:#92400e; }
+    .status-not-started { background:#f3f4f6; color:var(--text2); }
+    .puzzle-empty { text-align:center; padding:24px 16px; color:var(--text2); font-size:.82rem; }
+    .back-btn { display:inline-flex; align-items:center; gap:5px; margin-bottom:12px; padding:6px 10px; border:1px solid var(--border); background:transparent; border-radius:7px; color:var(--text2); cursor:pointer; font-size:.75rem; font-weight:600; transition:all .15s; text-decoration:none; }
+    .back-btn:hover { color:var(--accent); border-color:var(--accent); }
+    .main-btn { padding:16px 18px; border-radius:14px; border:2px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; transition:all .15s; display:flex; flex-direction:row; align-items:center; gap:12px; text-decoration:none; width:100%; }
+    .main-btn:hover { border-color:var(--accent); background:rgba(37,99,235,.08); transform:translateY(-2px); box-shadow:0 4px 12px rgba(37,99,235,.12); }
+    .main-btn .mb-icon { font-size:1.8rem; line-height:1; flex-shrink:0; }
+    .main-btn .mb-label { font-size:1rem; font-weight:800; text-align:left; }
+    .search-input { width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:.9rem; background:var(--surface); color:var(--text); outline:none; transition:border-color .15s; margin-bottom:12px; }
+    .search-input:focus { border-color:var(--accent); }
+    .filter-row { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+    .filter-select { padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:.75rem; background:var(--surface); color:var(--text); cursor:pointer; outline:none; }
+    .filter-select:focus { border-color:var(--accent); }
+    .search-results { display:flex; flex-direction:column; gap:8px; max-height:400px; overflow-y:auto; }
+  </style>
+</head>
+<body>
+
+<!-- MOBILE TOP BAR -->
+<div class="mobile-topbar" id="mobileTopbar">
+  <button class="mobile-back-btn" ontouchend="event.preventDefault();window.showSearchOverlay()" onclick="window.showSearchOverlay()">&#x2190;</button>
+  <div class="mobile-puzzle-name" id="mobilePuzzleName">Sudoku</div>
+  <!-- gear moved to left of timer for easier reach -->
+  <button class="mobile-gear-btn" id="mobileGearBtn" ontouchend="event.preventDefault();openMobileSettings()" onclick="openMobileSettings()" aria-label="Settings">&#x2699;&#xFE0F;</button>
+  <div class="mobile-timer-wrap">
+    <span id="mobileTimer">0:00</span>
+    <button class="mobile-pause-btn" id="mobilePauseBtn" ontouchend="event.preventDefault();togglePauseTimer()" onclick="togglePauseTimer()">⏸</button>
+  </div>
+</div>
+
+<!-- MOBILE SETTINGS PANEL -->
+<div class="mobile-settings-overlay" id="mobileSettingsOverlay" ontouchend="event.preventDefault();closeMobileSettings()" onclick="closeMobileSettings()"></div>
+<div class="mobile-settings-panel" id="mobileSettingsPanel">
+  <div class="mobile-settings-handle"></div>
+  <div class="mobile-settings-header">
+    <div class="mobile-settings-title">&#x2699;&#xFE0F; Settings &amp; Actions</div>
+    <button class="mobile-settings-close" ontouchend="event.preventDefault();closeMobileSettings()" onclick="closeMobileSettings()">&#x2190; Back</button>
+  </div>
+  <div class="mobile-settings-section">
+    <div class="mobile-settings-label">Options</div>
+    <button class="mobile-settings-toggle" id="msConflictsBtn" ontouchend="event.preventDefault();toggleConflicts();syncMobileSettingsToggles()" onclick="toggleConflicts();syncMobileSettingsToggles()">
+      &#x1F534; Highlight Conflicts
+      <span class="ms-pill"></span>
+    </button>
+    <button class="mobile-settings-toggle" id="msMistakesBtn" ontouchend="event.preventDefault();toggleMistakes();syncMobileSettingsToggles()" onclick="toggleMistakes();syncMobileSettingsToggles()">
+      &#x1F7E1; Show Mistakes
+      <span class="ms-pill"></span>
+    </button>
+  </div>
+  <div class="mobile-settings-section">
+    <div class="mobile-settings-label">Actions</div>
+    <div class="mobile-settings-actions">
+      <button class="mobile-settings-action" ontouchend="event.preventDefault();showHint();closeMobileSettings()" onclick="showHint();closeMobileSettings()">
+        <span class="ms-action-icon">&#x1F4A1;</span>Hint
+      </button>
+      <button class="mobile-settings-action" ontouchend="event.preventDefault();eraseCell();closeMobileSettings()" onclick="eraseCell();closeMobileSettings()">
+        <span class="ms-action-icon">&#x232B;</span>Erase Cell
+      </button>
+      <button class="mobile-settings-action danger" ontouchend="event.preventDefault();clearColors();closeMobileSettings()" onclick="clearColors();closeMobileSettings()">
+        <span class="ms-action-icon">&#x1F6AB;</span>Clear Colors
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- NAV BAR -->
+<nav class="navbar">
+  <div class="nav-logo">Sudoku Social</div>
+  <div class="nav-right">
+    <span class="nav-user" id="navUser"></span>
+    <a href="game.html#play" class="nav-btn" id="playNavBtn">🎮 Play</a>
+    <a href="game.html#search" class="nav-btn" id="searchNavBtn" onclick="event.preventDefault();window.showSearchOverlay();">🔍 Search</a>
+    <a href="create.html" class="nav-btn" id="createNavBtn">✏️ Create</a>
+    <a href="history.html" class="nav-btn" id="historyNavBtn">📊 History</a>
+    <button class="nav-btn" id="signOutBtn" onclick="handleSignOut()">Sign Out</button>
+  </div>
+</nav>
+
+<div class="page-content">
+  <div class="top-bar">
+    <button class="btn-ghost" onclick="undoMove()" title="Ctrl+Z">&#x21A9; Undo</button>
+    <button class="btn-ghost" onclick="redoMove()" title="Ctrl+Y">&#x21AA; Redo</button>
+    <div class="timer" id="timer">0:00</div>
+    <button class="btn-ghost" id="pauseBtn" onclick="togglePauseTimer()" title="Pause/Resume timer">⏸️ Pause</button>
+  </div>
+  <div class="game-area">
+    <div class="board-wrap">
+      <div class="board-container">
+        <div class="board" id="board"></div>
+        <svg class="constraint-svg" id="constraintSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="constraint-chips" id="constraintChips"></div>
+      <div class="mode-bar" id="modeBar">
+        <button class="mode-tab m-digit active" id="tab-digit"  onclick="setMode('digit')">&#x270F;&#xFE0F; Digit</button>
+        <button class="mode-tab m-corner"       id="tab-corner" onclick="setMode('corner')">&#x25E4; Corner</button>
+        <button class="mode-tab m-center"       id="tab-center" onclick="setMode('center')">&#x2299; Centre</button>
+        <button class="mode-tab m-color"        id="tab-color"  onclick="setMode('color')">&#x1F3A8; Color</button>
+      </div>
+    </div>
+    <div class="side-panel">
+      <div class="puzzle-title-card" id="puzzleTitleCard" style="display:none">
+        <div class="puzzle-title-name" id="puzzleTitleName"></div>
+        <div class="puzzle-title-meta" id="puzzleTitleMeta"></div>
+        <div class="puzzle-title-desc" id="puzzleTitleDesc" style="display:none"></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-label">Numbers</div>
+        <div class="numpad" id="numpad"></div>
+      </div>
+      <div class="panel-card" id="colorCard" style="display:none">
+        <div class="panel-label">Cell Color</div>
+        <div class="color-palette" id="colorPalette"></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-label">Options</div>
+        <button class="toggle-btn" id="conflictsBtn" onclick="toggleConflicts()">&#x1F534; Highlight Conflicts <span class="pill"></span></button>
+        <button class="toggle-btn" id="mistakesBtn" onclick="toggleMistakes()">&#x1F7E1; Show Mistakes <span class="pill"></span></button>
+      </div>
+      <div class="panel-card">
+        <div class="panel-label">Actions</div>
+        <div class="action-row">
+          <button class="action-btn" onclick="showHint()">&#x1F4A1; Hint</button>
+          <button class="action-btn" onclick="eraseCell()">&#x232B; Erase</button>
+        </div>
+        <div class="action-row">
+          <button class="action-btn" onclick="clearColors()">&#x1F6AB; Clear Colors</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE CONTROLS -->
+  <div class="mobile-controls" id="mobileControls">
+    <div class="mobile-mode-row">
+      <button class="mobile-mode-btn m-digit active" id="mob-tab-digit" onclick="setMode('digit');updateMobileModes();updateMobileColorView(false)">✏️ Digit</button>
+      <button class="mobile-mode-btn m-corner" id="mob-tab-corner" onclick="setMode('corner');updateMobileModes();updateMobileColorView(false)">◤ Corner</button>
+      <button class="mobile-mode-btn m-center" id="mob-tab-center" onclick="setMode('center');updateMobileModes();updateMobileColorView(false)">⊙ Centre</button>
+      <button class="mobile-mode-btn m-color"  id="mob-tab-color"  onclick="setMode('color');updateMobileModes();updateMobileColorView(true)">🎨 Color</button>
+    </div>
+    <div class="mobile-grid4">
+      <div id="mobileNumpadRow1" class="mobile-input-row">
+        <button class="mobile-num-btn" ontouchend="event.preventDefault();window.inputNumber(1)" onclick="window.inputNumber(1)">1</button>
+        <button class="mobile-num-btn" ontouchend="event.preventDefault();window.inputNumber(2)" onclick="window.inputNumber(2)">2</button>
+        <button class="mobile-num-btn" ontouchend="event.preventDefault();window.inputNumber(3)" onclick="window.inputNumber(3)">3</button>
+      </div>
+      <div id="mobileNumpadRow2" class="mobile-input-row">
+        <button class="mobile-num-btn" ontouchend="event.preventDefault();window.inputNumber(4)" onclick="window.inputNumber(4)">4</button>
+        <button class="mobile-num-btn" ontouchend="event.preventDefault();window.inputNumber(5)" onclick="window.inputNumber(5)">5</button>
+        <button class="mobile-num-btn" ontouchend="event.preventDefault();window.inputNumber(6)" onclick="window.inputNumber(6)">6</button>
+      </div>
+      <div id="mobileNumpadRow3" class="mobile-input-row">
+        <button class="mobile-num-btn" ontouchend="event.preventDefault();window.inputNumber(7)" onclick="window.inputNumber(7)">7</button>
+        <button class="mobile-num-btn" ontouchend="event.preventDefault();window.inputNumber(8)" onclick="window.inputNumber(8)">8</button>
+        <button class="mobile-num-btn" ontouchend="event.preventDefault();window.inputNumber(9)" onclick="window.inputNumber(9)">9</button>
+      </div>
+      <div id="mobileColorRow1" class="mobile-input-row" style="display:none"></div>
+      <div id="mobileColorRow2" class="mobile-input-row" style="display:none"></div>
+      <div id="mobileColorRow3" class="mobile-input-row" style="display:none"></div>
+      <div class="mobile-action-col">
+        <button class="mobile-action-side" ontouchend="event.preventDefault();undoMove()" onclick="undoMove()">↩</button>
+        <button class="mobile-action-side" ontouchend="event.preventDefault();window.mobileErase()" onclick="window.mobileErase()">⌫</button>
+        <button class="mobile-action-side" ontouchend="event.preventDefault();redoMove()" onclick="redoMove()">↪</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="shortcuts">
+    <kbd>1&ndash;9</kbd> Enter &nbsp;&middot;&nbsp;
+    <kbd>D</kbd> Digit &nbsp;&middot;&nbsp;
+    <kbd>R</kbd> Corner &nbsp;&middot;&nbsp;
+    <kbd>E</kbd> Centre &nbsp;&middot;&nbsp;
+    <kbd>L</kbd> Color &nbsp;&middot;&nbsp;
+    <kbd>Del</kbd> Erase &nbsp;&middot;&nbsp;
+    <kbd>Shift+Click/Drag</kbd> Multi-select &nbsp;&middot;&nbsp;
+    <kbd>Ctrl+Z/Y</kbd> Undo/Redo
+  </div>
+
+  <div class="rules-section" id="rulesSection">
+    <div class="rules-header" onclick="document.getElementById('rulesSection').classList.toggle('open')">
+      <div class="rules-title"><span>&#x1F4D6;</span> Rules &amp; How to Play</div>
+      <div class="rules-chevron">&#x25BC;</div>
+    </div>
+    <div class="rules-body">
+      <div class="rules-name">Sudoku</div>
+      <div class="rules-subtitle">Classic 9&times;9 Number Placement Puzzle</div>
+      <div class="rules-grid">
+        <div class="rule-item"><div class="rule-icon">1&#xFE0F;&#x20E3;</div><div class="rule-text"><strong>Rows</strong><span>Each of the 9 rows must contain the digits 1&ndash;9 with no repetition.</span></div></div>
+        <div class="rule-item"><div class="rule-icon">2&#xFE0F;&#x20E3;</div><div class="rule-text"><strong>Columns</strong><span>Each of the 9 columns must contain the digits 1&ndash;9 with no repetition.</span></div></div>
+        <div class="rule-item"><div class="rule-icon">3&#xFE0F;&#x20E3;</div><div class="rule-text"><strong>Boxes</strong><span>Each of the nine 3&times;3 boxes must contain the digits 1&ndash;9 with no repetition.</span></div></div>
+        <div class="rule-item"><div class="rule-icon">&#x1F513;</div><div class="rule-text"><strong>Given Clues</strong><span>Grey digits are pre-filled and cannot be changed.</span></div></div>
+        <div class="rule-item"><div class="rule-icon">&#x270F;&#xFE0F;</div><div class="rule-text"><strong>Corner Marks</strong><span>Small amber digits in cell corners — track possible candidates.</span></div></div>
+        <div class="rule-item"><div class="rule-icon">&#x2299;</div><div class="rule-text"><strong>Centre Marks</strong><span>Purple digits centred in the cell — mark cells belonging to a group.</span></div></div>
+        <div class="rule-item"><div class="rule-icon">&#x1F3AF;</div><div class="rule-text"><strong>Objective</strong><span>Fill every empty cell so all rows, columns, and boxes are complete.</span></div></div>
+        <div class="rule-item"><div class="rule-icon">&#x1F522;</div><div class="rule-text"><strong>Unique Solution</strong><span>Every generated puzzle has exactly one valid solution.</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Welcome overlay -->
+<div class="welcome-overlay" id="welcomeOverlay">
+  <div class="welcome-card" style="max-width:400px;">
+    <div class="welcome-logo">Sudoku Social</div>
+    <div class="welcome-sub">Challenge your mind</div>
+    <div id="mainMenu" style="display:flex; flex-direction:column; gap:10px;">
+      <button class="main-btn" onclick="playLastOrNew()">
+        <span class="mb-icon">🎮</span><span class="mb-label">Play</span>
+      </button>
+      <button class="main-btn" onclick="window.showSearchOverlay()">
+        <span class="mb-icon">🔍</span><span class="mb-label">Search</span>
+      </button>
+      <a href="create.html" class="main-btn">
+        <span class="mb-icon">✏️</span><span class="mb-label">Create</span>
+      </a>
+      <a href="history.html" class="main-btn">
+        <span class="mb-icon">📊</span><span class="mb-label">History</span>
+      </a>
+    </div>
+    <div id="searchMenu" style="display:none;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px;">
+        <button class="back-btn" style="margin-bottom:0;" onclick="showMainMenu()">← Back</button>
+        <div style="display:flex; gap:6px;">
+          <a href="game.html#play" class="back-btn" style="margin-bottom:0; text-decoration:none;">🎮 Play</a>
+          <a href="create.html" class="back-btn" style="margin-bottom:0; text-decoration:none;">✏️ Create</a>
+          <a href="history.html" class="back-btn" style="margin-bottom:0; text-decoration:none;">📊 History</a>
+        </div>
+      </div>
+      <input type="text" id="searchInput" class="search-input" placeholder="Search by name..." onkeyup="performSearch()">
+      <div class="filter-row">
+        <select id="authorFilter" class="filter-select" onchange="performSearch()">
+          <option value="">All Authors</option>
+          <option value="AI">AI Generated</option>
+          <option value="user">Community</option>
+        </select>
+        <select id="difficultyFilter" class="filter-select" onchange="performSearch()">
+          <option value="">All Difficulties</option>
+          <option value="Easy">Easy</option>
+          <option value="Medium">Medium</option>
+          <option value="Hard">Hard</option>
+          <option value="Expert">Expert</option>
+        </select>
+        <select id="ratingFilter" class="filter-select" onchange="performSearch()">
+          <option value="">All Ratings</option>
+          <option value="rated">Rated only</option>
+          <option value="4plus">4.0+ only</option>
+          <option value="top">Highest rated first</option>
+        </select>
+        <select id="statusFilter" class="filter-select" onchange="performSearch()">
+          <option value="">All Status</option>
+          <option value="completed">Completed</option>
+          <option value="incomplete">Incomplete</option>
+          <option value="not-started">Not Started</option>
+        </select>
+      </div>
+      <div class="search-results" id="searchResults">
+        <div class="puzzle-empty">Start typing to search...</div>
+      </div>
+    </div>
+    <div id="guestWelcomeNote" style="display:none; font-size:.72rem; color:var(--text2); margin-top:12px; line-height:1.5; text-align:center;">
+      Playing as guest — <a href="index.html" style="color:var(--accent);">sign in</a> to save your history.
+    </div>
+  </div>
+</div>
+
+<!-- Win overlay -->
+<div class="overlay" id="winOverlay" onclick="if(event.target===this)closeWin()">
+  <div class="win-card">
+    <div class="win-icon">&#x1F389;</div>
+    <h2>Puzzle Solved!</h2>
+    <div class="win-stats" id="winStats"></div>
+    <div class="win-rating-wrap" id="winRatingWrap" style="display:none;">
+      <div class="win-rating-title">Rate this puzzle</div>
+      <div class="win-stars" id="winStars"></div>
+      <div class="win-rating-actions">
+        <button class="btn-ghost" id="winRatingSaveBtn">Save Rating</button>
+      </div>
+      <div class="win-rating-msg" id="winRatingMsg"></div>
+    </div>
+    <div class="win-save-msg" id="winSaveMsg">✅ Solve saved to your history!</div>
+    <div class="win-btns">
+      <button class="btn-primary" onclick="closeWin();startNewGame()">Play Again</button>
+      <button class="btn-ghost" onclick="closeWin()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading spinner -->
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <span>Generating puzzle&hellip;</span>
+</div>
+
+<!-- Pre-game info overlay -->
+<div class="overlay" id="preGameOverlay" onclick="if(event.target===this)event.stopPropagation()">
+  <div class="pregame-card">
+    <div class="pregame-title" id="preGameTitle">Sudoku</div>
+    <div class="pregame-meta" id="preGameMeta"></div>
+    <div class="pregame-rules" id="preGameRules"></div>
+    <div class="pregame-actions">
+      <button class="btn-primary" id="preGameStartBtn">Start Game</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { firebaseConfig } from './firebase-config.js';
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+const isGuest = new URLSearchParams(location.search).has('guest')
+             || sessionStorage.getItem('sudokuGuest') === '1';
+if (isGuest) sessionStorage.setItem('sudokuGuest', '1');
+
+let currentUser = null;
+
+onAuthStateChanged(auth, user => {
+  if (user) {
+    currentUser = user;
+    sessionStorage.removeItem('sudokuGuest');
+    document.getElementById('navUser').textContent = '👤 ' + (user.displayName || user.email);
+  } else if (isGuest) {
+    document.getElementById('navUser').innerHTML = '<span class="guest-badge">Guest</span>';
+    document.getElementById('guestWelcomeNote').style.display = '';
+  } else {
+    window.location.href = 'index.html';
+  }
+});
+
+window.handleSignOut = async () => {
+  await signOut(auth);
+  sessionStorage.removeItem('sudokuGuest');
+  window.location.href = 'index.html';
+};
+
+async function saveSolve(difficulty, timeSeconds, mistakes) {
+  if (!currentUser) return;
+  try {
+    await addDoc(collection(db, 'users', currentUser.uid, 'solves'), {
+      difficulty, timeSeconds, mistakes,
+      puzzleName: currentPuzzleName || '',
+      puzzleId: currentPuzzleId || '',
+      solvedAt: serverTimestamp()
+    });
+    document.getElementById('winSaveMsg').classList.add('show');
+  } catch (err) {
+    console.error('Failed to save solve:', err);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// GAME ENGINE
+// ══════════════════════════════════════════════════════════════
+const PALETTE=['#fca5a5','#fdba74','#fcd34d','#a3e635','#6ee7b7','#67e8f9','#93c5fd','#c4b5fd','#f9a8d4','#fb7185','#f97316','#eab308','#84cc16','#22c55e','#14b8a6','#0ea5e9','#6366f1','#ec4899','#dc2626','#ea580c','#ca8a04','#65a30d','#16a34a','#0d9488','#0284c7','#4f46e5','#db2777','#b45309','#7f1d1d','#78350f','#365314','#14532d','#134e4a','#0c4a6e','#1e1b4b','#500724'];
+let solution=[],puzzle=[],board=[],notes=[],cellColor=[];
+let selected=null,multiSel=new Set(),inputMode='digit',activeColor=PALETTE[0];
+let showConflicts=false,showMistakes=false,undoStack=[],redoStack=[];
+let timerInterval=null,seconds=0,gameWon=false,mistakeCount=0,isDragging=false,timerPaused=false;
+let currentDifficulty='medium';
+let currentPuzzleAuthor='AI',currentPuzzleIsAI=true,currentPuzzleName='',currentPuzzleId='',currentPuzzleDescription='',currentPuzzleBackgroundImage='',communityPuzzles=[];
+let preGameContinueHandler=null;
+let currentPuzzleRatingAvg=null,currentPuzzleRatingCount=0;
+let selectedWinRating=0,currentUserExistingRating=null;
+
+function updatePuzzleNameDisplay(){
+  const card=document.getElementById('puzzleTitleCard');
+  const nameEl=document.getElementById('puzzleTitleName');
+  const metaEl=document.getElementById('puzzleTitleMeta');
+  const descEl=document.getElementById('puzzleTitleDesc');
+  const mobName=document.getElementById('mobilePuzzleName');
+  if(currentPuzzleName){
+    nameEl.textContent=currentPuzzleName;
+    const ratingText=(currentPuzzleRatingAvg==null||!Number.isFinite(Number(currentPuzzleRatingAvg)))
+      ?'Unrated'
+      :`★ ${Number(currentPuzzleRatingAvg).toFixed(1)} (${currentPuzzleRatingCount||0})`;
+    metaEl.textContent=currentDifficulty.charAt(0).toUpperCase()+currentDifficulty.slice(1)+' · by '+currentPuzzleAuthor+' · '+ratingText;
+    if(currentPuzzleDescription){
+      descEl.textContent=currentPuzzleDescription;
+      descEl.style.display='';
+    } else {
+      descEl.style.display='none';
+    }
+    card.style.display='';
+    if(mobName)mobName.textContent=currentPuzzleName;
+  } else {
+    card.style.display='none';
+    if(mobName)mobName.textContent='Sudoku';
+  }
+}
+
+function getDefaultRulesText(){
+  return 'Classic Sudoku rules: fill every row, column, and 3×3 box with digits 1–9 without repeats.';
+}
+
+function getSavedLastPuzzle(){
+  try{
+    const raw=localStorage.getItem('lastPuzzle');
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(_e){
+    return null;
+  }
+}
+
+function isSameBoard(a,b){
+  if(!Array.isArray(a)||!Array.isArray(b)||a.length!==9||b.length!==9) return false;
+  for(let r=0;r<9;r++){
+    for(let c=0;c<9;c++){
+      if((a[r]&&a[r][c])!==(b[r]&&b[r][c])) return false;
+    }
+  }
+  return true;
+}
+
+function hasPuzzleProgress(savedState, basePuzzle, puzzleId){
+  if(!savedState||!savedState.board||!Array.isArray(savedState.board)) return false;
+  if(puzzleId && savedState.puzzleId!==puzzleId) return false;
+  if(savedState.seconds>0) return true;
+  if(!isSameBoard(savedState.board,basePuzzle)) return true;
+  return false;
+}
+
+function showPreGameOverlay(buttonLabel,onContinue){
+  const titleEl=document.getElementById('preGameTitle');
+  const metaEl=document.getElementById('preGameMeta');
+  const rulesEl=document.getElementById('preGameRules');
+  const btn=document.getElementById('preGameStartBtn');
+  const overlay=document.getElementById('preGameOverlay');
+  if(!titleEl||!metaEl||!rulesEl||!btn||!overlay) return;
+  titleEl.textContent=currentPuzzleName||'Sudoku';
+  const diff=(currentDifficulty||'medium');
+  metaEl.textContent=`Author: ${currentPuzzleAuthor||'AI'} · Difficulty: ${diff.charAt(0).toUpperCase()+diff.slice(1)}`;
+  rulesEl.textContent=(currentPuzzleDescription&&String(currentPuzzleDescription).trim())?currentPuzzleDescription:getDefaultRulesText();
+  btn.textContent=buttonLabel;
+  preGameContinueHandler=typeof onContinue==='function'?onContinue:null;
+  overlay.classList.add('show');
+}
+
+function closePreGameOverlay(){
+  const overlay=document.getElementById('preGameOverlay');
+  if(overlay) overlay.classList.remove('show');
+}
+
+window.beginPreGameSession=function(){
+  closePreGameOverlay();
+  if(preGameContinueHandler){
+    const fn=preGameContinueHandler;
+    preGameContinueHandler=null;
+    fn();
+  }
+}
+
+const DEFAULT_PUZZLES=[
+  {id:"ai-e1",name:"Dusty Grove",puzzle:"006470908030009600107836000000008060048095721910607500060000140081000090000153870",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e2",name:"Radiant Enigma",puzzle:"040091020500360070000007049408739200000510007025400031359008002280100000104020805",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e3",name:"Gentle Inferno",puzzle:"003495602020006910006210000000500807000003040000107090862001079100802030005649128",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e4",name:"Amber Tempest",puzzle:"000000000200071860014850900439080007002030189051207340048020600020900008003610405",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e5",name:"Quiet Wanderer",puzzle:"600900000901823506003107000000090080007085263500200019800000090026370801030018624",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e6",name:"Crystal Haven",puzzle:"005789300000305000307041000001470000870050491460090070084900167710800020236010000",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e7",name:"Obsidian Haven",puzzle:"405060700070834620020000080010386040096000001000091362209050130157000408800007006",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e8",name:"Golden Vortex",puzzle:"830600705071020083420300010000093008596700100000005290063007841050800900008906050",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e9",name:"Breezy Riddle",puzzle:"100040009700006201900002530000000903045009020800720456080457002030098100590301780",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e10",name:"Radiant Orbit",puzzle:"704058093000092400390000850040000708109000540068007030006830070010009080832700964",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-m1",name:"Solar Jungle",puzzle:"040005980080600070000010035000060590000089047000154008908006000057031800010000000",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m2",name:"Obsidian Pinnacle",puzzle:"860020037235080000000005080000208900004019700100500000000002070620030005003007290",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m3",name:"Obsidian Vortex",puzzle:"400320580100000002082900000000000058030200700007860003008590400760182000050006000",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m4",name:"Breezy Vortex",puzzle:"000160900906002003001009407004930001600010000000600000490000020352000010100240790",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m5",name:"Neon Riddle",puzzle:"002004008608002709000700020007435000106807940800090000001000400060000201003060500",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m6",name:"Blazing Vortex",puzzle:"301670905590210040000030000900020004700000000020345098210450009000000007009000500",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m7",name:"Emerald Tempest",puzzle:"900037010010000032200040006800900000723400859060800007000080001008601045000004000",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m8",name:"Phantom Abyss",puzzle:"009021000053000000000040090000208050074060020208900003605432000027005300000000542",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m9",name:"Twilight Wanderer",puzzle:"000040030004507000090600000039000810000001097261800300002096003080100009005083004",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m10",name:"Frozen Frontier",puzzle:"200600005107230000804009200000807004095300007070095000000003502003006000020700480",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-h1",name:"Obsidian Iris",puzzle:"000045080801000009900600000000160030006000002500007800040570000000809600000002051",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h2",name:"Vivid Quest",puzzle:"000004090380005601000000020900030750000100000072890100741300000000500000090000200",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h3",name:"Jade Delta",puzzle:"200594100003000700500080000000860010094000500000000060000000900070040320002300806",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h4",name:"Kinetic Pinnacle",puzzle:"084000000000005006907006002000137600000000000018000300000053084020080000075600020",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h5",name:"Phantom Galaxy",puzzle:"000000300400370000070000540001040270000700000300005090100402009000650080095000020",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h6",name:"Neon Blizzard",puzzle:"003000008001950000050200106009007000030060000000000020084030095300520000000070403",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h7",name:"Phantom Jungle",puzzle:"930006000107209050500000800600000030000600000003050090040000270310007000060900004",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h8",name:"Ancient Frontier",puzzle:"204000010500000007080009000000980000060000800100040560006000003010203600000018029",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h9",name:"Solar Jewel",puzzle:"000003597203000406000006000030000020005309080000007000007018009080000002060030050",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h10",name:"Obsidian Wanderer",puzzle:"000030000701052000600000079000090500509060000047003000000000043000605080020001750",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-x1",name:"Emerald Jungle",puzzle:"204060050000900082700000030007200004900070000400600015603420000000010000000000028",difficulty:"Expert",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-x2",name:"Frozen Riddle",puzzle:"007040000010005040000830000020000300009000001700200800000090210500061084040070003",difficulty:"Expert",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-x3",name:"Dazzling Flame",puzzle:"035709020029030000000008600000000008350000004000007130143800000000090000700100000",difficulty:"Expert",clueCount:24,author:"AI",isAI:true},
+  {id:"ai-x4",name:"Neon Eclipse",puzzle:"250000000007062000000890060094000001500030000000000920000008100100000004600024007",difficulty:"Expert",clueCount:23,author:"AI",isAI:true},
+  {id:"ai-x5",name:"Whirling Wanderer",puzzle:"000500000000006002010000805020000003004010080605049010700000000030004071000003049",difficulty:"Expert",clueCount:24,author:"AI",isAI:true},
+  {id:"ai-x6",name:"Dusty Riddle",puzzle:"030200600010030000006070004500007200300000809020005003105000000040006020680003010",difficulty:"Expert",clueCount:26,author:"AI",isAI:true},
+  {id:"ai-x7",name:"Frozen Inferno",puzzle:"001000900000014860000020050020000000087000046094200070700308000000100423000000600",difficulty:"Expert",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-x8",name:"Kinetic Jewel",puzzle:"091000080600000702003060400000002600020040008009006014100007005000800000008000049",difficulty:"Expert",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-x9",name:"Emerald Enigma",puzzle:"000004090003000040008970000800100900090025810000040605600702000000000007020006031",difficulty:"Expert",clueCount:26,author:"AI",isAI:true},
+  {id:"ai-x10",name:"Golden Frontier",puzzle:"700036040000004803010208000070000020800402710009000006090500001000300060007000004",difficulty:"Expert",clueCount:26,author:"AI",isAI:true}
+];
+
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function isValid(g,r,c,n){for(let i=0;i<9;i++)if(g[r][i]===n||g[i][c]===n)return false;const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let rr=br;rr<br+3;rr++)for(let cc=bc;cc<bc+3;cc++)if(g[rr][cc]===n)return false;return true;}
+function findEmpty(g){for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(g[r][c]===0)return[r,c];return null;}
+function solveFill(g){const pos=findEmpty(g);if(!pos)return true;const[r,c]=pos;for(const n of shuffle([1,2,3,4,5,6,7,8,9])){if(isValid(g,r,c,n)){g[r][c]=n;if(solveFill(g))return true;g[r][c]=0;}}return false;}
+function countSols(g,limit=2){const pos=findEmpty(g);if(!pos)return 1;const[r,c]=pos;let count=0;for(let n=1;n<=9;n++){if(isValid(g,r,c,n)){g[r][c]=n;count+=countSols(g,limit);g[r][c]=0;if(count>=limit)return count;}}return count;}
+function generateSolution(){const g=Array.from({length:9},()=>Array(9).fill(0));solveFill(g);return g;}
+function createPuzzle(sol,difficulty){const targets={easy:38,medium:30,hard:25,expert:21};const target=targets[difficulty]??30;const p=sol.map(r=>[...r]);let clues=81;for(const pos of shuffle([...Array(81).keys()])){if(clues<=target)break;const r=Math.floor(pos/9),c=pos%9,bak=p[r][c];p[r][c]=0;if(countSols(p.map(row=>[...row]))!==1)p[r][c]=bak;else clues--;}return p;}
+
+function isGiven(r,c){return puzzle[r][c]!==0;}
+function key(r,c){return r+','+c;}
+function parseKey(k){const p=k.split(',');return[+p[0],+p[1]];}
+function hasConflict(r,c){const n=board[r][c];if(!n)return false;for(let i=0;i<9;i++){if(i!==c&&board[r][i]===n)return true;if(i!==r&&board[i][c]===n)return true;}const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let rr=br;rr<br+3;rr++)for(let cc=bc;cc<bc+3;cc++)if((rr!==r||cc!==c)&&board[rr][cc]===n)return true;return false;}
+function noteConflicts(r,c,n){for(let i=0;i<9;i++){if(board[r][i]===n)return true;if(board[i][c]===n)return true;}const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let rr=br;rr<br+3;rr++)for(let cc=bc;cc<bc+3;cc++)if(board[rr][cc]===n)return true;return false;}
+function isMistake(r,c){return board[r][c]!==0&&!isGiven(r,c)&&board[r][c]!==solution[r][c];}
+
+function snapshot(){return{board:board.map(r=>[...r]),notes:notes.map(r=>r.map(c=>({corner:new Set(c.corner),center:new Set(c.center)}))),cellColor:cellColor.map(r=>[...r])};}
+function saveUndo(){undoStack.push(snapshot());if(undoStack.length>120)undoStack.shift();redoStack=[];}
+window.undoMove=function(){if(!undoStack.length)return;redoStack.push(snapshot());const s=undoStack.pop();board=s.board;notes=s.notes;cellColor=s.cellColor;render();}
+window.redoMove=function(){if(!redoStack.length)return;undoStack.push(snapshot());const s=redoStack.pop();board=s.board;notes=s.notes;cellColor=s.cellColor;render();}
+
+function selectCell(r,c,additive){
+  if(additive){const k=key(r,c);if(multiSel.has(k)&&multiSel.size>1)multiSel.delete(k);else{multiSel.add(k);selected={row:r,col:c};}}
+  else{selected={row:r,col:c};multiSel=new Set([key(r,c)]);}
+  render();
+}
+
+function removePeerNote(r,c,num){
+  for(let i=0;i<9;i++){notes[r][i].corner.delete(num);notes[r][i].center.delete(num);notes[i][c].corner.delete(num);notes[i][c].center.delete(num);}
+  const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;
+  for(let rr=br;rr<br+3;rr++)for(let cc=bc;cc<bc+3;cc++){notes[rr][cc].corner.delete(num);notes[rr][cc].center.delete(num);}
+}
+
+window.inputNumber=function(num){
+  if(!multiSel.size||gameWon)return;
+  saveUndo();let changed=false;
+  for(const k of multiSel){
+    const[r,c]=parseKey(k);
+    if(inputMode==='digit'){
+      if(isGiven(r,c))continue;changed=true;
+      if(board[r][c]===num){board[r][c]=0;}
+      else{if(num!==solution[r][c])mistakeCount++;board[r][c]=num;notes[r][c].corner.clear();notes[r][c].center.clear();removePeerNote(r,c,num);}
+    } else if(inputMode==='corner'){
+      if(board[r][c]!==0)continue;changed=true;
+      if(notes[r][c].corner.has(num))notes[r][c].corner.delete(num);else notes[r][c].corner.add(num);
+    } else if(inputMode==='center'){
+      if(board[r][c]!==0)continue;changed=true;
+      if(notes[r][c].center.has(num))notes[r][c].center.delete(num);else notes[r][c].center.add(num);
+    } else if(inputMode==='color'){
+      changed=true;cellColor[r][c]=cellColor[r][c]===activeColor?null:activeColor;
+    }
+  }
+  if(!changed)undoStack.pop();
+  checkWin();render();
+}
+
+function applyColor(color){
+  if(!multiSel.size)return;saveUndo();
+  for(const k of multiSel){const[r,c]=parseKey(k);cellColor[r][c]=color;}
+  render();
+}
+
+window.eraseCell=function(){
+  if(!multiSel.size||gameWon)return;saveUndo();let changed=false;
+  for(const k of multiSel){const[r,c]=parseKey(k);if(isGiven(r,c))continue;changed=true;board[r][c]=0;notes[r][c].corner.clear();notes[r][c].center.clear();}
+  if(!changed)undoStack.pop();render();
+}
+
+window.clearColors=function(){saveUndo();cellColor=Array.from({length:9},()=>Array(9).fill(null));render();}
+
+function checkWin(){
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(board[r][c]!==solution[r][c])return;
+  gameWon=true;stopTimer();setTimeout(()=>showWin(),350);
+}
+
+function showWin(){
+  const diff=currentDifficulty;
+  document.getElementById('winStats').innerHTML='<strong>Difficulty:</strong> '+diff[0].toUpperCase()+diff.slice(1)+'<br><strong>By:</strong> '+currentPuzzleAuthor+'<br><strong>Time:</strong> '+fmtTime(seconds)+'<br><strong>Mistakes:</strong> '+mistakeCount;
+  document.getElementById('winSaveMsg').classList.remove('show');
+  document.getElementById('winOverlay').classList.add('show');
+  setupWinRatingUI();
+  saveSolve(diff,seconds,mistakeCount);
+}
+
+window.closeWin=function(){document.getElementById('winOverlay').classList.remove('show');}
+function fmtTime(s){return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+
+function updateWinStarButtons(){
+  document.querySelectorAll('.star-btn').forEach(btn=>{
+    const value=parseInt(btn.dataset.value)||0;
+    btn.classList.toggle('on',value<=selectedWinRating);
+    btn.textContent=value<=selectedWinRating?'★':'☆';
+  });
+}
+
+function setWinRatingMessage(msg){
+  const el=document.getElementById('winRatingMsg');
+  if(el) el.textContent=msg||'';
+}
+
+async function setupWinRatingUI(){
+  const wrap=document.getElementById('winRatingWrap');
+  const stars=document.getElementById('winStars');
+  if(!wrap||!stars) return;
+  if(!currentUser||!currentPuzzleId||currentPuzzleIsAI){
+    wrap.style.display='none';
+    return;
+  }
+  wrap.style.display='';
+  stars.innerHTML='';
+  selectedWinRating=0;
+  currentUserExistingRating=null;
+  setWinRatingMessage('');
+  for(let i=1;i<=5;i++){
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='star-btn';
+    b.dataset.value=String(i);
+    b.textContent='☆';
+    b.addEventListener('click',()=>{ selectedWinRating=i; updateWinStarButtons(); });
+    stars.appendChild(b);
+  }
+  try{
+    const userRatingRef=doc(db,'users',currentUser.uid,'puzzleRatings',currentPuzzleId);
+    const snap=await getDoc(userRatingRef);
+    if(snap.exists()){
+      const val=parseInt(snap.data()?.rating)||0;
+      if(val>=1&&val<=5){
+        currentUserExistingRating=val;
+        selectedWinRating=val;
+        updateWinStarButtons();
+        setWinRatingMessage('Your previous rating is loaded.');
+      }
+    }
+  }catch(_e){
+    setWinRatingMessage('Could not load previous rating.');
+  }
+}
+
+async function submitWinRating(){
+  if(!currentUser){ setWinRatingMessage('Sign in to rate puzzles.'); return; }
+  if(!currentPuzzleId||currentPuzzleIsAI){ setWinRatingMessage('Rating is available for community puzzles.'); return; }
+  if(selectedWinRating<1||selectedWinRating>5){ setWinRatingMessage('Pick 1–5 stars first.'); return; }
+
+  const saveBtn=document.getElementById('winRatingSaveBtn');
+  if(saveBtn) saveBtn.disabled=true;
+  setWinRatingMessage('Saving rating...');
+  try{
+    const puzzleRef=doc(db,'puzzles',currentPuzzleId);
+    const userRatingRef=doc(db,'users',currentUser.uid,'puzzleRatings',currentPuzzleId);
+    const prior=currentUserExistingRating;
+    let appliedAvg=null;
+    let appliedCount=0;
+    await runTransaction(db,async(tx)=>{
+      const psnap=await tx.get(puzzleRef);
+      if(!psnap.exists()) throw new Error('Puzzle not found');
+      const pdata=psnap.data()||{};
+      const sum=Number(pdata.ratingSum)||0;
+      const count=Number(pdata.ratingCount)||0;
+      let newSum=sum;
+      let newCount=count;
+      if(prior&&prior>=1&&prior<=5){
+        newSum=sum-prior+selectedWinRating;
+      } else {
+        newSum=sum+selectedWinRating;
+        newCount=count+1;
+      }
+      const newAvg=newCount>0?Number((newSum/newCount).toFixed(2)):null;
+      appliedAvg=newAvg;
+      appliedCount=newCount;
+      tx.update(puzzleRef,{ratingSum:newSum,ratingCount:newCount,ratingAvg:newAvg});
+      tx.set(userRatingRef,{rating:selectedWinRating,updatedAt:serverTimestamp(),puzzleId:currentPuzzleId},{merge:true});
+    });
+    currentUserExistingRating=selectedWinRating;
+    currentPuzzleRatingAvg=appliedAvg;
+    currentPuzzleRatingCount=appliedCount;
+    updatePuzzleNameDisplay();
+    savePuzzleState();
+    setWinRatingMessage('Rating saved. Thanks!');
+  }catch(err){
+    setWinRatingMessage('Rating failed: '+(err&&err.message?err.message:'Unknown error'));
+  }finally{
+    if(saveBtn) saveBtn.disabled=false;
+  }
+}
+
+window.showHint=function(){
+  if(gameWon)return;
+  const wrong=[];
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!isGiven(r,c)&&board[r][c]!==solution[r][c])wrong.push([r,c]);
+  if(!wrong.length)return;
+  const[r,c]=wrong[Math.floor(Math.random()*wrong.length)];
+  saveUndo();board[r][c]=solution[r][c];notes[r][c].corner.clear();notes[r][c].center.clear();
+  removePeerNote(r,c,solution[r][c]);selected={row:r,col:c};multiSel=new Set([key(r,c)]);
+  checkWin();render();
+}
+
+window.setMode=function(mode){
+  inputMode=mode;
+  ['digit','corner','center','color'].forEach(m=>{document.getElementById('tab-'+m).classList.toggle('active',m===mode);});
+  document.getElementById('colorCard').style.display=mode==='color'?'':'none';
+  const colors={digit:'var(--border)',corner:'#d97706',center:'#7c3aed',color:'#16a34a'};
+  document.getElementById('modeBar').style.borderColor=colors[mode];
+}
+
+window.toggleConflicts=function(){showConflicts=!showConflicts;document.getElementById('conflictsBtn').classList.toggle('on',showConflicts);render();}
+window.toggleMistakes=function(){showMistakes=!showMistakes;document.getElementById('mistakesBtn').classList.toggle('on',showMistakes);render();}
+
+function startTimer(){if(timerInterval||timerPaused)return;timerInterval=setInterval(()=>{seconds++;updateTimer();},1000);}
+function stopTimer(){clearInterval(timerInterval);timerInterval=null;}
+function updateTimer(){
+  const t=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
+  document.getElementById('timer').textContent=t;
+  const mob=document.getElementById('mobileTimer');
+  if(mob)mob.textContent=t;
+}
+
+window.togglePauseTimer=function(){
+  if(gameWon)return;
+  const btn=document.getElementById('pauseBtn');
+  const mobBtn=document.getElementById('mobilePauseBtn');
+  timerPaused=!timerPaused;
+  if(timerPaused){
+    stopTimer();
+    if(btn){btn.textContent='▶️ Resume';btn.classList.add('btn-primary');}
+    if(mobBtn)mobBtn.textContent='▶';
+  } else {
+    if(!timerInterval)startTimer();
+    if(btn){btn.textContent='⏸️ Pause';btn.classList.remove('btn-primary');}
+    if(mobBtn)mobBtn.textContent='⏸';
+  }
+}
+
+const CORNER_SLOTS=['cn-tl','cn-tc','cn-tr','cn-ml','cn-mr','cn-bl','cn-bc','cn-br'];
+let saveDelay;
+
+function render(){renderBoard();renderGameConstraints();updateNumpadHighlight();bindBoardTouch();clearTimeout(saveDelay);saveDelay=setTimeout(()=>savePuzzleState(),500);}
+
+function applyGameBoardBackground(){
+  const boardEl=document.getElementById('board');
+  if(!boardEl) return;
+  if(currentPuzzleBackgroundImage){
+    const safeUrl=currentPuzzleBackgroundImage.replace(/\)/g,'\\)');
+    boardEl.style.setProperty('--board-bg-image',`url("${safeUrl}")`);
+    boardEl.classList.add('has-background');
+  } else {
+    boardEl.style.removeProperty('--board-bg-image');
+    boardEl.classList.remove('has-background');
+  }
+}
+
+// ── Constraint rendering for game view ──
+let gameParsedConstraints = null;
+
+function keyToRC(k){ const m=k.match(/R(\d+)C(\d+)/); return m?[+m[1]-1,+m[2]-1]:null; }
+
+function svgEl(tag,attrs){
+  const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const[k,v] of Object.entries(attrs)) el.setAttribute(k.replace(/([A-Z])/g,m=>'-'+m.toLowerCase()),v);
+  return el;
+}
+
+function renderGameConstraints(){
+  const svg=document.getElementById('constraintSvg'); if(!svg) return;
+  svg.innerHTML='';
+  const GC=gameParsedConstraints; if(!GC) return;
+  const boardEl=document.getElementById('board');
+  if(!boardEl.offsetWidth) return;
+  const W=boardEl.offsetWidth, H=boardEl.offsetHeight, cw=W/9, ch=H/9;
+
+  // Diagonals
+  if(GC.globals&&GC.globals.diagonalpos) svg.appendChild(svgEl('line',{x1:0,y1:H,x2:W,y2:0,stroke:'#6366f1',strokeWidth:1.5,opacity:.4,strokeDasharray:'6 3'}));
+  if(GC.globals&&GC.globals.diagonalneg) svg.appendChild(svgEl('line',{x1:0,y1:0,x2:W,y2:H,stroke:'#6366f1',strokeWidth:1.5,opacity:.4,strokeDasharray:'6 3'}));
+
+  // Extra regions
+  (GC.extraRegions||[]).forEach(r=>gameDrawCage(svg,r.cells,'#f59e0b','#fef3c7',.25,cw,ch,false,''));
+  // Killer cages
+  (GC.killerCages||[]).forEach(c=>gameDrawCage(svg,c.cells,'#374151','none',0,cw,ch,true,c.value));
+
+  // Thermometers
+  (GC.thermometers||[]).forEach(t=>{
+    if(!t.cells||t.cells.length<1) return;
+    if(t.cells.length>=2){
+      const pts=t.cells.map(k=>{ const rc=keyToRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
+      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#9ca3af',strokeWidth:cw*.28,strokeLinecap:'round',strokeLinejoin:'round'}));
+    }
+    const rc=keyToRC(t.cells[0]); if(!rc) return;
+    svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.33,fill:'#9ca3af',stroke:'#6b7280',strokeWidth:1.5}));
+  });
+
+  // Arrows
+  (GC.arrows||[]).forEach(a=>{
+    const line=a.lines&&a.lines[0]; if(!line||line.length<2) return;
+    const brc=keyToRC((a.bulb&&a.bulb[0])||line[0]);
+    if(brc) svg.appendChild(svgEl('circle',{cx:brc[1]*cw+cw/2,cy:brc[0]*ch+ch/2,r:cw*.33,fill:'none',stroke:'#374151',strokeWidth:2}));
+    const pts=line.map(k=>{ const rc=keyToRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
+    if(pts.length>=2){
+      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#374151',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'}));
+      const last=keyToRC(line[line.length-1]),prev=keyToRC(line[line.length-2]);
+      if(last&&prev){
+        const ang=Math.atan2((last[0]-prev[0])*ch,(last[1]-prev[1])*cw);
+        const tx=last[1]*cw+cw/2,ty=last[0]*ch+ch/2,hl=cw*.28;
+        svg.appendChild(svgEl('polygon',{points:`${tx},${ty} ${tx-hl*Math.cos(ang-Math.PI/6)},${ty-hl*Math.sin(ang-Math.PI/6)} ${tx-hl*Math.cos(ang+Math.PI/6)},${ty-hl*Math.sin(ang+Math.PI/6)}`,fill:'#374151'}));
+      }
+    }
+  });
+
+  // Lines
+  const drawLine=(cells,color,width)=>{ if(!cells||cells.length<2) return; const pts=cells.map(k=>{ const rc=keyToRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean); svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:color,strokeWidth:width,strokeLinecap:'round',strokeLinejoin:'round',opacity:.85})); };
+  (GC.renbans||[]).forEach(l=>drawLine(l.cells,'#7c3aed',cw*.17));
+  (GC.whispers||[]).forEach(l=>drawLine(l.cells,'#22c55e',cw*.17));
+  (GC.palindromes||[]).forEach(l=>drawLine(l.cells,'#f59e0b',cw*.17));
+  (GC.betweens||[]).forEach(l=>{
+    drawLine(l.cells,'#0ea5e9',cw*.13);
+    [l.cells[0],l.cells[l.cells.length-1]].forEach(k=>{ const rc=keyToRC(k); if(!rc) return; svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.27,fill:'white',stroke:'#0ea5e9',strokeWidth:2})); });
+  });
+
+  // Chips below board
+  const chipsEl=document.getElementById('constraintChips');
+  if(chipsEl){
+    const items=[];
+    if((GC.thermometers||[]).length) items.push(`🌡️ Thermo ×${GC.thermometers.length}`);
+    if((GC.arrows||[]).length) items.push(`➡️ Arrow ×${GC.arrows.length}`);
+    if((GC.killerCages||[]).length) items.push(`🔢 Killer ×${GC.killerCages.length}`);
+    if((GC.renbans||[]).length) items.push(`〰️ Renban ×${GC.renbans.length}`);
+    if((GC.whispers||[]).length) items.push(`🤫 Whisper ×${GC.whispers.length}`);
+    if((GC.palindromes||[]).length) items.push(`↔️ Palindrome ×${GC.palindromes.length}`);
+    if((GC.betweens||[]).length) items.push(`⟷ Between ×${GC.betweens.length}`);
+    if((GC.extraRegions||[]).length) items.push(`🔷 Extra ×${GC.extraRegions.length}`);
+    const glabels={antiknight:'♞ Anti-knight',antiking:'♚ Anti-king',nonconsecutive:'≠± Non-consec.',diagonalpos:'╱ Diag+',diagonalneg:'╲ Diag−',disjoint:'⊞ Disjoint'};
+    Object.entries(GC.globals||{}).forEach(([k,v])=>{ if(v) items.push(glabels[k]||k); });
+    chipsEl.innerHTML=items.map(t=>`<span class="cchip">${t}</span>`).join('');
+  }
+}
+
+function gameDrawCage(svg,cells,stroke,fill,fillOp,cw,ch,dashed,label){
+  if(!cells||!cells.length) return;
+  const cellSet=new Set(cells);
+  if(fill!=='none') cells.forEach(k=>{ const rc=keyToRC(k); if(!rc) return; const[r,c]=rc; svg.appendChild(svgEl('rect',{x:c*cw+2,y:r*ch+2,width:cw-4,height:ch-4,fill:fill,'fill-opacity':fillOp,rx:3})); });
+  const pad=3.5;
+  cells.forEach(k=>{
+    const rc=keyToRC(k); if(!rc) return; const[r,c]=rc;
+    const x0=c*cw+pad,y0=r*ch+pad,x1=x0+cw-pad*2,y1=y0+ch-pad*2;
+    [{x1:x0,y1:y0,x2:x1,y2:y0,nr:r-1,nc:c},{x1:x0,y1:y1,x2:x1,y2:y1,nr:r+1,nc:c},{x1:x0,y1:y0,x2:x0,y2:y1,nr:r,nc:c-1},{x1:x1,y1:y0,x2:x1,y2:y1,nr:r,nc:c+1}].forEach(e=>{
+      const nk=`R${e.nr+1}C${e.nc+1}`;
+      if(!cellSet.has(nk)){ const ln=svgEl('line',{x1:e.x1,y1:e.y1,x2:e.x2,y2:e.y2,stroke,strokeWidth:1.8}); if(dashed) ln.setAttribute('stroke-dasharray','3.5 2'); svg.appendChild(ln); }
+    });
+  });
+  if(label){ const rc=keyToRC(cells[0]); if(!rc) return; const[fr,fc]=rc; const txt=svgEl('text',{x:fc*cw+pad+2,y:fr*ch+pad+9,fill:stroke,'font-size':Math.max(8,cw*.22),'font-weight':'700','font-family':'Segoe UI,system-ui,sans-serif'}); txt.textContent=label; svg.appendChild(txt); }
+}
+
+
+
+function renderBoard(){
+  const boardEl=document.getElementById('board');boardEl.innerHTML='';
+  const selNum=selected?board[selected.row][selected.col]:0;
+  for(let r=0;r<9;r++){
+    const rowEl=document.createElement('div');rowEl.className='board-row';
+    for(let c=0;c<9;c++){
+      const cell=document.createElement('div');const cls=['cell'];
+      if(c===2||c===5)cls.push('box-right');
+      if(r===2||r===5)cls.push('box-bottom');
+      const k=key(r,c);
+      const isSel=multiSel.has(k)&&selected&&selected.row===r&&selected.col===c;
+      const isMulti=multiSel.has(k)&&!isSel;
+      const isPeer=selected&&!multiSel.has(k)&&(selected.row===r||selected.col===c||(Math.floor(selected.row/3)===Math.floor(r/3)&&Math.floor(selected.col/3)===Math.floor(c/3)));
+      const isSameVal=selNum&&board[r][c]===selNum&&!multiSel.has(k);
+      if(isSel)cls.push('selected');else if(isMulti)cls.push('multi-sel');else if(isSameVal)cls.push('same-val');else if(isPeer)cls.push('peer');
+      const val=board[r][c];
+      if(isGiven(r,c)){cls.push('given');}else if(val){cls.push('filled');if(showConflicts&&hasConflict(r,c))cls.push('conflict');else if(showMistakes&&isMistake(r,c))cls.push('mistake');}
+      // Odd/even markers from constraints
+      if(gameParsedConstraints){
+        const k2=`R${r+1}C${c+1}`;
+        if((gameParsedConstraints.oddCells||[]).includes(k2)) cls.push('odd-cell');
+        if((gameParsedConstraints.evenCells||[]).includes(k2)) cls.push('even-cell');
+      }
+      cell.className=cls.join(' ');
+      const col=cellColor[r][c];
+      if(col){const cd=document.createElement('div');cd.className='cell-color';cd.style.background=col+'66';cell.appendChild(cd);}
+      if(val){const s=document.createElement('span');s.className='cell-number';s.textContent=val;cell.appendChild(s);}
+      else{
+        const cen=notes[r][c].center;
+        if(cen.size>0){const div=document.createElement('div');div.className='centre-notes';[...cen].sort((a,b)=>a-b).forEach(n=>{const s=document.createElement('span');s.className='cn-digit'+(showConflicts&&noteConflicts(r,c,n)?' note-conflict':'');s.textContent=n;div.appendChild(s);});cell.appendChild(div);}
+        const cor=notes[r][c].corner;
+        if(cor.size>0){const div=document.createElement('div');div.className='corner-notes';[...cor].sort((a,b)=>a-b).forEach((n,i)=>{const s=document.createElement('span');s.className=(CORNER_SLOTS[i]||'cn-br')+(showConflicts&&noteConflicts(r,c,n)?' note-conflict':'');s.textContent=n;div.appendChild(s);});cell.appendChild(div);}
+      }
+      cell.dataset.row=r;cell.dataset.col=c;
+      cell.addEventListener('mousedown',e=>{e.preventDefault();isDragging=true;selectCell(r,c,e.shiftKey||e.ctrlKey||e.metaKey);});
+      cell.addEventListener('mouseenter',e=>{if(isDragging&&e.buttons>0){multiSel.add(key(r,c));render();}});
+      rowEl.appendChild(cell);
+    }
+    boardEl.appendChild(rowEl);
+  }
+  applyGameBoardBackground();
+}
+
+function buildNumpad(){
+  const np=document.getElementById('numpad');
+  for(let n=1;n<=9;n++){
+    const btn=document.createElement('button');btn.className='num-btn';btn.id='num-'+n;btn.textContent=n;
+    btn.addEventListener('click',()=>inputNumber(n));np.appendChild(btn);
+  }
+  const eb=document.createElement('button');eb.className='erase-btn';eb.textContent='\u232B  Erase';
+  eb.addEventListener('click',()=>window.eraseCell());np.appendChild(eb);
+}
+
+window.updateMobileModes=function(){
+  ['digit','corner','center','color'].forEach(m=>{
+    const btn=document.getElementById('mob-tab-'+m);
+    if(btn)btn.classList.toggle('active',m===inputMode);
+  });
+}
+
+let mobileColorPage=0;
+
+window.updateMobileColorView=function(cycle){
+  const isColor=inputMode==='color';
+  const nr1=document.getElementById('mobileNumpadRow1');
+  const nr2=document.getElementById('mobileNumpadRow2');
+  const nr3=document.getElementById('mobileNumpadRow3');
+  const cr1=document.getElementById('mobileColorRow1');
+  const cr2=document.getElementById('mobileColorRow2');
+  const cr3=document.getElementById('mobileColorRow3');
+  if(!nr1||!nr2||!nr3||!cr1||!cr2||!cr3)return;
+  if(isColor&&cycle)mobileColorPage=(mobileColorPage+1)%4;
+  [nr1,nr2,nr3].forEach(r=>{r.style.display=isColor?'none':'contents';});
+  [cr1,cr2,cr3].forEach(r=>{r.style.display=isColor?'contents':'none';});
+  if(isColor)renderMobileColorPage();
+}
+
+function renderMobileColorPage(){
+  const rows=['mobileColorRow1','mobileColorRow2','mobileColorRow3'].map(id=>document.getElementById(id));
+  if(rows.some(r=>!r))return;
+  rows.forEach(r=>r.innerHTML='');
+  const start=mobileColorPage*9;
+  const pageColors=PALETTE.slice(start,start+9);
+  rows.forEach((row,rowIdx)=>{
+    const rowColors=pageColors.slice(rowIdx*3,rowIdx*3+3);
+    rowColors.forEach(hex=>{
+      const sw=document.createElement('button');
+      sw.className='mobile-num-btn mobile-color-swatch'+(hex===activeColor?' active':'');
+      sw.style.background=hex;
+      sw.style.border=hex===activeColor?'3px solid #1f2937':'3px solid transparent';
+      sw.dataset.color=hex;
+      sw.ontouchend=(e)=>{e.preventDefault();activeColor=hex;applyColor(hex);updateMobileSwatchHighlight(hex);};
+      sw.onclick=()=>{activeColor=hex;applyColor(hex);updateMobileSwatchHighlight(hex);};
+      row.appendChild(sw);
+    });
+  });
+}
+
+function updateMobileSwatchHighlight(hex){
+  ['mobileColorRow1','mobileColorRow2','mobileColorRow3'].forEach(id=>{
+    const row=document.getElementById(id);if(!row)return;
+    row.querySelectorAll('.mobile-color-swatch').forEach(s=>{
+      const active=s.dataset.color===hex;
+      s.classList.toggle('active',active);
+      s.style.border=active?'3px solid #1f2937':'3px solid transparent';
+    });
+  });
+}
+
+window.mobileErase=function(){
+  if(!multiSel.size||gameWon)return;saveUndo();let changed=false;
+  for(const k of multiSel){
+    const[r,c]=parseKey(k);if(isGiven(r,c))continue;
+    if(inputMode==='color'){if(cellColor[r][c]!==null){cellColor[r][c]=null;changed=true;}}
+    else if(inputMode==='corner'){if(notes[r][c].corner.size>0){notes[r][c].corner.clear();changed=true;}}
+    else if(inputMode==='center'){if(notes[r][c].center.size>0){notes[r][c].center.clear();changed=true;}}
+    else{if(board[r][c]!==0||notes[r][c].corner.size>0||notes[r][c].center.size>0){board[r][c]=0;notes[r][c].corner.clear();notes[r][c].center.clear();changed=true;}}
+  }
+  if(!changed)undoStack.pop();render();
+}
+
+function updateNumpadHighlight(){
+  const selNum=selected?board[selected.row][selected.col]:0;
+  for(let n=1;n<=9;n++){const btn=document.getElementById('num-'+n);if(btn)btn.classList.toggle('active-num',selNum!==0&&n===selNum);}
+}
+
+function buildPalette(){
+  const pal=document.getElementById('colorPalette');
+  const ns=document.createElement('div');ns.className='color-swatch none-sw';ns.title='Clear color';ns.textContent='\u2715';
+  ns.addEventListener('click',()=>applyColor(null));pal.appendChild(ns);
+  PALETTE.forEach(hex=>{
+    const sw=document.createElement('div');sw.className='color-swatch';sw.style.background=hex;sw.title=hex;sw.dataset.color=hex;
+    sw.addEventListener('click',()=>{activeColor=hex;pal.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active');if(multiSel.size)applyColor(hex);});
+    pal.appendChild(sw);
+  });
+  pal.querySelectorAll('.color-swatch:not(.none-sw)')[0]?.classList.add('active');
+}
+
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){window.undoMove();return;}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){window.redoMove();return;}
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const modeMap={d:'digit',r:'corner',e:'center',l:'color'};
+  const m=modeMap[e.key.toLowerCase()];if(m){window.setMode(m);return;}
+  if(e.key>='1'&&e.key<='9'){inputNumber(+e.key);return;}
+  if(e.key==='0'||e.key==='Backspace'||e.key==='Delete'){window.eraseCell();return;}
+  if(!selected)return;
+  const moves={ArrowUp:()=>{selected.row=Math.max(0,selected.row-1);},ArrowDown:()=>{selected.row=Math.min(8,selected.row+1);},ArrowLeft:()=>{selected.col=Math.max(0,selected.col-1);},ArrowRight:()=>{selected.col=Math.min(8,selected.col+1);}};
+  if(moves[e.key]){e.preventDefault();moves[e.key]();if(!e.shiftKey)multiSel=new Set([key(selected.row,selected.col)]);else multiSel.add(key(selected.row,selected.col));render();}
+});
+
+document.addEventListener('mouseup',()=>{isDragging=false;});
+
+// ── TOUCH: all handled on the board element, pure coordinate math ──
+// Attach once after first render via a flag so it survives DOM rebuilds
+let boardTouchBound=false;
+function bindBoardTouch(){
+  if(boardTouchBound)return;
+  boardTouchBound=true;
+  const boardEl=document.getElementById('board');
+
+  function getCellFromTouch(touch){
+    const rect=boardEl.getBoundingClientRect();
+    const x=touch.clientX-rect.left;
+    const y=touch.clientY-rect.top;
+    const col=Math.floor(x/(rect.width/9));
+    const row=Math.floor(y/(rect.height/9));
+    if(row<0||row>8||col<0||col>8)return null;
+    return{row,col};
+  }
+
+  boardEl.addEventListener('touchstart',(e)=>{
+    e.preventDefault();
+    isDragging=true;
+    const pos=getCellFromTouch(e.touches[0]);
+    if(!pos)return;
+    selected={row:pos.row,col:pos.col};
+    multiSel=new Set([key(pos.row,pos.col)]);
+    render();
+  },{passive:false});
+
+  boardEl.addEventListener('touchmove',(e)=>{
+    e.preventDefault();
+    if(!isDragging)return;
+    const pos=getCellFromTouch(e.touches[0]);
+    if(!pos)return;
+    const k=key(pos.row,pos.col);
+    if(!multiSel.has(k)){
+      multiSel.add(k);
+      selected={row:pos.row,col:pos.col};
+      // Directly update CSS classes — no DOM rebuild during drag
+      boardEl.querySelectorAll('.cell').forEach(el=>{
+        const ek=key(parseInt(el.dataset.row),parseInt(el.dataset.col));
+        if(multiSel.has(ek)){
+          el.classList.remove('peer','same-val');
+          if(!el.classList.contains('selected'))el.classList.add('multi-sel');
+        }
+      });
+    }
+  },{passive:false});
+
+  boardEl.addEventListener('touchend',()=>{isDragging=false;render();});
+  boardEl.addEventListener('touchcancel',()=>{isDragging=false;render();});
+}
+
+document.addEventListener('mouseup',()=>{isDragging=false;});
+
+// ── Mobile Settings Panel ──
+function openMobileSettings(){
+  syncMobileSettingsToggles();
+  document.getElementById('mobileSettingsOverlay').classList.add('open');
+  const panel=document.getElementById('mobileSettingsPanel');
+  panel.getBoundingClientRect(); // force reflow before animating
+  panel.classList.add('open');
+}
+function closeMobileSettings(){
+  document.getElementById('mobileSettingsOverlay').classList.remove('open');
+  document.getElementById('mobileSettingsPanel').classList.remove('open');
+}
+function syncMobileSettingsToggles(){
+  const conflictsOn=document.getElementById('conflictsBtn')?.classList.contains('on');
+  const mistakesOn=document.getElementById('mistakesBtn')?.classList.contains('on');
+  const msC=document.getElementById('msConflictsBtn');
+  const msM=document.getElementById('msMistakesBtn');
+  if(msC){conflictsOn?msC.classList.add('on'):msC.classList.remove('on');}
+  if(msM){mistakesOn?msM.classList.add('on'):msM.classList.remove('on');}
+}
+// Expose to global scope for inline handlers (module scripts are not global)
+window.openMobileSettings = openMobileSettings;
+window.closeMobileSettings = closeMobileSettings;
+window.syncMobileSettingsToggles = syncMobileSettingsToggles;
+
+// Ensure handlers are attached in a Safari-friendly way (some Safari
+// builds ignore inline touch handlers). Attach both touchend and click
+// listeners with preventDefault so the UI reliably opens/closes.
+function setupMobileSettingsHandlers(){
+  const gear=document.getElementById('mobileGearBtn');
+  const overlay=document.getElementById('mobileSettingsOverlay');
+  const closeBtn=document.querySelector('.mobile-settings-close');
+  const msConf=document.getElementById('msConflictsBtn');
+  const msMist=document.getElementById('msMistakesBtn');
+  if(gear){['pointerup','click'].forEach(ev=>gear.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();openMobileSettings();}));}
+  if(overlay){['pointerup','click'].forEach(ev=>overlay.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();closeMobileSettings();}));}
+  if(closeBtn){['pointerup','click'].forEach(ev=>closeBtn.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();closeMobileSettings();}));}
+  if(msConf){['pointerup','click'].forEach(ev=>msConf.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();toggleConflicts();syncMobileSettingsToggles();}));}
+  if(msMist){['pointerup','click'].forEach(ev=>msMist.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();toggleMistakes();syncMobileSettingsToggles();}));}
+  // actions inside panel (hint/erase/clear) close panel after running — ensure they work too
+  document.querySelectorAll('.mobile-settings-action').forEach(btn=>{
+    ['pointerup','click'].forEach(ev=>btn.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation(); /* handler attached inline already */ closeMobileSettings();}));
+  });
+}
+// Call setup after a short delay so DOM is ready (safe for module ordering)
+setTimeout(setupMobileSettingsHandlers,50);
+// Also attach on DOMContentLoaded to be robust across browsers
+document.addEventListener('DOMContentLoaded',setupMobileSettingsHandlers);
+
+// ══════════════════════════════════════════════════════════════
+// ZOOM LOCK — keep the play page completely static on all mobile
+// browsers (Safari, Chrome for iOS, Android Chrome, etc.)
+// ══════════════════════════════════════════════════════════════
+
+// 1. Force-reset any inherited zoom by removing and re-adding the
+//    viewport meta tag. Toggling .content alone is not enough in
+//    Safari when navigating from a page that already had a zoom.
+function resetZoom(){
+  const VIEWPORT='width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover';
+  let mv=document.querySelector('meta[name=viewport]');
+  if(mv){mv.parentNode.removeChild(mv);}
+  mv=document.createElement('meta');
+  mv.name='viewport';
+  mv.content=VIEWPORT;
+  document.head.appendChild(mv);
+}
+
+// Ensure the mobile topbar is shown when the app is in Play mode,
+// and avoid hiding it when the location indicates Play (#play).
+function ensureMobileTopbarVisible(){
+  try{
+    const mb = document.getElementById('mobileTopbar');
+    if(mb){ mb.classList.add('show'); document.body.classList.add('has-mobile-topbar'); }
+  }catch(e){}
+}
+
+function hideMobileTopbarIfNotPlay(){
+  try{
+    if(window.location.hash === '#play') return; // keep topbar when in Play
+    const mb = document.getElementById('mobileTopbar');
+    if(mb){ mb.classList.remove('show'); document.body.classList.remove('has-mobile-topbar'); }
+  }catch(e){}
+}
+
+// 2. Block pinch-zoom via touch (all browsers)
+document.addEventListener('touchmove',function(e){
+  if(e.touches.length>1){e.preventDefault();}
+},{passive:false});
+
+// 3. Block pinch-zoom via Safari gesture events
+document.addEventListener('gesturestart',function(e){e.preventDefault();},{passive:false});
+document.addEventListener('gesturechange',function(e){e.preventDefault();},{passive:false});
+document.addEventListener('gestureend',function(e){e.preventDefault();},{passive:false});
+
+// 4. Block Ctrl+Wheel zoom (desktop Safari / trackpad pinch on Mac)
+document.addEventListener('wheel',function(e){
+  if(e.ctrlKey){e.preventDefault();}
+},{passive:false});
+
+// 5. Block double-tap zoom without swallowing single taps.
+//    Track the last touchstart time; if two starts arrive within
+//    300 ms, prevent the second touchend so the browser never sees
+//    the double-tap that triggers zoom.
+let _lastTouchStart=0;
+document.addEventListener('touchstart',function(e){
+  const now=Date.now();
+  if(now-_lastTouchStart<300&&e.touches.length===1){
+    e.preventDefault(); // kills the zoom-triggering second tap
+  }
+  _lastTouchStart=now;
+},{passive:false});
+
+function savePuzzleState(){
+  try{
+    localStorage.setItem('lastPuzzle',JSON.stringify({
+      puzzle:puzzle.map(r=>[...r]),board:board.map(r=>[...r]),
+      notes:notes.map(r=>r.map(c=>({corner:[...c.corner],center:[...c.center]}))),
+      cellColor:cellColor.map(r=>[...r]),solution:solution.map(r=>[...r]),
+      difficulty:currentDifficulty,author:currentPuzzleAuthor,isAI:currentPuzzleIsAI,
+      puzzleId:currentPuzzleId||'',
+      name:currentPuzzleName,description:currentPuzzleDescription,backgroundImage:currentPuzzleBackgroundImage||'',
+      ratingAvg:currentPuzzleRatingAvg,ratingCount:currentPuzzleRatingCount,
+      seconds:seconds,mistakeCount:mistakeCount
+    }));
+  }catch(e){console.error('Error saving puzzle:',e);}
+}
+
+function unflattenPuzzle(str){
+  if(!str)return Array.from({length:9},()=>Array(9).fill(0));
+  const arr=[];
+  for(let i=0;i<9;i++){const row=[];for(let j=0;j<9;j++)row.push(parseInt(str[i*9+j])||0);arr.push(row);}
+  return arr;
+}
+
+window.startNewGame=function(showIntro=false){
+  document.getElementById('loading').classList.add('show');
+  setTimeout(()=>{
+    gameWon=false;mistakeCount=0;undoStack=[];redoStack=[];selected=null;multiSel=new Set();
+    currentDifficulty='medium';currentPuzzleName='';currentPuzzleId='';currentPuzzleAuthor='AI';currentPuzzleIsAI=true;currentPuzzleDescription='';currentPuzzleBackgroundImage='';
+    currentPuzzleRatingAvg=null;currentPuzzleRatingCount=0;
+    gameParsedConstraints=null;
+    solution=generateSolution();puzzle=createPuzzle(solution,currentDifficulty);board=puzzle.map(r=>[...r]);
+    notes=Array.from({length:9},()=>Array.from({length:9},()=>({corner:new Set(),center:new Set()})));
+    cellColor=Array.from({length:9},()=>Array(9).fill(null));
+    stopTimer();seconds=0;updateTimer();timerPaused=false;
+    const pbtn=document.getElementById('pauseBtn');
+    if(pbtn){pbtn.textContent='⏸️ Pause';pbtn.classList.remove('btn-primary');}
+    updatePuzzleNameDisplay();render();savePuzzleState();
+    if(showIntro){
+      showPreGameOverlay('Start Game',()=>{ startTimer(); render(); savePuzzleState(); });
+    } else {
+      startTimer();render();savePuzzleState();
+    }
+    document.getElementById('loading').classList.remove('show');
+  },30);
+}
+
+window.playLastOrNew=function(){
+  // Always show the mobile topbar when navigating to Play
+  try{document.getElementById('mobileTopbar').classList.add('show');document.body.classList.add('has-mobile-topbar');}catch(e){}
+  const lastPuzzle=localStorage.getItem('lastPuzzle');
+  if(lastPuzzle){
+    try{
+      const p=JSON.parse(lastPuzzle);
+      puzzle=p.puzzle.map(r=>[...r]);board=p.board.map(r=>[...r]);
+      notes=p.notes.map(r=>r.map(c=>({corner:new Set(c.corner),center:new Set(c.center)})));
+      cellColor=p.cellColor.map(r=>[...r]);solution=p.solution.map(r=>[...r]);
+      currentDifficulty=p.difficulty.toLowerCase();currentPuzzleAuthor=p.author;
+      currentPuzzleIsAI=p.isAI;currentPuzzleName=p.name||'';currentPuzzleId=p.puzzleId||'';currentPuzzleDescription=p.description||'';
+      currentPuzzleBackgroundImage=p.backgroundImage||'';
+      currentPuzzleRatingAvg=(typeof p.ratingAvg==='number')?p.ratingAvg:null;
+      currentPuzzleRatingCount=(typeof p.ratingCount==='number')?p.ratingCount:0;
+      seconds=p.seconds||0;mistakeCount=p.mistakeCount||0;
+      gameWon=false;selected=null;multiSel=new Set();
+      document.getElementById('welcomeOverlay').classList.add('hidden');
+      // show mobile topbar when entering play
+      try{document.getElementById('mobileTopbar').classList.add('show');document.body.classList.add('has-mobile-topbar');}catch(e){}
+      resetZoom();
+      updateTimer();updatePuzzleNameDisplay();timerPaused=false;
+      const pbtn=document.getElementById('pauseBtn');
+      if(pbtn){pbtn.textContent='⏸️ Pause';pbtn.classList.remove('btn-primary');}
+      render();
+      showPreGameOverlay('Resume Game',()=>{ startTimer(); render(); savePuzzleState(); });
+    }catch(e){console.error('Error loading last puzzle:',e);window.showSearchOverlay();}
+  } else {
+    // If there's no saved last puzzle, start a new game directly when
+    // user requested Play (e.g., coming from Create/History).
+    window.startNewGame(true);
+  }
+}
+
+window.showMainMenu=function(){
+  document.getElementById('mainMenu').style.display='flex';
+  document.getElementById('searchMenu').style.display='none';
+  hideMobileTopbarIfNotPlay();
+}
+
+window.showSearchOverlay=function(){
+  document.getElementById('welcomeOverlay').classList.remove('hidden');
+  document.getElementById('mainMenu').style.display='none';
+  document.getElementById('searchMenu').style.display='block';
+  hideMobileTopbarIfNotPlay();
+  document.getElementById('searchInput').value='';
+  try{document.getElementById('searchInput').focus();}catch(e){}
+  performSearch();
+}
+
+window.performSearch=async function(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const authorFilter=document.getElementById('authorFilter')?.value||'';
+  const difficultyFilter=document.getElementById('difficultyFilter')?.value||'';
+  const ratingFilter=document.getElementById('ratingFilter')?.value||'';
+  const statusFilter=document.getElementById('statusFilter')?.value||'';
+  const resultsDiv=document.getElementById('searchResults');
+  resultsDiv.innerHTML='<div class="puzzle-empty">Loading puzzles...</div>';
+  try{
+    let completedMap={};let startedMap={};
+    if(currentUser){
+      try{
+        const solvesSnap=await getDocs(collection(db,`users/${currentUser.uid}/solves`));
+        solvesSnap.docs.forEach(d=>{const data=d.data();if(data.puzzleId)completedMap[data.puzzleId]=data;});
+        const startedSnap=await getDocs(collection(db,`users/${currentUser.uid}/started`));
+        startedSnap.docs.forEach(d=>{startedMap[d.id]=d.data();});
+      }catch(e){console.log('Could not fetch puzzle status:',e);}
+    }
+    let allPuzzles=[...DEFAULT_PUZZLES];
+    try{
+      const snap=await getDocs(collection(db,'puzzles'));
+      allPuzzles=allPuzzles.concat(snap.docs.map(d=>({id:d.id,...d.data()})));
+    }catch(e){console.log('Could not fetch Firestore puzzles:',e);}
+    let results=allPuzzles.filter(p=>{
+      if(q.trim()){const ql=q.toLowerCase();if(!p.name.toLowerCase().includes(ql)&&!p.author.toLowerCase().includes(ql))return false;}
+      if(authorFilter){const isAI=p.author==='AI'||p.isAI;if(authorFilter==='AI'&&!isAI)return false;if(authorFilter==='user'&&isAI)return false;}
+      if(difficultyFilter&&!difficultyFilter.includes(p.difficulty))return false;
+      const avg=(typeof p.ratingAvg==='number'&&Number.isFinite(p.ratingAvg))?p.ratingAvg:null;
+      if(ratingFilter==='rated'&&avg==null)return false;
+      if(ratingFilter==='4plus'&&(avg==null||avg<4))return false;
+      if(statusFilter){
+        const isCompleted=completedMap.hasOwnProperty(p.id);const isStarted=startedMap.hasOwnProperty(p.id);
+        const isIncomplete=isStarted&&!isCompleted;const isNotStarted=!isStarted&&!isCompleted;
+        if(statusFilter==='completed'&&!isCompleted)return false;
+        if(statusFilter==='incomplete'&&!isIncomplete)return false;
+        if(statusFilter==='not-started'&&!isNotStarted)return false;
+      }
+      return true;
+    });
+    if(ratingFilter==='top'){
+      results=results.sort((a,b)=>{
+        const ar=(typeof a.ratingAvg==='number'&&Number.isFinite(a.ratingAvg))?a.ratingAvg:-1;
+        const br=(typeof b.ratingAvg==='number'&&Number.isFinite(b.ratingAvg))?b.ratingAvg:-1;
+        if(br!==ar) return br-ar;
+        const ac=(typeof a.ratingCount==='number')?a.ratingCount:0;
+        const bc=(typeof b.ratingCount==='number')?b.ratingCount:0;
+        return bc-ac;
+      });
+    }
+    if(!results.length){resultsDiv.innerHTML='<div class="puzzle-empty">No puzzles found</div>';return;}
+    communityPuzzles=results;
+    resultsDiv.innerHTML=results.map((p,i)=>{
+      const isCompleted=completedMap.hasOwnProperty(p.id);const isStarted=startedMap.hasOwnProperty(p.id);
+      let status='not-started',statusLabel='Not Started';
+      if(isCompleted){status='completed';statusLabel='✓ Completed';}
+      else if(isStarted){status='incomplete';statusLabel='In Progress';}
+      const ratingText=(typeof p.ratingAvg==='number'&&Number.isFinite(p.ratingAvg))
+        ?`★ ${p.ratingAvg.toFixed(1)} (${(typeof p.ratingCount==='number'?p.ratingCount:0)})`
+        :'Unrated';
+      return `<div class="puzzle-card" onclick="window.loadCommunityPuzzle(${i})">
+        <div class="puzzle-info">
+          <div class="puzzle-name">${p.name}</div>
+          <div class="puzzle-author">by ${p.author}</div>
+          <div class="puzzle-meta">${p.difficulty} • ${p.clueCount} clues • ${ratingText}</div>
+        </div>
+        <span class="puzzle-status status-${status}">${statusLabel}</span>
+      </div>`;
+    }).join('');
+  }catch(err){console.error('Search error:',err);resultsDiv.innerHTML='<div class="puzzle-empty">Error searching</div>';}
+}
+
+window.loadCommunityPuzzle=async function(idx){
+  const p=communityPuzzles[idx];
+  const basePuzzle=unflattenPuzzle(p.puzzle);
+  puzzle=basePuzzle.map(r=>[...r]);
+  currentPuzzleAuthor=p.author;currentPuzzleIsAI=p.isAI;currentPuzzleName=p.name||'';currentPuzzleId=p.id||'';currentPuzzleDescription=p.description||'';
+  currentPuzzleBackgroundImage=(typeof p.backgroundImage==='string')?p.backgroundImage:'';
+  currentPuzzleRatingAvg=(typeof p.ratingAvg==='number')?p.ratingAvg:null;
+  currentPuzzleRatingCount=(typeof p.ratingCount==='number')?p.ratingCount:0;
+  // Parse constraints if present
+  try{ gameParsedConstraints=p.constraints?JSON.parse(p.constraints):null; }catch{ gameParsedConstraints=null; }
+  document.getElementById('welcomeOverlay').classList.add('hidden');
+  try{document.getElementById('mobileTopbar').classList.add('show');document.body.classList.add('has-mobile-topbar');}catch(e){}
+  resetZoom();
+  if(currentUser){
+    try{
+      await setDoc(doc(db,'users',currentUser.uid,'started',p.id),{startedAt:new Date().toISOString(),puzzleId:p.id},{merge:true});
+    }catch(e){console.log('Could not save started state:',e);}
+  }
+  currentDifficulty=p.difficulty.toLowerCase();
+  solution=basePuzzle.map(r=>[...r]);solveFill(solution);
+  board=basePuzzle.map(r=>[...r]);
+  notes=Array.from({length:9},()=>Array.from({length:9},()=>({corner:new Set(),center:new Set()})));
+  cellColor=Array.from({length:9},()=>Array(9).fill(null));
+  gameWon=false;undoStack=[];redoStack=[];selected=null;multiSel=new Set();
+  stopTimer();timerPaused=false;
+
+  const saved=getSavedLastPuzzle();
+  const canResume=hasPuzzleProgress(saved,basePuzzle,p.id);
+  if(canResume){
+    board=saved.board.map(r=>[...r]);
+    notes=(saved.notes||[]).map(r=>r.map(c=>({corner:new Set(c.corner||[]),center:new Set(c.center||[])})));
+    if(!notes.length) notes=Array.from({length:9},()=>Array.from({length:9},()=>({corner:new Set(),center:new Set()})));
+    cellColor=(saved.cellColor||[]).map(r=>[...r]);
+    if(!cellColor.length) cellColor=Array.from({length:9},()=>Array(9).fill(null));
+    seconds=saved.seconds||0;
+    mistakeCount=saved.mistakeCount||0;
+  } else {
+    seconds=0;
+    mistakeCount=0;
+  }
+
+  updateTimer();updatePuzzleNameDisplay();
+  const pbtn=document.getElementById('pauseBtn');
+  if(pbtn){pbtn.textContent='⏸️ Pause';pbtn.classList.remove('btn-primary');}
+  render();
+  showPreGameOverlay(canResume?'Resume Game':'Start Game',()=>{ startTimer(); render(); savePuzzleState(); });
+}
+
+buildNumpad();
+buildPalette();
+renderMobileColorPage();
+document.getElementById('preGameStartBtn')?.addEventListener('click',()=>window.beginPreGameSession());
+document.getElementById('winRatingSaveBtn')?.addEventListener('click',submitWinRating);
+new ResizeObserver(()=>renderGameConstraints()).observe(document.getElementById('board'));
+
+function handleInitialHash(){
+  try{
+    if(window.location.hash==='#search'){window.showSearchOverlay();return;}
+    if(window.location.hash==='#play'){playLastOrNew();return;}
+  }catch(e){}
+  window.showMainMenu();
+}
+
+window.addEventListener('hashchange',()=>{
+  if(window.location.hash==='#search')window.showSearchOverlay();
+  else if(window.location.hash==='#play')playLastOrNew();
+  else window.showMainMenu();
+});
+
+handleInitialHash();
+
+// Re-apply mobile topbar on page show (helps when navigating between pages)
+window.addEventListener('pageshow', function(){
+  if(window.location.hash==='#play') ensureMobileTopbarVisible();
+});
+</script>
+</body>
+</html>
