@@ -340,7 +340,7 @@
   <div class="nav-right">
     <span class="nav-user" id="navUser"></span>
     <a href="game.html#play" class="nav-btn" id="playNavBtn">🎮 Play</a>
-    <a href="game.html#search" class="nav-btn" id="searchNavBtn" onclick="event.preventDefault();window.showSearchOverlay();">🔍 Explore</a>
+    <a href="explore.html" class="nav-btn" id="searchNavBtn">🔍 Explore</a>
     <a href="create.html" class="nav-btn" id="createNavBtn">✏️ Create</a>
     <a href="history.html" class="nav-btn" id="historyNavBtn">📊 History</a>
     <button class="nav-btn" id="signOutBtn" onclick="handleSignOut()">Sign Out</button>
@@ -477,9 +477,9 @@
       <button class="main-btn" onclick="playLastOrNew()">
         <span class="mb-icon">🎮</span><span class="mb-label">Play</span>
       </button>
-      <button class="main-btn" onclick="window.showSearchOverlay()">
+      <a href="explore.html" class="main-btn">
         <span class="mb-icon">🔍</span><span class="mb-label">Explore</span>
-      </button>
+      </a>
       <a href="create.html" class="main-btn">
         <span class="mb-icon">✏️</span><span class="mb-label">Create</span>
       </a>
@@ -586,6 +586,12 @@ const db   = getFirestore(app);
 const isGuest = new URLSearchParams(location.search).has('guest')
              || sessionStorage.getItem('sudokuGuest') === '1';
 if (isGuest) sessionStorage.setItem('sudokuGuest', '1');
+
+// If arriving from Explore, hide the welcome overlay immediately to avoid a flash
+if (window.location.hash.startsWith('#explore')) {
+  const ov = document.getElementById('welcomeOverlay');
+  if (ov) ov.classList.add('hidden');
+}
 
 let currentUser = null;
 
@@ -1611,6 +1617,7 @@ window.loadCommunityPuzzle=async function(idx){
   puzzle=basePuzzle.map(r=>[...r]);
   currentPuzzleAuthor=p.author;currentPuzzleIsAI=p.isAI;currentPuzzleName=p.name||'';currentPuzzleId=p.id||'';currentPuzzleDescription=p.description||'';
   currentPuzzleBackgroundImage=(typeof p.backgroundImage==='string')?p.backgroundImage:'';
+  applyGameBoardBackground();
   currentPuzzleRatingAvg=(typeof p.ratingAvg==='number')?p.ratingAvg:null;
   currentPuzzleRatingCount=(typeof p.ratingCount==='number')?p.ratingCount:0;
   // Parse constraints if present
@@ -1660,8 +1667,37 @@ document.getElementById('preGameStartBtn')?.addEventListener('click',()=>window.
 document.getElementById('winRatingSaveBtn')?.addEventListener('click',submitWinRating);
 new ResizeObserver(()=>renderGameConstraints()).observe(document.getElementById('board'));
 
+window.loadExplorePuzzle=async function(){
+  // 1. Try sessionStorage (primary path)
+  let p; try{ p=JSON.parse(sessionStorage.getItem('explorePuzzle')||'null'); }catch(e){ p=null; }
+  sessionStorage.removeItem('explorePuzzle');
+  // Extract puzzle ID from hash (#explore:puzzleId) for fallback / enrichment
+  const hash=window.location.hash;
+  const colonIdx=hash.indexOf(':');
+  const puzzleId=colonIdx!==-1?decodeURIComponent(hash.slice(colonIdx+1)):'';
+  // 2. If no sessionStorage data, fall back to Firestore or DEFAULT_PUZZLES
+  if(!p){
+    p=puzzleId?(DEFAULT_PUZZLES.find(x=>x.id===puzzleId)||null):null;
+    if(!p && puzzleId){
+      try{ const snap=await getDoc(doc(db,'puzzles',puzzleId)); if(snap.exists()) p={id:snap.id,...snap.data()}; }catch(e){}
+    }
+  }
+  // 3. If we have partial data (e.g. backgroundImage missing from old sessionStorage),
+  //    fetch full data from Firestore to patch in the missing fields
+  if(p && !p.backgroundImage && puzzleId && !puzzleId.startsWith('ai-')){
+    try{
+      const snap=await getDoc(doc(db,'puzzles',puzzleId));
+      if(snap.exists()){ const full={id:snap.id,...snap.data()}; p={...p,...full}; }
+    }catch(e){}
+  }
+  if(!p){ window.showMainMenu(); return; }
+  communityPuzzles=[p];
+  await window.loadCommunityPuzzle(0);
+}
+
 function handleInitialHash(){
   try{
+    if(window.location.hash.startsWith('#explore')){window.loadExplorePuzzle();return;}
     if(window.location.hash==='#search'){window.showSearchOverlay();return;}
     if(window.location.hash==='#play'){playLastOrNew();return;}
   }catch(e){}
@@ -1669,7 +1705,8 @@ function handleInitialHash(){
 }
 
 window.addEventListener('hashchange',()=>{
-  if(window.location.hash==='#search')window.showSearchOverlay();
+  if(window.location.hash.startsWith('#explore'))window.loadExplorePuzzle();
+  else if(window.location.hash==='#search')window.showSearchOverlay();
   else if(window.location.hash==='#play')playLastOrNew();
   else window.showMainMenu();
 });

@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Explore — Sudoku Social</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg:#f4f5f7;
+      --surface:#ffffff;
+      --surface2:#f0f2f5;
+      --surface3:#e4e7ec;
+      --accent:#2563eb;
+      --accent2:#7c3aed;
+      --accent3:#0ea5e9;
+      --success:#16a34a;
+      --warning:#d97706;
+      --error:#dc2626;
+      --text:#0f172a;
+      --text2:#64748b;
+      --text3:#94a3b8;
+      --border:#e2e8f0;
+      --hero-h:340px;
+    }
+    body {
+      font-family:'DM Sans',system-ui,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+
+    /* ── NAV ── */
+    .navbar {
+      width:100%; background:var(--surface);
+      border-bottom:1px solid var(--border);
+      padding:0 24px; height:54px;
+      display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:100;
+      box-shadow:0 1px 0 var(--border);
+    }
+    .nav-logo {
+      font-size:1rem; font-weight:900; letter-spacing:5px;
+      text-transform:uppercase;
+      background:linear-gradient(120deg,var(--accent) 20%,var(--accent2));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    }
+    .nav-links { display:flex; gap:4px; }
+    .nav-link {
+      padding:6px 13px; border-radius:8px; font-size:.8rem; font-weight:700;
+      color:var(--text2); text-decoration:none; transition:all .15s; cursor:pointer;
+      border:none; background:none;
+    }
+    .nav-link:hover { background:var(--surface2); color:var(--text); }
+    .nav-link.active { background:rgba(37,99,235,.1); color:var(--accent); }
+    .nav-right { display:flex; align-items:center; gap:8px; }
+    .nav-avatar {
+      width:32px; height:32px; border-radius:50%;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      display:flex; align-items:center; justify-content:center;
+      font-size:.75rem; font-weight:800; color:#fff; cursor:pointer;
+      flex-shrink:0;
+    }
+
+    /* ── HERO: PUZZLE OF THE DAY ── */
+    .hero {
+      width:100%; max-width:1100px; margin:24px auto 0;
+      padding:0 20px;
+    }
+    .hero-label {
+      font-size:.68rem; font-weight:800; letter-spacing:3px;
+      text-transform:uppercase; color:var(--accent);
+      margin-bottom:10px; display:flex; align-items:center; gap:6px;
+    }
+    .hero-label::before {
+      content:''; width:18px; height:2px; background:var(--accent); border-radius:2px;
+    }
+    .hero-card {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:20px;
+      padding:0;
+      overflow:hidden;
+      display:grid;
+      grid-template-columns:1fr 320px;
+      box-shadow:0 4px 24px rgba(0,0,0,.06);
+      transition:box-shadow .2s;
+      animation:fadeUp .4s ease both;
+    }
+    .hero-card:hover { box-shadow:0 8px 40px rgba(37,99,235,.12); }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+    .hero-left {
+      padding:32px 36px;
+      background:linear-gradient(135deg, #f8faff 0%, #eef2ff 100%);
+      display:flex; flex-direction:column; justify-content:space-between;
+      min-height:240px;
+    }
+    .hero-badge-row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+    .variant-badge {
+      font-size:.65rem; font-weight:800; padding:3px 9px; border-radius:999px;
+      letter-spacing:.5px; text-transform:uppercase;
+    }
+    .vb-killer    { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+    .vb-thermo    { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+    .vb-arrow     { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+    .vb-whisper   { background:#dcfce7; color:#14532d; border:1px solid #86efac; }
+    .vb-renban    { background:#ede9fe; color:#4c1d95; border:1px solid #c4b5fd; }
+    .vb-diagonal  { background:#fce7f3; color:#831843; border:1px solid #f9a8d4; }
+    .vb-antiknight{ background:#f0fdf4; color:#14532d; border:1px solid #86efac; }
+    .vb-classic   { background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; }
+    .vb-between   { background:#e0f2fe; color:#0c4a6e; border:1px solid #7dd3fc; }
+    .vb-palindrome{ background:#fdf4ff; color:#581c87; border:1px solid #d8b4fe; }
+
+    .hero-title {
+      font-size:2rem; font-weight:900; line-height:1.15;
+      color:var(--text); margin-bottom:6px;
+      letter-spacing:-.5px;
+    }
+    .hero-setter {
+      font-size:.82rem; color:var(--text2); font-weight:600; margin-bottom:20px;
+    }
+    .hero-setter strong { color:var(--accent); }
+    .hero-stats {
+      display:flex; gap:18px; margin-bottom:24px;
+    }
+    .hero-stat { display:flex; flex-direction:column; gap:2px; }
+    .hero-stat-val { font-size:1.1rem; font-weight:800; color:var(--text); }
+    .hero-stat-lbl { font-size:.65rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; }
+    .hero-btn {
+      display:inline-flex; align-items:center; gap:8px;
+      background:var(--accent); color:#fff;
+      padding:12px 24px; border-radius:12px; font-weight:800;
+      font-size:.9rem; cursor:pointer; border:none;
+      transition:all .15s; align-self:flex-start;
+      box-shadow:0 4px 14px rgba(37,99,235,.3);
+    }
+    .hero-btn:hover { filter:brightness(1.1); transform:translateY(-1px); box-shadow:0 6px 20px rgba(37,99,235,.4); }
+    .hero-btn-arrow { font-size:1.1rem; transition:transform .15s; }
+    .hero-btn:hover .hero-btn-arrow { transform:translateX(3px); }
+
+    .hero-right {
+      padding:28px; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:16px;
+      background:var(--surface); border-left:1px solid var(--border);
+    }
+    .mini-grid-wrap { position:relative; }
+    .mini-grid {
+      display:grid; grid-template-rows:repeat(9,1fr);
+      border:2.5px solid #374151; border-radius:8px; overflow:hidden;
+      width:220px; height:220px; background:#fff;
+      box-shadow:0 4px 16px rgba(0,0,0,.1);
+    }
+    .mg-row { display:grid; grid-template-columns:repeat(9,1fr); }
+    .mg-cell {
+      display:flex; align-items:center; justify-content:center;
+      border-right:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;
+      font-size:8px; font-weight:700; color:#2563eb;
+      font-family:'DM Mono',monospace;
+    }
+    .mg-cell.given { color:#1f2937; background:#f8f9fa; }
+    .mg-cell:last-child { border-right:none; }
+    .mg-row:last-child .mg-cell { border-bottom:none; }
+    .mg-cell.bx-r { border-right:2px solid #6b7280 !important; }
+    .mg-cell.bx-b { border-bottom:2px solid #6b7280 !important; }
+    .hero-timer-info {
+      display:flex; gap:16px;
+    }
+    .hero-mini-stat {
+      text-align:center;
+    }
+    .hero-mini-stat-val { font-size:1rem; font-weight:800; }
+    .hero-mini-stat-lbl { font-size:.62rem; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+    .diff-dot {
+      display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:4px;
+    }
+    .diff-easy { background:#16a34a; }
+    .diff-medium { background:#d97706; }
+    .diff-hard { background:#dc2626; }
+    .diff-expert { background:#7c3aed; }
+    .countdown {
+      font-size:.72rem; color:var(--text2); font-weight:600; text-align:center;
+      display:flex; align-items:center; gap:5px;
+    }
+    .countdown-clock { font-variant-numeric:tabular-nums; font-weight:800; color:var(--accent); }
+
+    /* ── FILTER CHIPS ── */
+    .filter-section {
+      width:100%; max-width:1100px; margin:20px auto 0; padding:0 20px;
+      animation:fadeUp .4s .1s ease both;
+    }
+    .filter-scroll {
+      display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;
+      scrollbar-width:none;
+    }
+    .filter-scroll::-webkit-scrollbar { display:none; }
+    .filter-chip {
+      flex-shrink:0; padding:7px 16px; border-radius:999px;
+      border:1.5px solid var(--border); background:var(--surface);
+      color:var(--text2); font-size:.78rem; font-weight:700;
+      cursor:pointer; transition:all .15s; white-space:nowrap;
+      display:flex; align-items:center; gap:5px;
+    }
+    .filter-chip:hover { border-color:var(--accent); color:var(--accent); }
+    .filter-chip.active {
+      background:var(--accent); color:#fff; border-color:var(--accent);
+      box-shadow:0 2px 8px rgba(37,99,235,.25);
+    }
+
+    /* ── CONTENT SECTIONS ── */
+    .content { width:100%; max-width:1100px; margin:0 auto; padding:20px 20px 40px; display:flex; flex-direction:column; gap:32px; }
+
+    .section-header {
+      display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;
+    }
+    .section-title {
+      font-size:1.05rem; font-weight:800; color:var(--text);
+      display:flex; align-items:center; gap:8px;
+    }
+    .section-title .icon { font-size:1.1rem; }
+    .see-all {
+      font-size:.75rem; font-weight:700; color:var(--accent);
+      cursor:pointer; text-decoration:none; transition:opacity .15s;
+      display:flex; align-items:center; gap:3px;
+    }
+    .see-all:hover { opacity:.7; }
+
+    /* PUZZLE CARDS horizontal scroll row */
+    .cards-row {
+      display:flex; gap:12px; overflow-x:auto; padding-bottom:6px;
+      scrollbar-width:none;
+    }
+    .cards-row::-webkit-scrollbar { display:none; }
+
+    .puzzle-card {
+      flex-shrink:0; width:200px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:14px; overflow:hidden; cursor:pointer;
+      transition:all .18s; animation:fadeUp .4s ease both;
+      box-shadow:0 1px 4px rgba(0,0,0,.04);
+    }
+    .puzzle-card:hover {
+      transform:translateY(-3px);
+      box-shadow:0 8px 24px rgba(37,99,235,.12);
+      border-color:rgba(37,99,235,.3);
+    }
+    .card-preview {
+      height:100px; padding:8px;
+      background:linear-gradient(135deg, #f8faff, #eef2ff);
+      display:flex; align-items:center; justify-content:center;
+      position:relative; overflow:hidden;
+    }
+    .card-grid {
+      display:grid; grid-template-rows:repeat(9,1fr);
+      border:1.5px solid #374151; border-radius:4px; overflow:hidden;
+      width:80px; height:80px; background:#fff;
+    }
+    .cg-row { display:grid; grid-template-columns:repeat(9,1fr); }
+    .cg-cell {
+      border-right:0.5px solid #e5e7eb; border-bottom:0.5px solid #e5e7eb;
+      font-size:4.5px; font-weight:700;
+      display:flex; align-items:center; justify-content:center;
+      color:#2563eb; font-family:'DM Mono',monospace;
+    }
+    .cg-cell.given { color:#1f2937; background:#f8f9fa; }
+    .cg-cell:last-child { border-right:none; }
+    .cg-row:last-child .cg-cell { border-bottom:none; }
+    .cg-cell.bx-r { border-right:1px solid #6b7280 !important; }
+    .cg-cell.bx-b { border-bottom:1px solid #6b7280 !important; }
+    .card-rank {
+      position:absolute; top:7px; left:8px;
+      font-size:.6rem; font-weight:800; color:var(--text2);
+      background:var(--surface); border:1px solid var(--border);
+      padding:2px 6px; border-radius:999px;
+    }
+    .card-rank.gold { background:#fef3c7; color:#92400e; border-color:#fcd34d; }
+    .card-rank.silver { background:#f1f5f9; color:#475569; border-color:#cbd5e1; }
+    .card-rank.bronze { background:#fef3c7; color:#a16207; border-color:#fde68a; }
+    .card-body { padding:10px 12px; }
+    .card-name { font-size:.82rem; font-weight:800; color:var(--text); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .card-setter { font-size:.68rem; color:var(--accent); font-weight:700; margin-bottom:6px; }
+    .card-meta { display:flex; align-items:center; justify-content:space-between; }
+    .card-badges { display:flex; gap:3px; flex-wrap:wrap; }
+    .card-badge { font-size:.55rem; font-weight:800; padding:2px 5px; border-radius:4px; }
+    .card-stats { display:flex; align-items:center; gap:5px; }
+    .card-star { font-size:.68rem; color:#f59e0b; font-weight:800; }
+    .card-solves { font-size:.63rem; color:var(--text3); font-weight:600; }
+
+    /* SETTER CARDS */
+    .setters-row { display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; scrollbar-width:none; }
+    .setters-row::-webkit-scrollbar { display:none; }
+    .setter-card {
+      flex-shrink:0; width:148px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:14px; padding:16px 12px; text-align:center;
+      cursor:pointer; transition:all .18s;
+      box-shadow:0 1px 4px rgba(0,0,0,.04);
+      animation:fadeUp .4s ease both;
+    }
+    .setter-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(37,99,235,.1); border-color:rgba(37,99,235,.25); }
+    .setter-avatar {
+      width:52px; height:52px; border-radius:50%; margin:0 auto 10px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.3rem; font-weight:900; color:#fff;
+      box-shadow:0 2px 8px rgba(0,0,0,.15);
+    }
+    .setter-name { font-size:.8rem; font-weight:800; color:var(--text); margin-bottom:3px; }
+    .setter-puzzles { font-size:.65rem; color:var(--text3); font-weight:600; margin-bottom:8px; }
+    .setter-follow-btn {
+      font-size:.65rem; font-weight:800; padding:4px 10px;
+      border-radius:999px; border:1.5px solid var(--accent);
+      color:var(--accent); background:transparent; cursor:pointer;
+      transition:all .15s;
+    }
+    .setter-follow-btn:hover { background:var(--accent); color:#fff; }
+    .setter-follow-btn.following { background:var(--accent); color:#fff; }
+
+    /* LEADERBOARD STRIP */
+    .leaderboard-strip {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:16px; overflow:hidden;
+      box-shadow:0 1px 4px rgba(0,0,0,.04);
+      animation:fadeUp .4s .2s ease both;
+    }
+    .lb-header {
+      padding:14px 18px 12px;
+      background:linear-gradient(135deg,rgba(37,99,235,.06),rgba(124,58,237,.06));
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .lb-title { font-size:.88rem; font-weight:800; display:flex; align-items:center; gap:7px; }
+    .lb-tabs { display:flex; gap:4px; }
+    .lb-tab {
+      font-size:.68rem; font-weight:700; padding:4px 10px; border-radius:6px;
+      border:none; background:transparent; color:var(--text2); cursor:pointer; transition:all .15s;
+    }
+    .lb-tab.active { background:var(--accent); color:#fff; }
+    .lb-row {
+      display:flex; align-items:center; gap:12px;
+      padding:11px 18px; border-bottom:1px solid var(--border);
+      transition:background .12s; cursor:pointer;
+    }
+    .lb-row:last-child { border-bottom:none; }
+    .lb-row:hover { background:var(--surface2); }
+    .lb-pos { font-size:.78rem; font-weight:800; color:var(--text3); width:20px; text-align:center; flex-shrink:0; }
+    .lb-pos.p1 { color:#f59e0b; }
+    .lb-pos.p2 { color:#94a3b8; }
+    .lb-pos.p3 { color:#cd7c3a; }
+    .lb-avatar {
+      width:30px; height:30px; border-radius:50%; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:.72rem; font-weight:800; color:#fff;
+    }
+    .lb-name { font-size:.82rem; font-weight:700; flex:1; }
+    .lb-val { font-size:.82rem; font-weight:800; color:var(--accent); font-variant-numeric:tabular-nums; }
+    .lb-badge { font-size:.62rem; font-weight:700; padding:2px 7px; border-radius:999px; background:rgba(37,99,235,.1); color:var(--accent); }
+
+    /* RECENTLY ACTIVE */
+    .feed-item {
+      display:flex; align-items:center; gap:12px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:12px; padding:12px 16px; cursor:pointer;
+      transition:all .15s; animation:fadeUp .4s ease both;
+    }
+    .feed-item:hover { border-color:rgba(37,99,235,.25); box-shadow:0 2px 10px rgba(37,99,235,.08); }
+    .feed-grid { flex-shrink:0; }
+    .feed-info { flex:1; min-width:0; }
+    .feed-name { font-size:.84rem; font-weight:800; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .feed-meta { font-size:.7rem; color:var(--text2); margin-top:2px; }
+    .feed-meta strong { color:var(--accent); }
+    .feed-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+    .feed-time { font-size:.65rem; color:var(--text3); font-weight:600; }
+    .feed-solve-badge { font-size:.65rem; font-weight:700; padding:2px 7px; border-radius:999px; background:#dcfce7; color:#15803d; border:1px solid #86efac; }
+
+    /* stagger animation delays on cards */
+    .puzzle-card:nth-child(1) { animation-delay:.05s }
+    .puzzle-card:nth-child(2) { animation-delay:.1s }
+    .puzzle-card:nth-child(3) { animation-delay:.15s }
+    .puzzle-card:nth-child(4) { animation-delay:.2s }
+    .puzzle-card:nth-child(5) { animation-delay:.25s }
+    .setter-card:nth-child(1) { animation-delay:.05s }
+    .setter-card:nth-child(2) { animation-delay:.1s }
+    .setter-card:nth-child(3) { animation-delay:.15s }
+    .setter-card:nth-child(4) { animation-delay:.2s }
+    .setter-card:nth-child(5) { animation-delay:.25s }
+
+    /* ── SEARCH SECTION ── */
+    .search-section {
+      width:100%; max-width:1100px; margin:20px auto 0;
+      padding:0 20px;
+      animation:fadeUp .4s .05s ease both;
+    }
+    .search-box-wrap {
+      background:var(--surface);
+      border:1.5px solid var(--border);
+      border-radius:16px;
+      overflow:hidden;
+      box-shadow:0 2px 12px rgba(0,0,0,.05);
+      transition:box-shadow .2s, border-color .2s;
+    }
+    .search-box-wrap:focus-within {
+      border-color:var(--accent);
+      box-shadow:0 4px 20px rgba(37,99,235,.12);
+    }
+    .search-input-row {
+      display:flex; align-items:center; gap:0;
+    }
+    .search-icon {
+      padding:0 14px 0 18px; font-size:1.1rem; color:var(--text3); flex-shrink:0;
+    }
+    .search-main-input {
+      flex:1; padding:14px 0; border:none; outline:none;
+      font-size:.94rem; font-weight:600; font-family:'DM Sans',system-ui,sans-serif;
+      color:var(--text); background:transparent;
+    }
+    .search-main-input::placeholder { color:var(--text3); font-weight:500; }
+    .search-clear {
+      padding:0 16px; font-size:1rem; color:var(--text3); cursor:pointer;
+      background:none; border:none; line-height:1; transition:color .15s;
+      display:none;
+    }
+    .search-clear.visible { display:block; }
+    .search-clear:hover { color:var(--error); }
+    .search-filters {
+      display:flex; gap:8px; padding:10px 16px 14px;
+      border-top:1px solid var(--border); flex-wrap:wrap; align-items:center;
+    }
+    .search-filter-label {
+      font-size:.68rem; font-weight:700; color:var(--text3);
+      text-transform:uppercase; letter-spacing:.5px; margin-right:2px;
+    }
+    .search-select {
+      padding:5px 26px 5px 10px; border:1.5px solid var(--border);
+      border-radius:8px; font-size:.75rem; font-weight:700;
+      background:var(--surface2); color:var(--text);
+      cursor:pointer; outline:none; transition:all .15s;
+      appearance:none; -webkit-appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2394a3b8' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 8px center;
+      font-family:'DM Sans',system-ui,sans-serif;
+    }
+    .search-select:focus { border-color:var(--accent); background-color:var(--surface); }
+    .search-results-area {
+      margin-top:10px;
+      display:none;
+    }
+    .search-results-area.visible { display:block; }
+    .search-results-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+      gap:12px;
+    }
+    .search-result-count {
+      font-size:.72rem; font-weight:700; color:var(--text2);
+      margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;
+    }
+    .search-empty {
+      text-align:center; padding:32px 20px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:14px; color:var(--text3); font-size:.84rem; font-weight:600;
+    }
+    .search-empty .empty-icon { font-size:2rem; margin-bottom:8px; }
+    .search-loading {
+      text-align:center; padding:24px;
+      color:var(--text3); font-size:.82rem; font-weight:600;
+      display:flex; align-items:center; justify-content:center; gap:8px;
+    }
+    .search-spinner {
+      width:16px; height:16px; border:2px solid var(--border);
+      border-top-color:var(--accent); border-radius:50%;
+      animation:spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .load-more-btn {
+      width:100%; margin-top:12px; padding:11px;
+      background:var(--surface); border:1.5px solid var(--border);
+      border-radius:10px; color:var(--text2); font-size:.8rem;
+      font-weight:700; cursor:pointer; transition:all .15s;
+      font-family:'DM Sans',system-ui,sans-serif;
+    }
+    .load-more-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+    @media (max-width:680px) {
+      .hero-card { grid-template-columns:1fr; }
+      .hero-right { display:none; }
+      .hero-title { font-size:1.5rem; }
+      .hero-left { padding:24px; }
+      .search-filters { gap:6px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="navbar">
+  <div class="nav-logo">Sudoku Social</div>
+  <div class="nav-links">
+    <a class="nav-link active" href="explore.html">� Explore</a>
+    <a class="nav-link" href="game.html#play">🎮 Play</a>
+    <a class="nav-link" href="create.html">✏️ Create</a>
+    <a class="nav-link" href="history.html">📊 History</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-avatar" id="navAvatarEl">…</div>
+  </div>
+</nav>
+
+<!-- HERO: PUZZLE OF THE DAY -->
+<div class="hero" style="display:none">
+  <div class="hero-label">✦ Puzzle of the Day</div>
+  <div class="hero-card">
+    <div class="hero-left">
+      <div>
+        <div class="hero-title">Loading…</div>
+        <div class="hero-setter"></div>
+        <div class="hero-stats" id="heroStats"></div>
+      </div>
+      <button class="hero-btn">
+        Play Today's Puzzle <span class="hero-btn-arrow">→</span>
+      </button>
+    </div>
+    <div class="hero-right">
+      <div class="mini-grid-wrap">
+        <div class="mini-grid" id="heroGrid"></div>
+      </div>
+
+      <div class="countdown">
+        🕐 New puzzle in <span class="countdown-clock" id="countdown">08:32:14</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SEARCH ALL SUDOKUS -->
+<div class="search-section">
+  <div class="hero-label" style="margin-bottom:10px;">🔍 Search All Puzzles</div>
+  <div class="search-box-wrap">
+    <div class="search-input-row">
+      <span class="search-icon">🔍</span>
+      <input
+        class="search-main-input"
+        id="searchMainInput"
+        type="text"
+        placeholder="Search by name, setter, or variant…"
+        autocomplete="off"
+        oninput="onSearchInput(this)"
+      />
+      <button class="search-clear" id="searchClearBtn" onclick="clearSearch()" title="Clear">✕</button>
+    </div>
+    <div class="search-filters">
+      <span class="search-filter-label">Filter:</span>
+      <select class="search-select" id="sfAuthor" onchange="runSearch()">
+        <option value="">All Authors</option>
+        <option value="AI">AI Generated</option>
+        <option value="community">Community</option>
+      </select>
+      <select class="search-select" id="sfDifficulty" onchange="runSearch()">
+        <option value="">Any Difficulty</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+        <option value="expert">Expert</option>
+      </select>
+      <select class="search-select" id="sfVariant" onchange="runSearch()">
+        <option value="">Any Variant</option>
+        <option value="classic">Classic</option>
+        <option value="killer">🔢 Killer</option>
+        <option value="thermo">🌡️ Thermo</option>
+        <option value="arrow">➡️ Arrow</option>
+        <option value="antiknight">♞ Anti-knight</option>
+        <option value="diagonal">╱ Diagonal</option>
+        <option value="whisper">🤫 Whisper</option>
+        <option value="renban">〰️ Renban</option>
+        <option value="palindrome">↔️ Palindrome</option>
+        <option value="between">⟷ Between</option>
+      </select>
+      <select class="search-select" id="sfRating" onchange="runSearch()">
+        <option value="">Any Rating</option>
+        <option value="4plus">★ 4.0+</option>
+        <option value="4.5plus">★ 4.5+</option>
+        <option value="top">Highest rated</option>
+      </select>
+      <select class="search-select" id="sfSort" onchange="runSearch()">
+        <option value="relevance">Sort: Relevance</option>
+        <option value="rating">Sort: Rating</option>
+        <option value="solves">Sort: Most Solved</option>
+        <option value="newest">Sort: Newest</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Results appear here -->
+  <div class="search-results-area" id="searchResultsArea">
+    <div class="search-result-count" id="searchResultCount"></div>
+    <div id="searchResultsGrid" class="search-results-grid"></div>
+    <button class="load-more-btn" id="loadMoreBtn" style="display:none" onclick="loadMoreResults()">Load more →</button>
+  </div>
+</div>
+
+<!-- FILTER CHIPS -->
+<div class="filter-section">
+  <div class="filter-scroll" id="filterRow">
+    <button class="filter-chip active" data-filter="all" onclick="setFilter(this)">All</button>
+    <button class="filter-chip" data-filter="classic" onclick="setFilter(this)">Classic</button>
+    <button class="filter-chip" data-filter="killer" onclick="setFilter(this)">🔢 Killer</button>
+    <button class="filter-chip" data-filter="thermo" onclick="setFilter(this)">🌡️ Thermo</button>
+    <button class="filter-chip" data-filter="arrow" onclick="setFilter(this)">➡️ Arrow</button>
+    <button class="filter-chip" data-filter="antiknight" onclick="setFilter(this)">♞ Anti-knight</button>
+    <button class="filter-chip" data-filter="diagonal" onclick="setFilter(this)">╱ Diagonal</button>
+    <button class="filter-chip" data-filter="whisper" onclick="setFilter(this)">🤫 Whisper</button>
+    <button class="filter-chip" data-filter="renban" onclick="setFilter(this)">〰️ Renban</button>
+    <button class="filter-chip" data-filter="palindrome" onclick="setFilter(this)">↔️ Palindrome</button>
+    <button class="filter-chip" data-filter="between" onclick="setFilter(this)">⟷ Between</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content">
+
+  <!-- TRENDING -->
+  <div class="section" id="sectionTrending">
+    <div class="section-header">
+      <div class="section-title"><span class="icon">🔥</span> Trending This Week</div>
+      <a class="see-all" href="#">See all →</a>
+    </div>
+    <div class="cards-row" id="trendingRow"></div>
+  </div>
+
+  <!-- FEATURED SETTERS -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title"><span class="icon">✨</span> Featured Setters</div>
+      <a class="see-all" href="#">See all →</a>
+    </div>
+    <div class="setters-row" id="settersRow"></div>
+  </div>
+
+  <!-- HIGHEST RATED -->
+  <div class="section" id="sectionRated">
+    <div class="section-header">
+      <div class="section-title"><span class="icon">⭐</span> Highest Rated</div>
+      <a class="see-all" href="#">See all →</a>
+    </div>
+    <div class="cards-row" id="ratedRow"></div>
+  </div>
+
+
+  <!-- JUST PUBLISHED -->
+  <div>
+    <div class="section-header">
+      <div class="section-title"><span class="icon">🆕</span> Just Published</div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px;" id="newFeed"></div>
+  </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
+import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { firebaseConfig } from './firebase-config.js';
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+const isGuest = new URLSearchParams(location.search).has('guest') || sessionStorage.getItem('sudokuGuest') === '1';
+if (isGuest) sessionStorage.setItem('sudokuGuest', '1');
+
+let currentUser = null;
+let allPuzzles  = [];
+let completedMap = {};
+
+// ── DEFAULT PUZZLES (same as game.html) ───────────────
+const DEFAULT_PUZZLES=[
+  {id:"ai-e1",name:"Dusty Grove",puzzle:"006470908030009600107836000000008060048095721910607500060000140081000090000153870",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e2",name:"Radiant Enigma",puzzle:"040091020500360070000007049408739200000510007025400031359008002280100000104020805",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e3",name:"Gentle Inferno",puzzle:"003495602020006910006210000000500807000003040000107090862001079100802030005649128",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e4",name:"Amber Tempest",puzzle:"000000000200071860014850900439080007002030189051207340048020600020900008003610405",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e5",name:"Quiet Wanderer",puzzle:"600900000901823506003107000000090080007085263500200019800000090026370801030018624",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e6",name:"Crystal Haven",puzzle:"005789300000305000307041000001470000870050491460090070084900167710800020236010000",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e7",name:"Obsidian Haven",puzzle:"405060700070834620020000080010386040096000001000091362209050130157000408800007006",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e8",name:"Golden Vortex",puzzle:"830600705071020083420300010000093008596700100000005290063007841050800900008906050",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e9",name:"Breezy Riddle",puzzle:"100040009700006201900002530000000903045009020800720456080457002030098100590301780",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-e10",name:"Radiant Orbit",puzzle:"704058093000092400390000850040000708109000540068007030006830070010009080832700964",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
+  {id:"ai-m1",name:"Solar Jungle",puzzle:"040005980080600070000010035000060590000089047000154008908006000057031800010000000",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m2",name:"Obsidian Pinnacle",puzzle:"860020037235080000000005080000208900004019700100500000000002070620030005003007290",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m3",name:"Obsidian Vortex",puzzle:"400320580100000002082900000000000058030200700007860003008590400760182000050006000",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m4",name:"Breezy Vortex",puzzle:"000160900906002003001009407004930001600010000000600000490000020352000010100240790",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m5",name:"Neon Riddle",puzzle:"002004008608002709000700020007435000106807940800090000001000400060000201003060500",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m6",name:"Blazing Vortex",puzzle:"301670905590210040000030000900020004700000000020345098210450009000000007009000500",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m7",name:"Emerald Tempest",puzzle:"900037010010000032200040006800900000723400859060800007000080001008601045000004000",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m8",name:"Phantom Abyss",puzzle:"009021000053000000000040090000208050074060020208900003605432000027005300000000542",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m9",name:"Twilight Wanderer",puzzle:"000040030004507000090600000039000810000001097261800300002096003080100009005083004",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-m10",name:"Frozen Frontier",puzzle:"200600005107230000804009200000807004095300007070095000000003502003006000020700480",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
+  {id:"ai-h1",name:"Obsidian Iris",puzzle:"000045080801000009900600000000160030006000002500007800040570000000809600000002051",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h2",name:"Vivid Quest",puzzle:"000004090380005601000000020900030750000100000072890100741300000000500000090000200",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h3",name:"Jade Delta",puzzle:"200594100003000700500080000000860010094000500000000060000000900070040320002300806",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h4",name:"Kinetic Pinnacle",puzzle:"084000000000005006907006002000137600000000000018000300000053084020080000075600020",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h5",name:"Phantom Galaxy",puzzle:"000000300400370000070000540001040270000700000300005090100402009000650080095000020",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h6",name:"Neon Blizzard",puzzle:"003000008001950000050200106009007000030060000000000020084030095300520000000070403",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h7",name:"Phantom Jungle",puzzle:"930006000107209050500000800600000030000600000003050090040000270310007000060900004",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h8",name:"Ancient Frontier",puzzle:"204000010500000007080009000000980000060000800100040560006000003010203600000018029",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h9",name:"Solar Jewel",puzzle:"000003597203000406000006000030000020005309080000007000007018009080000002060030050",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-h10",name:"Obsidian Wanderer",puzzle:"000030000701052000600000079000090500509060000047003000000000043000605080020001750",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-x1",name:"Emerald Jungle",puzzle:"204060050000900082700000030007200004900070000400600015603420000000010000000000028",difficulty:"Expert",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-x2",name:"Frozen Riddle",puzzle:"007040000010005040000830000020000300009000001700200800000090210500061084040070003",difficulty:"Expert",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-x3",name:"Dazzling Flame",puzzle:"035709020029030000000008600000000008350000004000007130143800000000090000700100000",difficulty:"Expert",clueCount:24,author:"AI",isAI:true},
+  {id:"ai-x4",name:"Neon Eclipse",puzzle:"250000000007062000000890060094000001500030000000000920000008100100000004600024007",difficulty:"Expert",clueCount:23,author:"AI",isAI:true},
+  {id:"ai-x5",name:"Whirling Wanderer",puzzle:"000500000000006002010000805020000003004010080605049010700000000030004071000003049",difficulty:"Expert",clueCount:24,author:"AI",isAI:true},
+  {id:"ai-x6",name:"Dusty Riddle",puzzle:"030200600010030000006070004500007200300000809020005003105000000040006020680003010",difficulty:"Expert",clueCount:26,author:"AI",isAI:true},
+  {id:"ai-x7",name:"Frozen Inferno",puzzle:"001000900000014860000020050020000000087000046094200070700308000000100423000000600",difficulty:"Expert",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-x8",name:"Kinetic Jewel",puzzle:"091000080600000702003060400000002600020040008009006014100007005000000000008000049",difficulty:"Expert",clueCount:25,author:"AI",isAI:true},
+  {id:"ai-x9",name:"Emerald Enigma",puzzle:"000004090003000040008970000800100900090025810000040605600702000000000007020006031",difficulty:"Expert",clueCount:26,author:"AI",isAI:true},
+  {id:"ai-x10",name:"Golden Frontier",puzzle:"700036040000004803010208000070000020800402710009000006090500001000300060007000004",difficulty:"Expert",clueCount:26,author:"AI",isAI:true}
+];
+// ─────────────────────────────────────────────────────
+
+const DIFF_COLOR = { Easy:'#16a34a', Medium:'#d97706', Hard:'#dc2626', Expert:'#7c3aed' };
+const AVATAR_COLORS = ['linear-gradient(135deg,#2563eb,#7c3aed)','linear-gradient(135deg,#ec4899,#f97316)','linear-gradient(135deg,#16a34a,#0ea5e9)','linear-gradient(135deg,#f59e0b,#ef4444)','linear-gradient(135deg,#7c3aed,#ec4899)','linear-gradient(135deg,#0ea5e9,#16a34a)'];
+function avatarColor(name){ let h=0; for(const c of name) h=(h*31+c.charCodeAt(0))&0xffff; return AVATAR_COLORS[h%AVATAR_COLORS.length]; }
+function initials(name){ return name.replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase()||'??'; }
+
+// ── AUTH ──────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    currentUser = user;
+    sessionStorage.removeItem('sudokuGuest');
+    const av = document.getElementById('navAvatarEl');
+    if(av){ av.textContent = (user.displayName||user.email||'U')[0].toUpperCase(); }
+    try {
+      const solvesSnap = await getDocs(collection(db, `users/${user.uid}/solves`));
+      solvesSnap.docs.forEach(d => { const data = d.data(); if(data.puzzleId) completedMap[data.puzzleId] = data; });
+    } catch(e) {}
+  } else if (isGuest) {
+    const av = document.getElementById('navAvatarEl');
+    if(av){ av.textContent = '?'; av.title = 'Guest'; }
+  } else {
+    window.location.href = 'index.html'; return;
+  }
+  await loadAllPuzzles();
+  buildPage();
+});
+
+window.handleSignOut = async () => { await signOut(auth); sessionStorage.removeItem('sudokuGuest'); window.location.href = 'index.html'; };
+
+// ── LOAD PUZZLES ──────────────────────────────────────
+async function loadAllPuzzles(){
+  allPuzzles = [...DEFAULT_PUZZLES];
+  try {
+    const snap = await getDocs(collection(db, 'puzzles'));
+    allPuzzles = allPuzzles.concat(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  } catch(e) { console.error('Could not load Firestore puzzles:', e); }
+}
+
+// ── BUILD PAGE ────────────────────────────────────────
+function buildPage(){
+  buildPOTD();
+  buildTrending();
+  buildRated();
+  buildSetters();
+  buildNewFeed();
+  updateCountdown();
+}
+
+// ── PUZZLE OF THE DAY (deterministic by date) ─────────
+function buildPOTD(){
+  if(!allPuzzles.length) return;
+  const day = Math.floor(Date.now() / 86400000);
+  const p = allPuzzles[day % allPuzzles.length];
+  // hero left
+  document.querySelector('.hero-title').textContent = p.name;
+  document.querySelector('.hero-setter').innerHTML = `by <strong>${p.author}</strong>`;
+  const d = p.difficulty||'';
+  const rating = (typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg)) ? `⭐ ${p.ratingAvg.toFixed(1)}` : 'Unrated';
+  const count  = (typeof p.ratingCount==='number') ? p.ratingCount : 0;
+  document.getElementById('heroStats').innerHTML = `
+    <div class="hero-stat"><div class="hero-stat-val"><span class="diff-dot ${d.toLowerCase()}"></span>${d}</div><div class="hero-stat-lbl">Difficulty</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">${rating}</div><div class="hero-stat-lbl">Rating</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">${count}</div><div class="hero-stat-lbl">Ratings</div></div>
+  `;
+  document.querySelector('.hero-btn').onclick = () => launchPuzzle(p);
+  // hero grid
+  const heroGrid = document.getElementById('heroGrid');
+  heroGrid.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:2.5px solid #374151;border-radius:8px;overflow:hidden;width:220px;height:220px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.1);';
+  renderMiniGrid(heroGrid, p.puzzle||'', 220, 8.5);
+  document.querySelector('.hero').style.display = '';
+}
+
+// ── LAUNCH PUZZLE → game.html ─────────────────────────
+function launchPuzzle(p){
+  const data = {id:p.id||'',name:p.name||'',puzzle:p.puzzle||'',difficulty:p.difficulty||'',author:p.author||'',isAI:!!p.isAI,clueCount:p.clueCount||0,description:p.description||'',ratingAvg:p.ratingAvg||null,ratingCount:p.ratingCount||0,constraints:p.constraints||null,backgroundImage:p.backgroundImage||''};
+  try { sessionStorage.setItem('explorePuzzle', JSON.stringify(data)); } catch(e){}
+  window.location.href = 'game.html#explore:' + encodeURIComponent(p.id||'');
+}
+
+// ── MINI GRID RENDERER ─────────────────────────────────
+function renderMiniGrid(el, clueStr, size=80, fontSize=4.5){
+  el.innerHTML = '';
+  el.style.width = size+'px'; el.style.height = size+'px';
+  const digits = (clueStr||'').replace(/\D/g,'').padEnd(81,'0');
+  for(let r=0;r<9;r++){
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:repeat(9,1fr);';
+    for(let c=0;c<9;c++){
+      const cell = document.createElement('div');
+      const bR = (c===2||c===5)?'2px solid #6b7280':'0.5px solid #e5e7eb';
+      const bB = (r===2||r===5)?'2px solid #6b7280':'0.5px solid #e5e7eb';
+      const n = parseInt(digits[r*9+c]);
+      cell.style.cssText=`display:flex;align-items:center;justify-content:center;border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:${fontSize}px;font-weight:700;font-family:'DM Mono',monospace;color:${n?'#1f2937':'transparent'};background:${n?'#f8f9fa':'#fff'};`;
+      if(n) cell.textContent = n;
+      row.appendChild(cell);
+    }
+    el.appendChild(row);
+  }
+}
+
+// ── PUZZLE CARD ────────────────────────────────────────
+function makePuzzleCard(p, rank){
+  const card = document.createElement('div');
+  card.className = 'puzzle-card';
+  card.onclick = () => launchPuzzle(p);
+
+  const preview = document.createElement('div');
+  preview.className = 'card-preview';
+  if(rank){
+    const rb = document.createElement('div');
+    rb.className = 'card-rank'+(rank===1?' gold':rank===2?' silver':rank===3?' bronze':'');
+    rb.textContent = rank===1?'🥇 #1':rank===2?'🥈 #2':rank===3?'🥉 #3':'#'+rank;
+    preview.appendChild(rb);
+  }
+  const gridEl = document.createElement('div');
+  gridEl.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:80px;height:80px;background:#fff;';
+  renderMiniGrid(gridEl, p.puzzle||'', 80, 4.5);
+  preview.appendChild(gridEl);
+
+  const diff = p.difficulty||'';
+  const rating = (typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg)) ? `★ ${p.ratingAvg.toFixed(1)}` : 'Unrated';
+  const count  = typeof p.ratingCount==='number' ? p.ratingCount : 0;
+  const body = document.createElement('div');
+  body.className = 'card-body';
+  body.innerHTML = `
+    <div class="card-name">${p.name||'Untitled'}</div>
+    <div class="card-setter">${p.author||'Unknown'}</div>
+    <div class="card-meta">
+      <div class="card-stats"><span class="card-star">${rating}</span></div>
+      <span style="font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:4px;background:${(DIFF_COLOR[diff]||'#64748b')}22;color:${DIFF_COLOR[diff]||'#64748b'}">${diff}</span>
+    </div>
+    <div style="margin-top:4px;font-size:.62rem;color:var(--text3)">${count} rating${count===1?'':'s'}</div>
+  `;
+  card.appendChild(preview);
+  card.appendChild(body);
+  return card;
+}
+
+// ── BUILD TRENDING (by ratingCount) ───────────────────
+function buildTrending(filter='all'){
+  const row = document.getElementById('trendingRow');
+  row.innerHTML = '';
+  let puzzles = filter==='all' ? allPuzzles : allPuzzles.filter(p => (p.difficulty||'').toLowerCase()===filter);
+  const sorted = [...puzzles].sort((a,b)=>(b.ratingCount||0)-(a.ratingCount||0)).slice(0,8);
+  if(!sorted.length){ row.innerHTML='<div style="padding:20px;color:var(--text3);font-size:.82rem;">No puzzles yet</div>'; return; }
+  sorted.forEach((p,i)=>row.appendChild(makePuzzleCard(p,i+1)));
+}
+
+// ── BUILD HIGHEST RATED ────────────────────────────────
+function buildRated(filter='all'){
+  const row = document.getElementById('ratedRow');
+  row.innerHTML = '';
+  let puzzles = filter==='all' ? allPuzzles : allPuzzles.filter(p => (p.difficulty||'').toLowerCase()===filter);
+  const sorted = [...puzzles]
+    .filter(p=>typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg))
+    .sort((a,b)=>b.ratingAvg-a.ratingAvg).slice(0,8);
+  if(!sorted.length){ row.innerHTML='<div style="padding:20px;color:var(--text3);font-size:.82rem;">No rated puzzles yet</div>'; return; }
+  sorted.forEach((p,i)=>row.appendChild(makePuzzleCard(p,i+1)));
+}
+
+// ── BUILD SETTERS (from real puzzle authors) ──────────
+function buildSetters(){
+  const row = document.getElementById('settersRow');
+  row.innerHTML = '';
+  const map = {};
+  allPuzzles.forEach(p => {
+    if(!p.isAI && p.author && p.author!=='AI'){
+      if(!map[p.author]) map[p.author] = { name:p.author, count:0, totalRating:0, ratedCount:0 };
+      map[p.author].count++;
+      if(typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg)){ map[p.author].totalRating+=p.ratingAvg; map[p.author].ratedCount++; }
+    }
+  });
+  const setters = Object.values(map).sort((a,b)=>b.count-a.count).slice(0,6);
+  if(!setters.length){
+    row.innerHTML='<div style="padding:20px;color:var(--text3);font-size:.82rem;">No community setters yet</div>';
+    return;
+  }
+  setters.forEach(s => {
+    const avg = s.ratedCount ? (s.totalRating/s.ratedCount).toFixed(1) : null;
+    const card = document.createElement('div');
+    card.className = 'setter-card';
+    card.innerHTML=`
+      <div class="setter-avatar" style="background:${avatarColor(s.name)}">${initials(s.name)}</div>
+      <div class="setter-name">${s.name}</div>
+      <div class="setter-puzzles">${s.count} puzzle${s.count===1?'':'s'}${avg?` · ★${avg}`:''}</div>
+    `;
+    row.appendChild(card);
+  });
+}
+
+// ── BUILD JUST PUBLISHED ───────────────────────────────
+function buildNewFeed(){
+  const feed = document.getElementById('newFeed');
+  if(!feed) return;
+  feed.innerHTML = '';
+  const recent = [...allPuzzles]
+    .filter(p => !p.isAI)
+    .sort((a,b) => {
+      const at = a.createdAt?.seconds||0, bt = b.createdAt?.seconds||0;
+      return bt - at;
+    }).slice(0,5);
+  if(!recent.length){ feed.innerHTML='<div style="padding:20px;color:var(--text3);font-size:.82rem;">No community puzzles yet</div>'; return; }
+  recent.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'feed-item';
+    item.onclick = () => launchPuzzle(p);
+    const diff = p.difficulty||'';
+    const g = document.createElement('div');
+    g.className = 'feed-grid';
+    g.style.cssText='flex-shrink:0;';
+    const gridEl = document.createElement('div');
+    gridEl.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:46px;height:46px;background:#fff;';
+    renderMiniGrid(gridEl, p.puzzle||'', 46, 2.5);
+    g.appendChild(gridEl);
+    item.innerHTML=`
+      <div class="feed-info">
+        <div class="feed-name">${p.name||'Untitled'}</div>
+        <div class="feed-meta">by <strong>${p.author}</strong> · ${diff}</div>
+      </div>
+      <div class="feed-right">
+        <div class="feed-solve-badge">${diff}</div>
+      </div>
+    `;
+    item.insertBefore(g, item.firstChild);
+    feed.appendChild(item);
+  });
+}
+
+// ── FILTER CHIPS ──────────────────────────────────────
+window.setFilter = function(btn){
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  const filter = btn.dataset.filter;
+  buildTrending(filter);
+  buildRated(filter);
+};
+
+// ── COUNTDOWN ─────────────────────────────────────────
+function updateCountdown(){
+  const now=new Date(), midnight=new Date(); midnight.setHours(24,0,0,0);
+  const diff=Math.floor((midnight-now)/1000);
+  const h=Math.floor(diff/3600),m=Math.floor((diff%3600)/60),s=diff%60;
+  const el=document.getElementById('countdown');
+  if(el) el.textContent=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+setInterval(updateCountdown,1000);
+
+// ── SEARCH ────────────────────────────────────────────
+let searchDebounce=null, searchPage=0;
+const PAGE_SIZE=8;
+let lastSearchResults=[];
+
+window.onSearchInput = function(input){
+  const val=input.value.trim();
+  document.getElementById('searchClearBtn').classList.toggle('visible',val.length>0);
+  clearTimeout(searchDebounce);
+  if(!val && !hasActiveFilters()){ collapseSearch(); return; }
+  showSearchLoading();
+  searchDebounce=setTimeout(()=>runSearch(),280);
+};
+
+function hasActiveFilters(){
+  return ['sfAuthor','sfDifficulty','sfVariant','sfRating'].some(id=>document.getElementById(id)?.value!=='');
+}
+
+window.clearSearch = function(){
+  document.getElementById('searchMainInput').value='';
+  document.getElementById('searchClearBtn').classList.remove('visible');
+  ['sfAuthor','sfDifficulty','sfVariant','sfRating','sfSort'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=(id==='sfSort'?'relevance':''); });
+  collapseSearch();
+};
+
+function collapseSearch(){ document.getElementById('searchResultsArea').classList.remove('visible'); }
+
+function showSearchLoading(){
+  const area=document.getElementById('searchResultsArea');
+  area.classList.add('visible');
+  document.getElementById('searchResultCount').innerHTML='';
+  document.getElementById('searchResultsGrid').innerHTML=`<div class="search-loading" style="grid-column:1/-1"><div class="search-spinner"></div> Searching…</div>`;
+  document.getElementById('loadMoreBtn').style.display='none';
+}
+
+window.runSearch = function(){
+  searchPage=0;
+  const query  = document.getElementById('searchMainInput').value.trim().toLowerCase();
+  const author = document.getElementById('sfAuthor')?.value||'';
+  const diff   = document.getElementById('sfDifficulty')?.value||'';
+  const variant= document.getElementById('sfVariant')?.value||''; // stored for future use
+  const rating = document.getElementById('sfRating')?.value||'';
+  const sort   = document.getElementById('sfSort')?.value||'relevance';
+
+  if(!query&&!author&&!diff&&!rating){ collapseSearch(); return; }
+
+  let results = allPuzzles.filter(p => {
+    if(query){
+      const ql=query.toLowerCase();
+      if(!p.name?.toLowerCase().includes(ql)&&!(p.author||'').toLowerCase().includes(ql)) return false;
+    }
+    if(author==='AI'&&!p.isAI) return false;
+    if(author==='community'&&p.isAI) return false;
+    if(diff && (p.difficulty||'').toLowerCase()!==diff.toLowerCase()) return false;
+    const avg=(typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg))?p.ratingAvg:null;
+    if(rating==='rated'&&avg==null) return false;
+    if(rating==='4plus'&&(avg==null||avg<4)) return false;
+    if(rating==='4.5plus'&&(avg==null||avg<4.5)) return false;
+    return true;
+  });
+
+  if(sort==='rating')  results.sort((a,b)=>(b.ratingAvg||0)-(a.ratingAvg||0));
+  if(sort==='solves')  results.sort((a,b)=>(b.ratingCount||0)-(a.ratingCount||0));
+  if(sort==='newest')  results.sort((a,b)=>((b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)));
+
+  lastSearchResults=results;
+  renderSearchResults(false);
+};
+
+function renderSearchResults(append){
+  const area =document.getElementById('searchResultsArea');
+  const grid =document.getElementById('searchResultsGrid');
+  const count=document.getElementById('searchResultCount');
+  const more =document.getElementById('loadMoreBtn');
+  area.classList.add('visible');
+  const total=lastSearchResults.length;
+  const page =lastSearchResults.slice(searchPage*PAGE_SIZE,(searchPage+1)*PAGE_SIZE);
+  if(!append) grid.innerHTML='';
+  if(total===0){
+    grid.innerHTML=`<div class="search-empty" style="grid-column:1/-1"><div class="empty-icon">🔍</div>No puzzles found — try different filters</div>`;
+    count.innerHTML=''; more.style.display='none'; return;
+  }
+  count.innerHTML=`<span><strong>${total}</strong> puzzle${total===1?'':'s'} found</span>${total>PAGE_SIZE?`<span style="color:var(--text3);font-size:.68rem">showing ${Math.min((searchPage+1)*PAGE_SIZE,total)} of ${total}</span>`:''}`;
+  page.forEach(p=>{
+    const card=makeSearchResultCard(p);
+    grid.appendChild(card);
+  });
+  const shown=(searchPage+1)*PAGE_SIZE;
+  more.style.display=shown<total?'block':'none';
+}
+
+window.loadMoreResults = function(){ searchPage++; renderSearchResults(true); };
+
+function makeSearchResultCard(p){
+  const card=document.createElement('div');
+  card.className='puzzle-card'; card.style.width='100%';
+  card.onclick=()=>launchPuzzle(p);
+  const preview=document.createElement('div'); preview.className='card-preview';
+  const gridEl=document.createElement('div');
+  gridEl.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:80px;height:80px;background:#fff;';
+  renderMiniGrid(gridEl,p.puzzle||'',80,4.5);
+  preview.appendChild(gridEl);
+  const diff=p.difficulty||'';
+  const rating=(typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg))?`★ ${p.ratingAvg.toFixed(1)}`:'Unrated';
+  const count=typeof p.ratingCount==='number'?p.ratingCount:0;
+  const body=document.createElement('div'); body.className='card-body';
+  body.innerHTML=`
+    <div class="card-name">${p.name||'Untitled'}</div>
+    <div class="card-setter">${p.author||'Unknown'}</div>
+    <div class="card-meta">
+      <span class="card-star">${rating}</span>
+      <span style="font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:4px;background:${(DIFF_COLOR[diff]||'#64748b')}22;color:${DIFF_COLOR[diff]||'#64748b'}">${diff}</span>
+    </div>
+    <div style="margin-top:4px;font-size:.62rem;color:var(--text3)">${count} rating${count===1?'':'s'}</div>
+  `;
+  card.appendChild(preview); card.appendChild(body);
+  return card;
+}
+
+// Trigger search when filters change
+['sfAuthor','sfDifficulty','sfVariant','sfRating','sfSort'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('change',()=>{
+    if(document.getElementById('searchMainInput')?.value.trim()||hasActiveFilters()){
+      showSearchLoading(); clearTimeout(searchDebounce); searchDebounce=setTimeout(runSearch,150);
+    }
+  });
+});
+</script>
+</body>
+</html>
