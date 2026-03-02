@@ -497,7 +497,7 @@
 <nav class="navbar">
   <div class="nav-logo">Sudoku Social</div>
   <div class="nav-links">
-    <a class="nav-link active" href="explore.html">� Explore</a>
+    <a class="nav-link active" href="explore.html">🔍 Explore</a>
     <a class="nav-link" href="game.html#play">🎮 Play</a>
     <a class="nav-link" href="create.html">✏️ Create</a>
     <a class="nav-link" href="history.html">📊 History</a>
@@ -513,6 +513,7 @@
   <div class="hero-card">
     <div class="hero-left">
       <div>
+        <div class="hero-badge-row" id="heroBadgeRow"></div>
         <div class="hero-title">Loading…</div>
         <div class="hero-setter"></div>
         <div class="hero-stats" id="heroStats"></div>
@@ -753,6 +754,33 @@ async function loadAllPuzzles(){
   } catch(e) { console.error('Could not load Firestore puzzles:', e); }
 }
 
+// ── VARIANT BADGE HELPERS ───────────────────────────
+function getPuzzleVariants(p){
+  let c=null;
+  try{ c=p.constraints?(typeof p.constraints==='string'?JSON.parse(p.constraints):p.constraints):null; }catch(e){}
+  if(!c) return [{label:'Classic',cls:'vb-classic'}];
+  const v=[];
+  if((c.killerCages||[]).length)   v.push({label:'Killer',cls:'vb-killer'});
+  if((c.thermometers||[]).length)  v.push({label:'Thermo',cls:'vb-thermo'});
+  if((c.arrows||[]).length)        v.push({label:'Arrow',cls:'vb-arrow'});
+  if((c.whispers||[]).length)      v.push({label:'Whisper',cls:'vb-whisper'});
+  if((c.renbans||[]).length)       v.push({label:'Renban',cls:'vb-renban'});
+  if((c.palindromes||[]).length)   v.push({label:'Palindrome',cls:'vb-palindrome'});
+  if((c.betweens||[]).length)      v.push({label:'Between',cls:'vb-between'});
+  const g=c.globals||{};
+  if(g.diagonalpos||g.diagonalneg) v.push({label:'Diagonal',cls:'vb-diagonal'});
+  if(g.antiknight)                 v.push({label:'Anti-Knight',cls:'vb-antiknight'});
+  if(g.antiking)                   v.push({label:'Anti-King',cls:'vb-antiknight'});
+  if(g.nonconsecutive)             v.push({label:'Non-Consec',cls:'vb-between'});
+  if(g.disjoint)                   v.push({label:'Disjoint',cls:'vb-renban'});
+  if((c.extraRegions||[]).length)  v.push({label:'Extra Regions',cls:'vb-arrow'});
+  if((c.oddCells||[]).length||(c.evenCells||[]).length) v.push({label:'Odd/Even',cls:'vb-whisper'});
+  return v.length ? v : [{label:'Classic',cls:'vb-classic'}];
+}
+function variantBadgesHTML(p){
+  return getPuzzleVariants(p).map(x=>`<span class="variant-badge ${x.cls}">${x.label}</span>`).join('');
+}
+
 // ── BUILD PAGE ────────────────────────────────────────
 function buildPage(){
   buildPOTD();
@@ -771,6 +799,8 @@ function buildPOTD(){
   // hero left
   document.querySelector('.hero-title').textContent = p.name;
   document.querySelector('.hero-setter').innerHTML = `by <strong>${p.author}</strong>`;
+  const heroBadgeRow = document.getElementById('heroBadgeRow');
+  if(heroBadgeRow) heroBadgeRow.innerHTML = variantBadgesHTML(p);
   const d = p.difficulty||'';
   const rating = (typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg)) ? `⭐ ${p.ratingAvg.toFixed(1)}` : 'Unrated';
   const count  = (typeof p.ratingCount==='number') ? p.ratingCount : 0;
@@ -841,6 +871,7 @@ function makePuzzleCard(p, rank){
   body.className = 'card-body';
   body.innerHTML = `
     <div class="card-name">${p.name||'Untitled'}</div>
+    <div style="display:flex;gap:3px;flex-wrap:wrap;margin:3px 0 4px;">${variantBadgesHTML(p)}</div>
     <div class="card-setter">${p.author||'Unknown'}</div>
     <div class="card-meta">
       <div class="card-stats"><span class="card-star">${rating}</span></div>
@@ -1070,6 +1101,7 @@ function makeSearchResultCard(p){
   const body=document.createElement('div'); body.className='card-body';
   body.innerHTML=`
     <div class="card-name">${p.name||'Untitled'}</div>
+    <div style="display:flex;gap:3px;flex-wrap:wrap;margin:3px 0 4px;">${variantBadgesHTML(p)}</div>
     <div class="card-setter">${p.author||'Unknown'}</div>
     <div class="card-meta">
       <span class="card-star">${rating}</span>
