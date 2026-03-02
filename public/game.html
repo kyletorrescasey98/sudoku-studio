@@ -289,7 +289,7 @@
 
 <!-- MOBILE TOP BAR -->
 <div class="mobile-topbar" id="mobileTopbar">
-  <button class="mobile-back-btn" ontouchend="event.preventDefault();window.showSearchOverlay()" onclick="window.showSearchOverlay()">&#x2190;</button>
+  <button class="mobile-back-btn" ontouchend="event.preventDefault();history.back()" onclick="history.back()">&#x2190;</button>
   <div class="mobile-puzzle-name" id="mobilePuzzleName">Sudoku</div>
   <!-- gear moved to left of timer for easier reach -->
   <button class="mobile-gear-btn" id="mobileGearBtn" ontouchend="event.preventDefault();openMobileSettings()" onclick="openMobileSettings()" aria-label="Settings">&#x2699;&#xFE0F;</button>
