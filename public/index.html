@@ -117,7 +117,7 @@
     const googleProvider = new GoogleAuthProvider();
 
     // Redirect if already signed in
-    onAuthStateChanged(auth, user => { if(user) window.location.href = 'game.html'; });
+    onAuthStateChanged(auth, user => { if(user) window.location.href = 'explore.html'; });
 
     window.switchTab = function(tab) {
       document.getElementById('form-signin').style.display = tab==='signin' ? '' : 'none';
@@ -145,7 +145,7 @@
       setLoading('si-btn', true);
       try {
         await signInWithEmailAndPassword(auth, email, pass);
-        window.location.href = 'game.html';
+        window.location.href = 'explore.html';
       } catch(e) {
         showMsg('si-msg', friendlyError(e.code), 'error');
         setLoading('si-btn', false);
@@ -162,7 +162,7 @@
       try {
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
         await updateProfile(cred.user, { displayName: name });
-        window.location.href = 'game.html';
+        window.location.href = 'explore.html';
       } catch(e) {
         showMsg('su-msg', friendlyError(e.code), 'error');
         setLoading('su-btn', false);
@@ -172,7 +172,7 @@
     window.signInGoogle = async function() {
       try {
         await signInWithPopup(auth, googleProvider);
-        window.location.href = 'game.html';
+        window.location.href = 'explore.html';
       } catch(e) {
         showMsg('si-msg', friendlyError(e.code), 'error');
       }
