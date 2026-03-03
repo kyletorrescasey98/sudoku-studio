@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile — Sudoku Social</title>
+  <meta name="description" content="View your Sudoku profile, stats, solve history and created puzzles" />
+  <meta property="og:title" content="Sudoku Social - Profile" />
+  <meta property="og:description" content="View your Sudoku profile, stats, solve history and created puzzles" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://sudokusocial.web.app/" />
+  <meta property="og:image" content="https://sudokusocial.web.app/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Sudoku Social - Profile" />
+  <meta name="twitter:description" content="View your Sudoku profile, stats, solve history and created puzzles" />
+  <meta name="twitter:image" content="https://sudokusocial.web.app/og-image.png" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg:#f8f9fa; --surface:#ffffff; --surface2:#f0f2f5; --surface3:#e4e6ea;
+      --accent:#2563eb; --accent2:#7c3aed; --text:#111827; --text2:#6b7280;
+      --error:#dc2626; --warning:#d97706; --success:#16a34a;
+      --border:#d1d5db;
+    }
+    body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding-bottom:60px; overflow-x:hidden; }
+
+    /* ── NAVBAR ── */
+    .navbar { width:100%; background:var(--surface); border-bottom:1px solid var(--border); padding:0 20px; height:52px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-shrink:0; position:sticky; top:0; z-index:50; }
+    .nav-logo { font-size:1.1rem; font-weight:900; letter-spacing:6px; text-transform:uppercase; background:linear-gradient(120deg,var(--accent) 30%,var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; text-decoration:none; }
+    .nav-right { display:flex; align-items:center; gap:8px; }
+    .nav-links { display:flex; align-items:center; gap:6px; }
+    .nav-btn { padding:5px 12px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:.75rem; font-weight:600; cursor:pointer; transition:all .15s; text-decoration:none; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+    .nav-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .nav-btn.danger:hover { border-color:var(--error); color:var(--error); }
+    .nav-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; color:#fff; cursor:pointer; flex-shrink:0; }
+    .nav-menu-btn { display:none; padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:1rem; cursor:pointer; align-items:center; justify-content:center; }
+    .nav-menu-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .nav-menu-dropdown { display:none; position:fixed; top:52px; right:12px; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.18); z-index:1000; min-width:170px; overflow:hidden; }
+    .nav-menu-dropdown.open { display:block; }
+    .nav-menu-item { display:block; padding:9px 14px; font-size:.82rem; color:var(--text); text-decoration:none; background:var(--surface); border-bottom:1px solid var(--surface2); cursor:pointer; text-align:left; width:100%; border-left:none; border-right:none; border-top:none; font-family:inherit; }
+    .nav-menu-item:last-child { border-bottom:none; }
+    .nav-menu-item:hover { background:var(--surface2); }
+    .nav-menu-item.danger { color:var(--error); }
+
+    /* ── PAGE SHELL ── */
+    .page { width:100%; max-width:900px; padding:28px 20px 0; display:flex; flex-direction:column; gap:24px; }
+
+    /* ── LOADING ── */
+    .loading-area { display:flex; align-items:center; justify-content:center; padding:80px 20px; gap:12px; color:var(--text2); font-size:.9rem; }
+    .spinner { width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+    /* ── PROFILE HEADER ── */
+    .profile-header { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:28px 28px 24px; display:flex; gap:22px; align-items:flex-start; animation:fadeUp .35s ease both; }
+    .profile-avatar-wrap { flex-shrink:0; }
+    .profile-avatar { width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:900; color:#fff; box-shadow:0 4px 16px rgba(0,0,0,.15); letter-spacing:-1px; }
+    .profile-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+    .profile-name-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .profile-name { font-size:1.4rem; font-weight:900; color:var(--text); line-height:1.1; }
+    .profile-username { font-size:.82rem; color:var(--text2); font-weight:600; }
+    .profile-join { font-size:.72rem; color:var(--text2); display:flex; align-items:center; gap:5px; }
+    .profile-bio-wrap { display:flex; align-items:center; gap:8px; }
+    .profile-bio { font-size:.84rem; color:var(--text2); font-style:italic; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .profile-bio.empty { color:var(--surface3); }
+    .bio-edit-input { flex:1; min-width:0; font-size:.84rem; padding:4px 8px; border:1px solid var(--border); border-radius:6px; color:var(--text); background:var(--surface2); outline:none; font-family:inherit; }
+    .bio-edit-input:focus { border-color:var(--accent); }
+    .icon-btn { background:none; border:none; cursor:pointer; color:var(--text2); font-size:.85rem; padding:2px 4px; border-radius:4px; transition:color .12s; flex-shrink:0; }
+    .icon-btn:hover { color:var(--accent); }
+    .profile-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+    .btn-sm { padding:6px 14px; border-radius:8px; font-size:.76rem; font-weight:700; cursor:pointer; border:1.5px solid var(--border); background:var(--surface2); color:var(--text); transition:all .15s; display:inline-flex; align-items:center; gap:5px; }
+    .btn-sm:hover { border-color:var(--accent); color:var(--accent); }
+    .btn-sm.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .btn-sm.primary:hover { filter:brightness(1.1); }
+    .privacy-toggle { display:flex; align-items:center; gap:8px; }
+    .toggle-label { font-size:.72rem; font-weight:700; color:var(--text2); }
+    .toggle-switch { position:relative; width:36px; height:20px; cursor:pointer; }
+    .toggle-switch input { opacity:0; width:0; height:0; position:absolute; }
+    .toggle-slider { position:absolute; inset:0; background:var(--surface3); border-radius:999px; transition:background .2s; }
+    .toggle-slider::before { content:''; position:absolute; width:14px; height:14px; background:#fff; border-radius:50%; top:3px; left:3px; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+    .toggle-switch input:checked + .toggle-slider { background:var(--accent2); }
+    .toggle-switch input:checked + .toggle-slider::before { transform:translateX(16px); }
+
+    /* ── PRIVATE OVERLAY ── */
+    .private-notice { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:40px 20px; text-align:center; color:var(--text2); animation:fadeUp .3s ease both; }
+    .private-notice .lock-icon { font-size:2.5rem; margin-bottom:12px; }
+    .private-notice p { font-size:.9rem; }
+
+    /* ── SECTION LABEL ── */
+    .section-label { font-size:.68rem; font-weight:800; letter-spacing:2.5px; text-transform:uppercase; color:var(--text2); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+    .section-label::before { content:''; width:16px; height:2px; background:currentColor; border-radius:2px; }
+
+    /* ── STATS CARDS ── */
+    .stats-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px; }
+    .stats-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px 20px 18px; animation:fadeUp .35s .05s ease both; }
+    .stats-card-title { font-size:.72rem; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--text2); margin-bottom:14px; display:flex; align-items:center; gap:7px; }
+    .stats-card-title .icon { font-size:1rem; }
+    .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .stat-item { display:flex; flex-direction:column; gap:2px; }
+    .stat-value { font-size:1.6rem; font-weight:900; color:var(--accent); line-height:1.1; }
+    .stat-value.accent2 { color:var(--accent2); }
+    .stat-value.success { color:var(--success); }
+    .stat-label { font-size:.63rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:1px; }
+    .stat-sub { font-size:.68rem; color:var(--text2); margin-top:1px; }
+    .diff-breakdown { display:flex; flex-direction:column; gap:5px; margin-top:10px; padding-top:10px; border-top:1px solid var(--surface2); }
+    .diff-row { display:flex; align-items:center; gap:8px; }
+    .diff-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .diff-name { font-size:.7rem; font-weight:700; color:var(--text2); width:52px; flex-shrink:0; }
+    .diff-bar-wrap { flex:1; height:6px; background:var(--surface2); border-radius:999px; overflow:hidden; }
+    .diff-bar { height:100%; border-radius:999px; transition:width .6s ease; }
+    .diff-val { font-size:.7rem; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; width:62px; text-align:right; flex-shrink:0; }
+
+    /* ── ACHIEVEMENTS ── */
+    .achievements-wrap { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; animation:fadeUp .35s .1s ease both; }
+    .badges-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .badge { display:flex; flex-direction:column; align-items:center; gap:5px; padding:12px 14px; border-radius:12px; border:1.5px solid var(--border); background:var(--surface2); min-width:72px; transition:all .15s; }
+    .badge.earned { background:linear-gradient(135deg,#fef9c3,#fef3c7); border-color:#fcd34d; }
+    .badge-icon { font-size:1.5rem; filter:grayscale(1) opacity(.3); }
+    .badge.earned .badge-icon { filter:none; }
+    .badge-name { font-size:.58rem; font-weight:800; color:var(--text2); text-align:center; line-height:1.3; }
+    .badge.earned .badge-name { color:#92400e; }
+
+    /* ── TABS ── */
+    .tabs-section { animation:fadeUp .35s .12s ease both; }
+    .tab-bar { display:flex; gap:0; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:3px; margin-bottom:16px; width:fit-content; }
+    .tab-btn { padding:7px 18px; border-radius:7px; border:none; background:transparent; color:var(--text2); font-size:.78rem; font-weight:700; cursor:pointer; transition:all .15s; white-space:nowrap; }
+    .tab-btn.active { background:var(--surface); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+    .tab-pane { display:none; }
+    .tab-pane.active { display:block; }
+
+    /* ── SORT BAR ── */
+    .sort-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+    .filter-bar { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+    .filter-group { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+    .filter-label { font-size:.72rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.06em; padding-right:2px; }
+    .filter-chip { background:var(--surface2); border:1.5px solid var(--border); border-radius:999px; padding:3px 12px; font-size:.78rem; cursor:pointer; color:var(--text2); transition:background .15s,color .15s,border-color .15s; }
+    .filter-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
+    .filter-chip:hover:not(.active) { background:rgba(37,99,235,.1); color:var(--accent); border-color:var(--accent); }
+    .sort-label { font-size:.7rem; font-weight:700; color:var(--text2); }
+    .sort-btn { padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text2); font-size:.7rem; font-weight:700; cursor:pointer; transition:all .12s; }
+    .sort-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+    /* ── HISTORY ITEMS ── */
+    .history-list { display:flex; flex-direction:column; gap:8px; }
+    .history-item { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 16px; display:flex; align-items:center; gap:14px; transition:all .15s; cursor:pointer; }
+    .history-item:hover { border-color:rgba(37,99,235,.3); box-shadow:0 2px 10px rgba(37,99,235,.08); }
+    .hi-grid { display:grid; grid-template-rows:repeat(9,1fr); border:1.5px solid #374151; border-radius:4px; overflow:hidden; width:52px; height:52px; background:#fff; flex-shrink:0; }
+    .hi-row { display:grid; grid-template-columns:repeat(9,1fr); }
+    .hi-cell { border-right:.4px solid #e5e7eb; border-bottom:.4px solid #e5e7eb; display:flex; align-items:center; justify-content:center; font-size:3.2px; font-weight:700; color:#1f2937; background:#f8f9fa; }
+    .hi-cell.empty { background:#fff; color:transparent; }
+    .hi-cell:last-child { border-right:none; }
+    .hi-row:last-child .hi-cell { border-bottom:none; }
+    .hi-cell.bx-r { border-right:1px solid #6b7280 !important; }
+    .hi-cell.bx-b { border-bottom:1px solid #6b7280 !important; }
+    .hi-info { flex:1; min-width:0; }
+    .hi-name { font-size:.84rem; font-weight:800; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .hi-meta { font-size:.7rem; color:var(--text2); margin-top:2px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .hi-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+    .hi-time { font-size:.88rem; font-weight:800; color:var(--accent); font-variant-numeric:tabular-nums; }
+    .hi-date { font-size:.65rem; color:var(--text2); }
+    .diff-badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:.65rem; font-weight:700; }
+    .diff-easy   { background:#dcfce7; color:#15803d; }
+    .diff-medium { background:#fef9c3; color:#854d0e; }
+    .diff-hard   { background:#fee2e2; color:#b91c1c; }
+    .diff-expert { background:#ede9fe; color:#6d28d9; }
+
+    /* ── CREATED PUZZLES GRID ── */
+    .created-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px; }
+    .puzzle-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; cursor:pointer; transition:all .18s; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+    .puzzle-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(37,99,235,.12); border-color:rgba(37,99,235,.3); }
+    .card-preview { height:100px; padding:8px; background:linear-gradient(135deg,#f8faff,#eef2ff); display:flex; align-items:center; justify-content:center; }
+    .card-mini-grid { display:grid; grid-template-rows:repeat(9,1fr); border:1.5px solid #374151; border-radius:4px; overflow:hidden; width:80px; height:80px; background:#fff; }
+    .card-grid-row { display:grid; grid-template-columns:repeat(9,1fr); }
+    .card-cell { border-right:.5px solid #e5e7eb; border-bottom:.5px solid #e5e7eb; display:flex; align-items:center; justify-content:center; font-size:4.5px; font-weight:700; color:#1f2937; background:#f8f9fa; }
+    .card-cell.empty { background:#fff; color:transparent; }
+    .card-cell:last-child { border-right:none; }
+    .card-grid-row:last-child .card-cell { border-bottom:none; }
+    .card-cell.bx-r { border-right:1px solid #6b7280 !important; }
+    .card-cell.bx-b { border-bottom:1px solid #6b7280 !important; }
+    .card-body { padding:10px 12px; }
+    .card-name { font-size:.82rem; font-weight:800; color:var(--text); margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .card-stats-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+    .card-stat-pill { font-size:.65rem; font-weight:700; color:var(--text2); display:flex; align-items:center; gap:3px; }
+    .card-edit-btn { width:100%; padding:7px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:.72rem; font-weight:700; cursor:pointer; transition:all .15s; }
+    .card-edit-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(37,99,235,.05); }
+
+    /* ── EMPTY STATE ── */
+    .empty-state { text-align:center; padding:48px 20px; color:var(--text2); }
+    .empty-icon { font-size:2.8rem; margin-bottom:12px; }
+    .empty-state p { font-size:.88rem; margin-bottom:16px; line-height:1.7; }
+    .btn-primary { display:inline-block; padding:9px 20px; background:var(--accent); color:#fff; border-radius:8px; font-size:.85rem; font-weight:700; text-decoration:none; border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(1.1); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width:640px) {
+      .nav-links { display:none; }
+      .nav-menu-btn { display:inline-flex; }
+      .profile-header { flex-direction:column; align-items:center; text-align:center; }
+      .profile-name-row { justify-content:center; }
+      .profile-actions { justify-content:center; }
+      .stats-row { grid-template-columns:1fr; }
+      .created-grid { grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="game.html" class="nav-logo">Sudoku Social</a>
+  <div class="nav-right">
+    <div class="nav-links">
+      <a href="game.html#play" class="nav-btn">🎮 Play</a>
+      <a href="explore.html" class="nav-btn">🔍 Explore</a>
+      <a href="create.html" class="nav-btn">✏️ Create</a>
+      <a href="profile.html" class="nav-btn">👤 Profile</a>
+      <button class="nav-btn danger" onclick="handleSignOut()">Sign Out</button>
+    </div>
+    <div class="nav-avatar" id="navAvatarEl">…</div>
+    <button class="nav-menu-btn" id="navMenuBtn" aria-label="Menu">☰</button>
+  </div>
+</nav>
+
+<div class="nav-menu-dropdown" id="navMenuDropdown">
+  <a href="game.html#play" class="nav-menu-item">🎮 Play</a>
+  <a href="explore.html" class="nav-menu-item">🔍 Explore</a>
+  <a href="create.html" class="nav-menu-item">✏️ Create</a>
+  <a href="profile.html" class="nav-menu-item">👤 Profile</a>
+  <button class="nav-menu-item danger" type="button" onclick="handleSignOut()">Sign Out</button>
+</div>
+
+<div class="page" id="mainPage">
+
+  <!-- Loading -->
+  <div class="loading-area" id="loadingArea">
+    <div class="spinner"></div> Loading profile…
+  </div>
+
+  <!-- Content -->
+  <div id="contentArea" style="display:none; flex-direction:column; gap:24px;">
+
+    <!-- ── PROFILE HEADER ── -->
+    <div class="profile-header" id="profileHeader">
+      <div class="profile-avatar-wrap">
+        <div class="profile-avatar" id="profileAvatar">?</div>
+      </div>
+      <div class="profile-info">
+        <div class="profile-name-row">
+          <div class="profile-name" id="profileName">—</div>
+          <div class="profile-username" id="profileUsername"></div>
+        </div>
+        <div class="profile-join" id="profileJoin">📅 Joined —</div>
+        <div class="profile-bio-wrap" id="bioWrap">
+          <span class="profile-bio empty" id="profileBioDisplay">No bio yet…</span>
+          <button class="icon-btn" id="bioEditBtn" title="Edit bio" style="display:none">✏️</button>
+        </div>
+        <div class="profile-bio-wrap" id="bioEditWrap" style="display:none">
+          <input class="bio-edit-input" id="bioInput" maxlength="100" placeholder="Write a short bio…" />
+          <button class="icon-btn" onclick="saveBio()" title="Save">✅</button>
+          <button class="icon-btn" onclick="cancelBio()" title="Cancel">❌</button>
+        </div>
+        <div class="profile-actions" id="profileActions"></div>
+      </div>
+    </div>
+
+    <!-- Private-profile notice -->
+    <div class="private-notice" id="privateNotice" style="display:none">
+      <div class="lock-icon">🔒</div>
+      <p>This profile is private.</p>
+    </div>
+
+    <div id="publicContent" style="display:contents">
+
+      <!-- ── STATS ── -->
+      <div>
+        <div class="section-label">Solver Stats</div>
+        <div class="stats-row">
+          <div class="stats-card" id="solverStatsCard">
+            <div class="stats-card-title"><span class="icon">📊</span> Solver Statistics</div>
+            <div class="stats-grid">
+              <div class="stat-item"><div class="stat-value" id="sSolved">0</div><div class="stat-label">Puzzles Solved</div></div>
+              <div class="stat-item"><div class="stat-value accent2" id="sStreak">0</div><div class="stat-label">Current Streak</div><div class="stat-sub">days in a row</div></div>
+              <div class="stat-item"><div class="stat-value" id="sLongest">0</div><div class="stat-label">Longest Streak</div><div class="stat-sub">days</div></div>
+              <div class="stat-item"><div class="stat-value success" id="sAvgTime">—</div><div class="stat-label">Avg Solve Time</div></div>
+              <div class="stat-item"><div class="stat-value" id="sCompletion">—</div><div class="stat-label">Completion Rate</div></div>
+              <div class="stat-item"><div class="stat-value accent2" id="sFavVariant" style="font-size:1rem">—</div><div class="stat-label">Fav. Variant</div></div>
+            </div>
+            <div class="diff-breakdown" id="diffBreakdown"></div>
+          </div>
+          <div class="stats-card" id="setterStatsCard" style="display:none">
+            <div class="stats-card-title"><span class="icon">✏️</span> Setter Statistics</div>
+            <div class="stats-grid">
+              <div class="stat-item"><div class="stat-value" id="setPublished">0</div><div class="stat-label">Puzzles Published</div></div>
+              <div class="stat-item"><div class="stat-value accent2" id="setTotalSolves">0</div><div class="stat-label">Total Solves</div><div class="stat-sub">across all puzzles</div></div>
+              <div class="stat-item"><div class="stat-value success" id="setAvgRating">—</div><div class="stat-label">Avg Rating</div></div>
+              <div class="stat-item"><div class="stat-value" id="setPopularCount">—</div><div class="stat-label">Most Popular</div><div class="stat-sub" id="setPopularName" style="font-size:.7rem;color:var(--text2);max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ACHIEVEMENTS ── -->
+      <div class="achievements-wrap">
+        <div class="section-label" style="margin-bottom:14px">Achievements</div>
+        <div class="badges-row" id="badgesRow"></div>
+      </div>
+
+      <!-- ── TABS ── -->
+      <div class="tabs-section">
+        <div class="tab-bar">
+          <button class="tab-btn active" id="tabBtnHistory" onclick="switchTab('history')">📋 Solve History</button>
+          <button class="tab-btn" id="tabBtnCreated" onclick="switchTab('created')">✏️ Created Puzzles</button>
+        </div>
+        <div class="tab-pane active" id="paneHistory">
+          <div class="sort-bar">
+            <span class="sort-label">Sort by:</span>
+            <button class="sort-btn active" id="sortDate" onclick="setSolveSort('date')">Date</button>
+            <button class="sort-btn" id="sortTime" onclick="setSolveSort('time')">Time</button>
+            <button class="sort-btn" id="sortDiff" onclick="setSolveSort('diff')">Difficulty</button>
+          </div>
+          <div class="filter-bar">
+            <div class="filter-group">
+              <span class="filter-label">Difficulty:</span>
+              <button class="filter-chip active" id="sfDiff-all"   onclick="setSolveFilter('diff','all')">All</button>
+              <button class="filter-chip"        id="sfDiff-easy"  onclick="setSolveFilter('diff','easy')">Easy</button>
+              <button class="filter-chip"        id="sfDiff-medium" onclick="setSolveFilter('diff','medium')">Medium</button>
+              <button class="filter-chip"        id="sfDiff-hard"  onclick="setSolveFilter('diff','hard')">Hard</button>
+              <button class="filter-chip"        id="sfDiff-expert" onclick="setSolveFilter('diff','expert')">Expert</button>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Variant:</span>
+              <button class="filter-chip active" id="sfVar-all"     onclick="setSolveFilter('variant','all')">All</button>
+              <button class="filter-chip"        id="sfVar-classic" onclick="setSolveFilter('variant','classic')">Classic</button>
+              <button class="filter-chip"        id="sfVar-killer"  onclick="setSolveFilter('variant','killer')">Killer</button>
+              <button class="filter-chip"        id="sfVar-thermo"  onclick="setSolveFilter('variant','thermo')">Thermo</button>
+              <button class="filter-chip"        id="sfVar-arrow"   onclick="setSolveFilter('variant','arrow')">Arrow</button>
+            </div>
+          </div>
+          <div class="history-list" id="historyList"></div>
+        </div>
+        <div class="tab-pane" id="paneCreated">
+          <div class="filter-bar">
+            <div class="filter-group">
+              <span class="filter-label">Difficulty:</span>
+              <button class="filter-chip active" id="cfDiff-all"   onclick="setCreatedFilter('diff','all')">All</button>
+              <button class="filter-chip"        id="cfDiff-easy"  onclick="setCreatedFilter('diff','easy')">Easy</button>
+              <button class="filter-chip"        id="cfDiff-medium" onclick="setCreatedFilter('diff','medium')">Medium</button>
+              <button class="filter-chip"        id="cfDiff-hard"  onclick="setCreatedFilter('diff','hard')">Hard</button>
+              <button class="filter-chip"        id="cfDiff-expert" onclick="setCreatedFilter('diff','expert')">Expert</button>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Variant:</span>
+              <button class="filter-chip active" id="cfVar-all"     onclick="setCreatedFilter('variant','all')">All</button>
+              <button class="filter-chip"        id="cfVar-classic" onclick="setCreatedFilter('variant','classic')">Classic</button>
+              <button class="filter-chip"        id="cfVar-killer"  onclick="setCreatedFilter('variant','killer')">Killer</button>
+              <button class="filter-chip"        id="cfVar-thermo"  onclick="setCreatedFilter('variant','thermo')">Thermo</button>
+              <button class="filter-chip"        id="cfVar-arrow"   onclick="setCreatedFilter('variant','arrow')">Arrow</button>
+            </div>
+          </div>
+          <div class="created-grid" id="createdGrid"></div>
+        </div>
+      </div>
+
+    </div><!-- /publicContent -->
+  </div><!-- /contentArea -->
+</div>
+
+<script type="module">
+import { initializeApp }        from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
+import { getFirestore, collection, getDocs, getDoc, setDoc, doc, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { firebaseConfig } from './firebase-config.js';
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ── STATE ────────────────────────────────────────────
+let currentUser    = null;
+let viewUid        = null;
+let isOwnProfile   = true;
+let allSolves      = [];
+let createdPuzzles = [];
+let solveSort         = 'date';
+let solveFilterDiff   = 'all';
+let solveFilterVariant= 'all';
+let createdFilterDiff = 'all';
+let createdFilterVariant = 'all';
+let profileDoc     = {};
+
+const params    = new URLSearchParams(location.search);
+const targetUid = params.get('uid');
+
+// ── HELPERS ──────────────────────────────────────────
+const AVATAR_COLORS = [
+  'linear-gradient(135deg,#2563eb,#7c3aed)',
+  'linear-gradient(135deg,#ec4899,#f97316)',
+  'linear-gradient(135deg,#16a34a,#0ea5e9)',
+  'linear-gradient(135deg,#f59e0b,#ef4444)',
+  'linear-gradient(135deg,#7c3aed,#ec4899)',
+  'linear-gradient(135deg,#0ea5e9,#16a34a)'
+];
+function avatarGradient(name){
+  let h=0; for(const ch of (name||'?')) h=(h*31+ch.charCodeAt(0))&0xffff;
+  return AVATAR_COLORS[h%AVATAR_COLORS.length];
+}
+function initials(name){
+  return (name||'?').trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';
+}
+function fmtTime(s){
+  if(s==null||isNaN(s)) return '—';
+  return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+}
+function fmtDate(ts){
+  const d=ts?.toDate?ts.toDate():(ts?new Date(ts):new Date());
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+}
+function relDate(ts){
+  const d=ts?.toDate?ts.toDate():new Date(ts||Date.now());
+  const diff=Math.floor((Date.now()-d)/86400000);
+  if(diff===0) return 'Today';
+  if(diff===1) return 'Yesterday';
+  if(diff<7)   return diff+'d ago';
+  if(diff<30)  return Math.floor(diff/7)+'w ago';
+  return Math.floor(diff/30)+'mo ago';
+}
+function escHtml(str){ const d=document.createElement('span'); d.textContent=str; return d.innerHTML; }
+
+// ── NAV ──────────────────────────────────────────────
+function initNavMenu(){
+  const btn=document.getElementById('navMenuBtn');
+  const menu=document.getElementById('navMenuDropdown');
+  if(!btn||!menu) return;
+  btn.addEventListener('click',e=>{ e.stopPropagation(); menu.classList.toggle('open'); });
+  document.addEventListener('click',e=>{
+    if(menu.classList.contains('open')&&!menu.contains(e.target)&&e.target!==btn) menu.classList.remove('open');
+  });
+}
+initNavMenu();
+
+window.handleSignOut = async()=>{ await signOut(auth); window.location.href='index.html'; };
+
+// ── AUTH ─────────────────────────────────────────────
+onAuthStateChanged(auth, async user=>{
+  if(!user){ window.location.href='index.html'; return; }
+  currentUser=user;
+  viewUid=targetUid||user.uid;
+  isOwnProfile=(viewUid===user.uid);
+
+  const av=document.getElementById('navAvatarEl');
+  const navName=user.displayName||user.email||'U';
+  av.textContent=navName[0].toUpperCase();
+  av.style.background=avatarGradient(navName);
+  av.onclick=()=>{ window.location.href='profile.html'; };
+
+  await loadProfile();
+  document.getElementById('loadingArea').style.display='none';
+  const ca=document.getElementById('contentArea');
+  ca.style.display='flex';
+});
+
+// ── LOAD ALL DATA ─────────────────────────────────────
+async function loadProfile(){
+  try{
+    const snap=await getDoc(doc(db,'users',viewUid));
+    profileDoc=snap.exists()?snap.data():{};
+  }catch(e){ profileDoc={}; }
+
+  try{
+    const q=query(collection(db,'users',viewUid,'solves'),orderBy('solvedAt','desc'));
+    const snap=await getDocs(q);
+    allSolves=snap.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){ allSolves=[]; }
+
+  try{
+    const q=query(collection(db,'puzzles'),where('authorUid','==',viewUid));
+    const snap=await getDocs(q);
+    createdPuzzles=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  }catch(e){ createdPuzzles=[]; }
+
+  renderAll();
+}
+
+// ── RENDER ────────────────────────────────────────────
+function renderAll(){
+  renderHeader();
+  const isPrivate=profileDoc.isPrivate&&!isOwnProfile;
+  document.getElementById('privateNotice').style.display=isPrivate?'':'none';
+  document.getElementById('publicContent').style.display=isPrivate?'none':'contents';
+  if(!isPrivate){
+    renderSolverStats();
+    renderSetterStats();
+    renderAchievements();
+    renderSolveHistory();
+    renderCreatedPuzzles();
+  }
+}
+
+function renderHeader(){
+  const displayName=profileDoc.displayName||currentUser?.displayName||(isOwnProfile?(currentUser?.email?.split('@')[0]||'Player'):'Player');
+  const username=profileDoc.username||(isOwnProfile?(currentUser?.email?.split('@')[0]||''):'');
+  const bio=profileDoc.bio||'';
+  const joinedAt=profileDoc.joinedAt||currentUser?.metadata?.creationTime;
+  const isPrivate=!!profileDoc.isPrivate;
+
+  const av=document.getElementById('profileAvatar');
+  av.textContent=initials(displayName);
+  av.style.background=avatarGradient(displayName);
+
+  document.getElementById('profileName').textContent=displayName;
+  document.getElementById('profileUsername').textContent=username?'@'+username:'';
+
+  let joinStr='—';
+  if(joinedAt){
+    const d=joinedAt?.toDate?joinedAt.toDate():new Date(joinedAt);
+    joinStr=d.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  }
+  document.getElementById('profileJoin').innerHTML='📅 Joined '+joinStr;
+
+  const bioDisplay=document.getElementById('profileBioDisplay');
+  bioDisplay.textContent=bio||'No bio yet…';
+  bioDisplay.className='profile-bio'+(bio?'':' empty');
+  document.getElementById('bioInput').value=bio;
+
+  if(isOwnProfile) document.getElementById('bioEditBtn').style.display='';
+
+  const actions=document.getElementById('profileActions');
+  actions.innerHTML='';
+  if(isOwnProfile){
+    const toggleWrap=document.createElement('div');
+    toggleWrap.className='privacy-toggle';
+    toggleWrap.innerHTML=`
+      <span class="toggle-label">🔒 Private Profile</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="privacyToggle" ${isPrivate?'checked':''} onchange="togglePrivacy(this.checked)"/>
+        <span class="toggle-slider"></span>
+      </label>`;
+    actions.appendChild(toggleWrap);
+  } else {
+    const followed=profileDoc.followers&&profileDoc.followers[currentUser.uid];
+    const followBtn=document.createElement('button');
+    followBtn.className='btn-sm primary';
+    followBtn.id='followBtn';
+    followBtn.textContent=followed?'✓ Following':'+ Follow';
+    followBtn.onclick=toggleFollow;
+    actions.appendChild(followBtn);
+  }
+}
+
+// ── BIO EDIT ─────────────────────────────────────────
+window.saveBio=async function(){
+  const newBio=document.getElementById('bioInput').value.trim();
+  const bioDisplay=document.getElementById('profileBioDisplay');
+  bioDisplay.textContent=newBio||'No bio yet…';
+  bioDisplay.className='profile-bio'+(newBio?'':' empty');
+  document.getElementById('bioWrap').style.display='';
+  document.getElementById('bioEditWrap').style.display='none';
+  profileDoc.bio=newBio;
+  try{ await setDoc(doc(db,'users',currentUser.uid),{bio:newBio},{merge:true}); }catch(e){}
+};
+window.cancelBio=function(){
+  document.getElementById('bioInput').value=profileDoc.bio||'';
+  document.getElementById('bioWrap').style.display='';
+  document.getElementById('bioEditWrap').style.display='none';
+};
+document.getElementById('bioEditBtn').addEventListener('click',()=>{
+  document.getElementById('bioWrap').style.display='none';
+  document.getElementById('bioEditWrap').style.display='';
+  document.getElementById('bioInput').focus();
+});
+
+// ── PRIVACY TOGGLE ────────────────────────────────────
+window.togglePrivacy=async function(checked){
+  profileDoc.isPrivate=checked;
+  try{ await setDoc(doc(db,'users',currentUser.uid),{isPrivate:checked},{merge:true}); }catch(e){}
+};
+
+// ── FOLLOW / UNFOLLOW ─────────────────────────────────
+async function toggleFollow(){
+  if(!currentUser) return;
+  const isFollowing=!!(profileDoc.followers&&profileDoc.followers[currentUser.uid]);
+  const newState=!isFollowing;
+  const btn=document.getElementById('followBtn');
+  if(btn) btn.textContent=newState?'✓ Following':'+ Follow';
+  profileDoc.followers=profileDoc.followers||{};
+  if(newState) profileDoc.followers[currentUser.uid]=true;
+  else delete profileDoc.followers[currentUser.uid];
+  try{
+    const upd={}; upd[`followers.${currentUser.uid}`]=newState||null;
+    await setDoc(doc(db,'users',viewUid),upd,{merge:true});
+  }catch(e){}
+}
+
+// ── SOLVER STATS ──────────────────────────────────────
+function renderSolverStats(){
+  const total=allSolves.length;
+  document.getElementById('sSolved').textContent=total;
+  if(total===0){
+    ['sAvgTime','sCompletion','sFavVariant'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('sStreak').textContent='0';
+    document.getElementById('sLongest').textContent='0';
+    document.getElementById('diffBreakdown').innerHTML='';
+    return;
+  }
+  const validTimes=allSolves.filter(s=>s.timeSeconds>0);
+  if(validTimes.length){
+    const avg=Math.round(validTimes.reduce((a,s)=>a+s.timeSeconds,0)/validTimes.length);
+    document.getElementById('sAvgTime').textContent=fmtTime(avg);
+  }
+  const finished=allSolves.filter(s=>s.timeSeconds>0).length;
+  document.getElementById('sCompletion').textContent=total>0?Math.round(finished/total*100)+'%':'—';
+  const variantCount={};
+  for(const s of allSolves){ const v=s.variant||s.puzzleVariant||'Classic'; variantCount[v]=(variantCount[v]||0)+1; }
+  const favVariant=Object.entries(variantCount).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('sFavVariant').textContent=favVariant?favVariant[0]:'Classic';
+  const {current,longest}=computeStreaks(allSolves);
+  document.getElementById('sStreak').textContent=current;
+  document.getElementById('sLongest').textContent=longest;
+
+  const diffs=['Easy','Medium','Hard','Expert'];
+  const diffColors={Easy:'#16a34a',Medium:'#d97706',Hard:'#dc2626',Expert:'#7c3aed'};
+  const maxCount=Math.max(...diffs.map(d=>allSolves.filter(s=>(s.difficulty||'').toLowerCase()===d.toLowerCase()).length),1);
+  const bd=document.getElementById('diffBreakdown'); bd.innerHTML='';
+  for(const d of diffs){
+    const filtered=allSolves.filter(s=>(s.difficulty||'').toLowerCase()===d.toLowerCase());
+    const count=filtered.length;
+    const withTime=filtered.filter(s=>s.timeSeconds>0);
+    const avgT=withTime.length?Math.round(withTime.reduce((a,s)=>a+s.timeSeconds,0)/withTime.length):0;
+    const pct=count?Math.round(count/maxCount*100):0;
+    const row=document.createElement('div'); row.className='diff-row';
+    row.innerHTML=`<div class="diff-dot" style="background:${diffColors[d]}"></div><div class="diff-name">${d}</div><div class="diff-bar-wrap"><div class="diff-bar" style="width:${pct}%;background:${diffColors[d]}"></div></div><div class="diff-val">${count?fmtTime(avgT):'—'} <span style="color:var(--text2);font-weight:600">(${count})</span></div>`;
+    bd.appendChild(row);
+  }
+}
+
+function computeStreaks(solves){
+  if(!solves.length) return{current:0,longest:0};
+  const daySet=new Set();
+  for(const s of solves){
+    const d=s.solvedAt?.toDate?s.solvedAt.toDate():new Date(s.solvedAt||Date.now());
+    daySet.add(d.toISOString().slice(0,10));
+  }
+  const days=[...daySet].sort().reverse();
+  const today=new Date().toISOString().slice(0,10);
+  const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
+  let current=0,longest=0,run=1;
+  if(days[0]===today||days[0]===yesterday){
+    current=1;
+    for(let i=1;i<days.length;i++){
+      const diff=Math.round((new Date(days[i-1])-new Date(days[i]))/86400000);
+      if(diff===1) current++; else break;
+    }
+  }
+  for(let i=1;i<days.length;i++){
+    if(Math.round((new Date(days[i-1])-new Date(days[i]))/86400000)===1){ run++; longest=Math.max(longest,run); }
+    else run=1;
+  }
+  return{current,longest:Math.max(longest,current,days.length?1:0)};
+}
+
+// ── SETTER STATS ──────────────────────────────────────
+function renderSetterStats(){
+  if(!createdPuzzles.length){ document.getElementById('setterStatsCard').style.display='none'; return; }
+  document.getElementById('setterStatsCard').style.display='';
+  document.getElementById('setPublished').textContent=createdPuzzles.length;
+  const totalSolves=createdPuzzles.reduce((a,p)=>a+(p.solveCount||0),0);
+  document.getElementById('setTotalSolves').textContent=totalSolves;
+  const rated=createdPuzzles.filter(p=>typeof p.ratingAvg==='number'&&p.ratingCount>0);
+  document.getElementById('setAvgRating').textContent=rated.length?'⭐ '+(rated.reduce((a,p)=>a+p.ratingAvg,0)/rated.length).toFixed(1):'—';
+  const popular=[...createdPuzzles].sort((a,b)=>(b.solveCount||0)-(a.solveCount||0))[0];
+  if(popular){ document.getElementById('setPopularCount').textContent=popular.solveCount||0; document.getElementById('setPopularName').textContent=popular.name||''; }
+}
+
+// ── ACHIEVEMENTS ─────────────────────────────────────
+const ACHIEVEMENTS=[
+  {id:'first_solve', icon:'🎉',name:'First Solve',   check:(s,p)=>s.length>=1},
+  {id:'solve_10',    icon:'🔟',name:'10 Solves',     check:(s,p)=>s.length>=10},
+  {id:'solve_50',    icon:'🏅',name:'50 Solves',     check:(s,p)=>s.length>=50},
+  {id:'solve_100',   icon:'💯',name:'100 Solves',    check:(s,p)=>s.length>=100},
+  {id:'speed_demon', icon:'⚡',name:'Speed Demon',   check:(s,p)=>s.some(x=>x.timeSeconds>0&&x.timeSeconds<300)},
+  {id:'perfectionist',icon:'✨',name:'No Mistakes',  check:(s,p)=>s.some(x=>(x.mistakes||0)===0)},
+  {id:'streak_3',    icon:'🔥',name:'3-Day Streak',  check:(s,p)=>computeStreaks(s).longest>=3},
+  {id:'streak_7',    icon:'🗓️',name:'Streak 7',      check:(s,p)=>computeStreaks(s).longest>=7},
+  {id:'streak_30',   icon:'📅',name:'Streak 30',     check:(s,p)=>computeStreaks(s).longest>=30},
+  {id:'setter',      icon:'🛠️',name:'Setter',        check:(s,p)=>p.length>=1},
+  {id:'popular',     icon:'🌟',name:'Popular Puzzle',check:(s,p)=>p.some(x=>(x.solveCount||0)>=10)},
+  {id:'all_diffs',   icon:'🎓',name:'All Difficulties',check:(s,p)=>['easy','medium','hard','expert'].every(d=>s.some(x=>(x.difficulty||'').toLowerCase()===d))},
+];
+function renderAchievements(){
+  const row=document.getElementById('badgesRow'); row.innerHTML='';
+  for(const ach of ACHIEVEMENTS){
+    const earned=ach.check(allSolves,createdPuzzles);
+    const el=document.createElement('div');
+    el.className='badge'+(earned?' earned':'');
+    el.title=ach.name+(earned?' — Earned!':' — Not yet earned');
+    el.innerHTML=`<div class="badge-icon">${ach.icon}</div><div class="badge-name">${ach.name}</div>`;
+    row.appendChild(el);
+  }
+}
+
+// ── SOLVE HISTORY ─────────────────────────────────────
+window.setSolveSort=function(mode){
+  solveSort=mode;
+  document.getElementById('sortDate').classList.toggle('active',mode==='date');
+  document.getElementById('sortTime').classList.toggle('active',mode==='time');
+  document.getElementById('sortDiff').classList.toggle('active',mode==='diff');
+  renderSolveHistory();
+};
+
+window.setSolveFilter=function(type,val){
+  if(type==='diff') solveFilterDiff=val;
+  else solveFilterVariant=val;
+  const prefix=type==='diff'?'sfDiff':'sfVar';
+  document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el=>el.classList.toggle('active',el.id===`${prefix}-${val}`));
+  renderSolveHistory();
+};
+
+window.setCreatedFilter=function(type,val){
+  if(type==='diff') createdFilterDiff=val;
+  else createdFilterVariant=val;
+  const prefix=type==='diff'?'cfDiff':'cfVar';
+  document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el=>el.classList.toggle('active',el.id===`${prefix}-${val}`));
+  renderCreatedPuzzles();
+};
+
+function renderSolveHistory(){
+  const list=document.getElementById('historyList'); list.innerHTML='';
+  if(!allSolves.length){
+    list.innerHTML='<div class="empty-state"><div class="empty-icon">🎯</div><p>No solves yet!<br>Complete a puzzle to see your history here.</p><a href="game.html" class="btn-primary">Play Now</a></div>';
+    return;
+  }
+  let filtered=[...allSolves];
+  if(solveFilterDiff!=='all') filtered=filtered.filter(s=>(s.difficulty||'').toLowerCase()===solveFilterDiff);
+  if(solveFilterVariant!=='all') filtered=filtered.filter(s=>(s.variant||s.puzzleVariant||'classic').toLowerCase()===solveFilterVariant);
+  if(!filtered.length){
+    list.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><p>No solves match the selected filters.</p></div>';
+    return;
+  }
+  let sorted=[...filtered];
+  if(solveSort==='time') sorted.sort((a,b)=>(a.timeSeconds||Infinity)-(b.timeSeconds||Infinity));
+  else if(solveSort==='diff'){
+    const order={easy:0,medium:1,hard:2,expert:3};
+    sorted.sort((a,b)=>(order[(a.difficulty||'').toLowerCase()]??4)-(order[(b.difficulty||'').toLowerCase()]??4));
+  }
+  for(const s of sorted){
+    const item=document.createElement('div'); item.className='history-item';
+    const diff=(s.difficulty||'easy').toLowerCase();
+    const diffCap=diff[0].toUpperCase()+diff.slice(1);
+    item.innerHTML=`
+      <div class="hi-grid" id="hg-${escHtml(s.id)}"></div>
+      <div class="hi-info">
+        <div class="hi-name">${escHtml(s.puzzleName||'Untitled Puzzle')}</div>
+        <div class="hi-meta">
+          <span class="diff-badge diff-${diff}">${diffCap}</span>
+          ${s.mistakes!=null?`<span>⚠️ ${s.mistakes} mistake${s.mistakes!==1?'s':''}</span>`:''}
+          ${s.solvedAt?`<span>${relDate(s.solvedAt)}</span>`:''}
+        </div>
+      </div>
+      <div class="hi-right">
+        <div class="hi-time">${fmtTime(s.timeSeconds)}</div>
+        <div class="hi-date">${s.solvedAt?fmtDate(s.solvedAt):''}</div>
+      </div>`;
+    item.onclick=()=>{ if(s.puzzleId) window.location.href='game.html#explore:'+encodeURIComponent(s.puzzleId); };
+    list.appendChild(item);
+    const gridEl=document.getElementById('hg-'+s.id);
+    if(gridEl&&s.puzzle) renderTinyGrid(gridEl,s.puzzle);
+  }
+}
+
+function renderTinyGrid(el,clueStr){
+  el.innerHTML='';
+  el.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:52px;height:52px;background:#fff;flex-shrink:0;';
+  const digits=(clueStr||'').replace(/\D/g,'').padEnd(81,'0');
+  for(let r=0;r<9;r++){
+    const row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:repeat(9,1fr);';
+    for(let c=0;c<9;c++){
+      const cell=document.createElement('div');
+      const n=parseInt(digits[r*9+c]);
+      const bR=(c===2||c===5)?'1px solid #6b7280':'.4px solid #e5e7eb';
+      const bB=(r===2||r===5)?'1px solid #6b7280':'.4px solid #e5e7eb';
+      cell.style.cssText=`display:flex;align-items:center;justify-content:center;border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:3.2px;font-weight:700;color:#1f2937;background:${n?'#f8f9fa':'#fff'};`;
+      if(n) cell.textContent=n;
+      row.appendChild(cell);
+    }
+    el.appendChild(row);
+  }
+}
+
+// ── CREATED PUZZLES ───────────────────────────────────
+function renderCreatedPuzzles(){
+  const grid=document.getElementById('createdGrid'); grid.innerHTML='';
+  let filtered=[...createdPuzzles];
+  if(createdFilterDiff!=='all') filtered=filtered.filter(p=>(p.difficulty||'').toLowerCase()===createdFilterDiff);
+  if(createdFilterVariant!=='all') filtered=filtered.filter(p=>(p.variant||p.type||'classic').toLowerCase()===createdFilterVariant);
+  if(!createdPuzzles.length){
+    const empty=document.createElement('div'); empty.className='empty-state';
+    empty.innerHTML='<div class="empty-icon">✏️</div><p>No puzzles published yet.<br>Create and publish a puzzle to see it here.</p><a href="create.html" class="btn-primary">Create a Puzzle</a>';
+    grid.appendChild(empty); return;
+  }
+  if(!filtered.length){
+    const emp=document.createElement('div'); emp.className='empty-state';
+    emp.innerHTML='<div class="empty-icon">🔍</div><p>No puzzles match the selected filters.</p>';
+    grid.appendChild(emp); return;
+  }
+  for(const p of filtered){
+    const card=document.createElement('div'); card.className='puzzle-card';
+    const solves=p.solveCount||0;
+    const rating=(typeof p.ratingAvg==='number'&&p.ratingCount>0)?'⭐ '+p.ratingAvg.toFixed(1):'Unrated';
+    const dateStr=p.createdAt?fmtDate(p.createdAt):'';
+    const diff=(p.difficulty||'classic').toLowerCase();
+    card.innerHTML=`
+      <div class="card-preview" id="cp-${escHtml(p.id)}"></div>
+      <div class="card-body">
+        <div class="card-name">${escHtml(p.name||'Untitled')}</div>
+        <div class="card-stats-row">
+          <span class="diff-badge diff-${diff}">${p.difficulty||'?'}</span>
+          <span class="card-stat-pill">▶ ${solves} solve${solves!==1?'s':''}</span>
+        </div>
+        <div class="card-stats-row">
+          <span class="card-stat-pill">${rating}</span>
+          <span class="card-stat-pill" style="color:var(--text2)">${dateStr}</span>
+        </div>
+        ${isOwnProfile?`<button class="card-edit-btn" onclick="editPuzzle('${escHtml(p.id)}',event)">✏️ Edit</button>`:''}
+      </div>`;
+    grid.appendChild(card);
+    const previewEl=document.getElementById('cp-'+p.id);
+    if(previewEl&&p.puzzle) renderCardGrid(previewEl,p.puzzle);
+  }
+}
+
+function renderCardGrid(container,clueStr){
+  container.innerHTML='';
+  const wrap=document.createElement('div');
+  wrap.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:80px;height:80px;background:#fff;';
+  const digits=(clueStr||'').replace(/\D/g,'').padEnd(81,'0');
+  for(let r=0;r<9;r++){
+    const row=document.createElement('div'); row.style.cssText='display:grid;grid-template-columns:repeat(9,1fr);';
+    for(let c=0;c<9;c++){
+      const cell=document.createElement('div');
+      const n=parseInt(digits[r*9+c]);
+      const bR=(c===2||c===5)?'1px solid #6b7280':'.5px solid #e5e7eb';
+      const bB=(r===2||r===5)?'1px solid #6b7280':'.5px solid #e5e7eb';
+      cell.style.cssText=`display:flex;align-items:center;justify-content:center;border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:4.5px;font-weight:700;color:#1f2937;background:${n?'#f8f9fa':'#fff'};`;
+      if(n) cell.textContent=n;
+      row.appendChild(cell);
+    }
+    wrap.appendChild(row);
+  }
+  container.appendChild(wrap);
+}
+
+window.editPuzzle=function(id,e){ e.stopPropagation(); window.location.href='create.html?edit='+encodeURIComponent(id); };
+
+// ── TABS ─────────────────────────────────────────────
+window.switchTab=function(tab){
+  document.getElementById('paneHistory').classList.toggle('active',tab==='history');
+  document.getElementById('paneCreated').classList.toggle('active',tab==='created');
+  document.getElementById('tabBtnHistory').classList.toggle('active',tab==='history');
+  document.getElementById('tabBtnCreated').classList.toggle('active',tab==='created');
+};
+</script>
+</body>
+</html>
