@@ -847,11 +847,15 @@ window.openUserProfile = async function(uid){
 
 let currentUser = null;
 
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
   if (user) {
     currentUser = user;
     sessionStorage.removeItem('sudokuGuest');
     document.getElementById('navUser').textContent = '👤 ' + (user.displayName || user.email);
+    // Sync displayName to Firestore so other users can see it on profile pages
+    if(user.displayName){
+      try{ await setDoc(doc(db,'users',user.uid),{ displayName: user.displayName },{ merge: true }); }catch(e){}
+    }
     // Re-run loadSolvers now that auth is resolved, so the backfill
     // can run even if loadSolvers was called before the user was known.
     if(currentPuzzleId){

@@ -454,6 +454,13 @@ onAuthStateChanged(auth, async user=>{
   av.style.background=avatarGradient(navName);
   av.onclick=()=>{ window.location.href='profile.html'; };
 
+  // Sync current user's name to Firestore so other users can see it on their profile
+  if(user.displayName){
+    try{
+      await setDoc(doc(db,'users',user.uid),{ displayName: user.displayName },{ merge: true });
+    }catch(e){}
+  }
+
   await loadProfile();
   document.getElementById('loadingArea').style.display='none';
   const ca=document.getElementById('contentArea');

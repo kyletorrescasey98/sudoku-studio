@@ -658,7 +658,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
-import { getFirestore, collection, getDocs, getDoc, doc } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { getFirestore, collection, getDocs, getDoc, doc, setDoc } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
@@ -745,6 +745,10 @@ onAuthStateChanged(auth, async user => {
     sessionStorage.removeItem('sudokuGuest');
     const av = document.getElementById('navAvatarEl');
     if(av){ av.textContent = (user.displayName||user.email||'U')[0].toUpperCase(); }
+    // Sync displayName to Firestore so other users can see it on profile pages
+    if(user.displayName){
+      try{ await setDoc(doc(db,'users',user.uid),{ displayName: user.displayName },{ merge: true }); }catch(e){}
+    }
     try {
       const solvesSnap = await getDocs(collection(db, `users/${user.uid}/solves`));
       solvesSnap.docs.forEach(d => { const data = d.data(); if(data.puzzleId) completedMap[data.puzzleId] = data; });
