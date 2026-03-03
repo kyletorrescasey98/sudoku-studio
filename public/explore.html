@@ -554,7 +554,7 @@
       <span class="search-filter-label">Filter:</span>
       <select class="search-select" id="sfAuthor" onchange="runSearch()">
         <option value="">All Authors</option>
-        <option value="AI">AI Generated</option>
+        <option value="App">App Generated</option>
         <option value="community">Community</option>
       </select>
       <select class="search-select" id="sfDifficulty" onchange="runSearch()">
@@ -658,7 +658,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
-import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { getFirestore, collection, getDocs, getDoc, doc } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
@@ -674,46 +674,46 @@ let completedMap = {};
 
 // ── DEFAULT PUZZLES (same as game.html) ───────────────
 const DEFAULT_PUZZLES=[
-  {id:"ai-e1",name:"Dusty Grove",puzzle:"006470908030009600107836000000008060048095721910607500060000140081000090000153870",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
-  {id:"ai-e2",name:"Radiant Enigma",puzzle:"040091020500360070000007049408739200000510007025400031359008002280100000104020805",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
-  {id:"ai-e3",name:"Gentle Inferno",puzzle:"003495602020006910006210000000500807000003040000107090862001079100802030005649128",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
-  {id:"ai-e4",name:"Amber Tempest",puzzle:"000000000200071860014850900439080007002030189051207340048020600020900008003610405",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
-  {id:"ai-e5",name:"Quiet Wanderer",puzzle:"600900000901823506003107000000090080007085263500200019800000090026370801030018624",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
-  {id:"ai-e6",name:"Crystal Haven",puzzle:"005789300000305000307041000001470000870050491460090070084900167710800020236010000",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
-  {id:"ai-e7",name:"Obsidian Haven",puzzle:"405060700070834620020000080010386040096000001000091362209050130157000408800007006",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
-  {id:"ai-e8",name:"Golden Vortex",puzzle:"830600705071020083420300010000093008596700100000005290063007841050800900008906050",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
-  {id:"ai-e9",name:"Breezy Riddle",puzzle:"100040009700006201900002530000000903045009020800720456080457002030098100590301780",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
-  {id:"ai-e10",name:"Radiant Orbit",puzzle:"704058093000092400390000850040000708109000540068007030006830070010009080832700964",difficulty:"Easy",clueCount:38,author:"AI",isAI:true},
-  {id:"ai-m1",name:"Solar Jungle",puzzle:"040005980080600070000010035000060590000089047000154008908006000057031800010000000",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
-  {id:"ai-m2",name:"Obsidian Pinnacle",puzzle:"860020037235080000000005080000208900004019700100500000000002070620030005003007290",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
-  {id:"ai-m3",name:"Obsidian Vortex",puzzle:"400320580100000002082900000000000058030200700007860003008590400760182000050006000",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
-  {id:"ai-m4",name:"Breezy Vortex",puzzle:"000160900906002003001009407004930001600010000000600000490000020352000010100240790",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
-  {id:"ai-m5",name:"Neon Riddle",puzzle:"002004008608002709000700020007435000106807940800090000001000400060000201003060500",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
-  {id:"ai-m6",name:"Blazing Vortex",puzzle:"301670905590210040000030000900020004700000000020345098210450009000000007009000500",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
-  {id:"ai-m7",name:"Emerald Tempest",puzzle:"900037010010000032200040006800900000723400859060800007000080001008601045000004000",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
-  {id:"ai-m8",name:"Phantom Abyss",puzzle:"009021000053000000000040090000208050074060020208900003605432000027005300000000542",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
-  {id:"ai-m9",name:"Twilight Wanderer",puzzle:"000040030004507000090600000039000810000001097261800300002096003080100009005083004",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
-  {id:"ai-m10",name:"Frozen Frontier",puzzle:"200600005107230000804009200000807004095300007070095000000003502003006000020700480",difficulty:"Medium",clueCount:30,author:"AI",isAI:true},
-  {id:"ai-h1",name:"Obsidian Iris",puzzle:"000045080801000009900600000000160030006000002500007800040570000000809600000002051",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-h2",name:"Vivid Quest",puzzle:"000004090380005601000000020900030750000100000072890100741300000000500000090000200",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-h3",name:"Jade Delta",puzzle:"200594100003000700500080000000860010094000500000000060000000900070040320002300806",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-h4",name:"Kinetic Pinnacle",puzzle:"084000000000005006907006002000137600000000000018000300000053084020080000075600020",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-h5",name:"Phantom Galaxy",puzzle:"000000300400370000070000540001040270000700000300005090100402009000650080095000020",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-h6",name:"Neon Blizzard",puzzle:"003000008001950000050200106009007000030060000000000020084030095300520000000070403",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-h7",name:"Phantom Jungle",puzzle:"930006000107209050500000800600000030000600000003050090040000270310007000060900004",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-h8",name:"Ancient Frontier",puzzle:"204000010500000007080009000000980000060000800100040560006000003010203600000018029",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-h9",name:"Solar Jewel",puzzle:"000003597203000406000006000030000020005309080000007000007018009080000002060030050",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-h10",name:"Obsidian Wanderer",puzzle:"000030000701052000600000079000090500509060000047003000000000043000605080020001750",difficulty:"Hard",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-x1",name:"Emerald Jungle",puzzle:"204060050000900082700000030007200004900070000400600015603420000000010000000000028",difficulty:"Expert",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-x2",name:"Frozen Riddle",puzzle:"007040000010005040000830000020000300009000001700200800000090210500061084040070003",difficulty:"Expert",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-x3",name:"Dazzling Flame",puzzle:"035709020029030000000008600000000008350000004000007130143800000000090000700100000",difficulty:"Expert",clueCount:24,author:"AI",isAI:true},
-  {id:"ai-x4",name:"Neon Eclipse",puzzle:"250000000007062000000890060094000001500030000000000920000008100100000004600024007",difficulty:"Expert",clueCount:23,author:"AI",isAI:true},
-  {id:"ai-x5",name:"Whirling Wanderer",puzzle:"000500000000006002010000805020000003004010080605049010700000000030004071000003049",difficulty:"Expert",clueCount:24,author:"AI",isAI:true},
-  {id:"ai-x6",name:"Dusty Riddle",puzzle:"030200600010030000006070004500007200300000809020005003105000000040006020680003010",difficulty:"Expert",clueCount:26,author:"AI",isAI:true},
-  {id:"ai-x7",name:"Frozen Inferno",puzzle:"001000900000014860000020050020000000087000046094200070700308000000100423000000600",difficulty:"Expert",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-x8",name:"Kinetic Jewel",puzzle:"091000080600000702003060400000002600020040008009006014100007005000000000008000049",difficulty:"Expert",clueCount:25,author:"AI",isAI:true},
-  {id:"ai-x9",name:"Emerald Enigma",puzzle:"000004090003000040008970000800100900090025810000040605600702000000000007020006031",difficulty:"Expert",clueCount:26,author:"AI",isAI:true},
-  {id:"ai-x10",name:"Golden Frontier",puzzle:"700036040000004803010208000070000020800402710009000006090500001000300060007000004",difficulty:"Expert",clueCount:26,author:"AI",isAI:true}
+  {id:"ai-e1",name:"Dusty Grove",puzzle:"006470908030009600107836000000008060048095721910607500060000140081000090000153870",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
+  {id:"ai-e2",name:"Radiant Enigma",puzzle:"040091020500360070000007049408739200000510007025400031359008002280100000104020805",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
+  {id:"ai-e3",name:"Gentle Inferno",puzzle:"003495602020006910006210000000500807000003040000107090862001079100802030005649128",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
+  {id:"ai-e4",name:"Amber Tempest",puzzle:"000000000200071860014850900439080007002030189051207340048020600020900008003610405",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
+  {id:"ai-e5",name:"Quiet Wanderer",puzzle:"600900000901823506003107000000090080007085263500200019800000090026370801030018624",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
+  {id:"ai-e6",name:"Crystal Haven",puzzle:"005789300000305000307041000001470000870050491460090070084900167710800020236010000",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
+  {id:"ai-e7",name:"Obsidian Haven",puzzle:"405060700070834620020000080010386040096000001000091362209050130157000408800007006",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
+  {id:"ai-e8",name:"Golden Vortex",puzzle:"830600705071020083420300010000093008596700100000005290063007841050800900008906050",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
+  {id:"ai-e9",name:"Breezy Riddle",puzzle:"100040009700006201900002530000000903045009020800720456080457002030098100590301780",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
+  {id:"ai-e10",name:"Radiant Orbit",puzzle:"704058093000092400390000850040000708109000540068007030006830070010009080832700964",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
+  {id:"ai-m1",name:"Solar Jungle",puzzle:"040005980080600070000010035000060590000089047000154008908006000057031800010000000",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
+  {id:"ai-m2",name:"Obsidian Pinnacle",puzzle:"860020037235080000000005080000208900004019700100500000000002070620030005003007290",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
+  {id:"ai-m3",name:"Obsidian Vortex",puzzle:"400320580100000002082900000000000058030200700007860003008590400760182000050006000",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
+  {id:"ai-m4",name:"Breezy Vortex",puzzle:"000160900906002003001009407004930001600010000000600000490000020352000010100240790",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
+  {id:"ai-m5",name:"Neon Riddle",puzzle:"002004008608002709000700020007435000106807940800090000001000400060000201003060500",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
+  {id:"ai-m6",name:"Blazing Vortex",puzzle:"301670905590210040000030000900020004700000000020345098210450009000000007009000500",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
+  {id:"ai-m7",name:"Emerald Tempest",puzzle:"900037010010000032200040006800900000723400859060800007000080001008601045000004000",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
+  {id:"ai-m8",name:"Phantom Abyss",puzzle:"009021000053000000000040090000208050074060020208900003605432000027005300000000542",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
+  {id:"ai-m9",name:"Twilight Wanderer",puzzle:"000040030004507000090600000039000810000001097261800300002096003080100009005083004",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
+  {id:"ai-m10",name:"Frozen Frontier",puzzle:"200600005107230000804009200000807004095300007070095000000003502003006000020700480",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
+  {id:"ai-h1",name:"Obsidian Iris",puzzle:"000045080801000009900600000000160030006000002500007800040570000000809600000002051",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
+  {id:"ai-h2",name:"Vivid Quest",puzzle:"000004090380005601000000020900030750000100000072890100741300000000500000090000200",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
+  {id:"ai-h3",name:"Jade Delta",puzzle:"200594100003000700500080000000860010094000500000000060000000900070040320002300806",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
+  {id:"ai-h4",name:"Kinetic Pinnacle",puzzle:"084000000000005006907006002000137600000000000018000300000053084020080000075600020",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
+  {id:"ai-h5",name:"Phantom Galaxy",puzzle:"000000300400370000070000540001040270000700000300005090100402009000650080095000020",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
+  {id:"ai-h6",name:"Neon Blizzard",puzzle:"003000008001950000050200106009007000030060000000000020084030095300520000000070403",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
+  {id:"ai-h7",name:"Phantom Jungle",puzzle:"930006000107209050500000800600000030000600000003050090040000270310007000060900004",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
+  {id:"ai-h8",name:"Ancient Frontier",puzzle:"204000010500000007080009000000980000060000800100040560006000003010203600000018029",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
+  {id:"ai-h9",name:"Solar Jewel",puzzle:"000003597203000406000006000030000020005309080000007000007018009080000002060030050",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
+  {id:"ai-h10",name:"Obsidian Wanderer",puzzle:"000030000701052000600000079000090500509060000047003000000000043000605080020001750",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
+  {id:"ai-x1",name:"Emerald Jungle",puzzle:"204060050000900082700000030007200004900070000400600015603420000000010000000000028",difficulty:"Expert",clueCount:25,author:"App",isAI:true},
+  {id:"ai-x2",name:"Frozen Riddle",puzzle:"007040000010005040000830000020000300009000001700200800000090210500061084040070003",difficulty:"Expert",clueCount:25,author:"App",isAI:true},
+  {id:"ai-x3",name:"Dazzling Flame",puzzle:"035709020029030000000008600000000008350000004000007130143800000000090000700100000",difficulty:"Expert",clueCount:24,author:"App",isAI:true},
+  {id:"ai-x4",name:"Neon Eclipse",puzzle:"250000000007062000000890060094000001500030000000000920000008100100000004600024007",difficulty:"Expert",clueCount:23,author:"App",isAI:true},
+  {id:"ai-x5",name:"Whirling Wanderer",puzzle:"000500000000006002010000805020000003004010080605049010700000000030004071000003049",difficulty:"Expert",clueCount:24,author:"App",isAI:true},
+  {id:"ai-x6",name:"Dusty Riddle",puzzle:"030200600010030000006070004500007200300000809020005003105000000040006020680003010",difficulty:"Expert",clueCount:26,author:"App",isAI:true},
+  {id:"ai-x7",name:"Frozen Inferno",puzzle:"001000900000014860000020050020000000087000046094200070700308000000100423000000600",difficulty:"Expert",clueCount:25,author:"App",isAI:true},
+  {id:"ai-x8",name:"Kinetic Jewel",puzzle:"091000080600000702003060400000002600020040008009006014100007005000000000008000049",difficulty:"Expert",clueCount:25,author:"App",isAI:true},
+  {id:"ai-x9",name:"Emerald Enigma",puzzle:"000004090003000040008970000800100900090025810000040605600702000000000007020006031",difficulty:"Expert",clueCount:26,author:"App",isAI:true},
+  {id:"ai-x10",name:"Golden Frontier",puzzle:"700036040000004803010208000070000020800402710009000006090500001000300060007000004",difficulty:"Expert",clueCount:26,author:"App",isAI:true}
 ];
 // ─────────────────────────────────────────────────────
 
@@ -721,6 +721,22 @@ const DIFF_COLOR = { Easy:'#16a34a', Medium:'#d97706', Hard:'#dc2626', Expert:'#
 const AVATAR_COLORS = ['linear-gradient(135deg,#2563eb,#7c3aed)','linear-gradient(135deg,#ec4899,#f97316)','linear-gradient(135deg,#16a34a,#0ea5e9)','linear-gradient(135deg,#f59e0b,#ef4444)','linear-gradient(135deg,#7c3aed,#ec4899)','linear-gradient(135deg,#0ea5e9,#16a34a)'];
 function avatarColor(name){ let h=0; for(const c of name) h=(h*31+c.charCodeAt(0))&0xffff; return AVATAR_COLORS[h%AVATAR_COLORS.length]; }
 function initials(name){ return name.replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase()||'??'; }
+function esc(str){ return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// Open a user's profile if public. Fetch the user doc to respect privacy.
+window.openUserProfile = async function(uid){
+  if(!uid) return;
+  try{
+    const udoc = await getDoc(doc(db,'users',uid));
+    if(!udoc.exists()) { window.location.href = `profile.html?uid=${encodeURIComponent(uid)}`; return; }
+    const data = udoc.data()||{};
+    if(data.isPrivate && (!currentUser || currentUser.uid!==uid)){
+      alert('This profile is private.');
+      return;
+    }
+    window.location.href = `profile.html?uid=${encodeURIComponent(uid)}`;
+  }catch(e){ console.error('openUserProfile:',e); window.location.href = `profile.html?uid=${encodeURIComponent(uid)}`; }
+}
 
 // ── AUTH ──────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
@@ -789,6 +805,17 @@ function buildPage(){
   buildSetters();
   buildNewFeed();
   updateCountdown();
+  // If arriving from Solve History with ?q=name, auto-search for that puzzle
+  const qParam = new URLSearchParams(location.search).get('q');
+  if(qParam){
+    const input = document.getElementById('searchMainInput');
+    if(input){
+      input.value = qParam;
+      document.getElementById('searchClearBtn')?.classList.add('visible');
+      showSearchLoading();
+      setTimeout(()=>runSearch(), 100);
+    }
+  }
 }
 
 // ── PUZZLE OF THE DAY (deterministic by date) ─────────
@@ -912,10 +939,11 @@ function buildSetters(){
   row.innerHTML = '';
   const map = {};
   allPuzzles.forEach(p => {
-    if(!p.isAI && p.author && p.author!=='AI'){
-      if(!map[p.author]) map[p.author] = { name:p.author, count:0, totalRating:0, ratedCount:0 };
-      map[p.author].count++;
-      if(typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg)){ map[p.author].totalRating+=p.ratingAvg; map[p.author].ratedCount++; }
+    if(!p.isAI && p.author){
+      const key = p.authorUid || p.author;
+      if(!map[key]) map[key] = { name:p.author, uid:p.authorUid||null, count:0, totalRating:0, ratedCount:0 };
+      map[key].count++;
+      if(typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg)){ map[key].totalRating+=p.ratingAvg; map[key].ratedCount++; }
     }
   });
   const setters = Object.values(map).sort((a,b)=>b.count-a.count).slice(0,6);
@@ -927,11 +955,12 @@ function buildSetters(){
     const avg = s.ratedCount ? (s.totalRating/s.ratedCount).toFixed(1) : null;
     const card = document.createElement('div');
     card.className = 'setter-card';
-    card.innerHTML=`
-      <div class="setter-avatar" style="background:${avatarColor(s.name)}">${initials(s.name)}</div>
-      <div class="setter-name">${s.name}</div>
-      <div class="setter-puzzles">${s.count} puzzle${s.count===1?'':'s'}${avg?` · ★${avg}`:''}</div>
-    `;
+    const uid = s.uid;
+    const nameEsc = esc(s.name||'');
+    const avatar = `<div class="setter-avatar" style="background:${avatarColor(s.name)}"${uid?` onclick="openUserProfile('${(uid+'').replace(/'/g,"\\'")})" style="cursor:pointer"`:''}>${initials(s.name)}</div>`;
+    const nameHtml = uid ? `<div class="setter-name" onclick="openUserProfile('${(uid+'').replace(/'/g,"\\'")})" style="cursor:pointer">${nameEsc}</div>` : `<div class="setter-name">${nameEsc}</div>`;
+    const puzzlesHtml = `<div class="setter-puzzles">${s.count} puzzle${s.count===1?'':'s'}${avg?` · ★${avg}`:''}</div>`;
+    card.innerHTML = avatar + nameHtml + puzzlesHtml;
     row.appendChild(card);
   });
 }
@@ -1044,7 +1073,7 @@ window.runSearch = function(){
       const ql=query.toLowerCase();
       if(!p.name?.toLowerCase().includes(ql)&&!(p.author||'').toLowerCase().includes(ql)) return false;
     }
-    if(author==='AI'&&!p.isAI) return false;
+    if(author==='App'&&!p.isAI) return false;
     if(author==='community'&&p.isAI) return false;
     if(diff && (p.difficulty||'').toLowerCase()!==diff.toLowerCase()) return false;
     const avg=(typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg))?p.ratingAvg:null;

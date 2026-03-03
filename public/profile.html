@@ -498,10 +498,29 @@ function renderAll(){
 }
 
 function renderHeader(){
-  const displayName=profileDoc.displayName||currentUser?.displayName||(isOwnProfile?(currentUser?.email?.split('@')[0]||'Player'):'Player');
-  const username=profileDoc.username||(isOwnProfile?(currentUser?.email?.split('@')[0]||''):'');
-  const bio=profileDoc.bio||'';
-  const joinedAt=profileDoc.joinedAt||currentUser?.metadata?.creationTime;
+  console.log('ProfileDoc for debugging:', profileDoc);
+  console.log('Created puzzles for debugging:', createdPuzzles);
+  console.log('ViewUID:', viewUid);
+  console.log('IsOwnProfile:', isOwnProfile);
+  
+  const emailLocal = (profileDoc.email||'').split ? (profileDoc.email||'').split('@')[0] : '';
+  // Prefer explicit profile fields (several common keys), then any created puzzle author name,
+  // then email-local, then own-user fallback or UID short
+  const altName = (createdPuzzles && createdPuzzles.length && createdPuzzles[0].author) ? createdPuzzles[0].author : '';
+  const displayName = profileDoc.displayName || profileDoc.name || profileDoc.fullName || profileDoc.username || altName || emailLocal || (isOwnProfile ? (currentUser?.displayName || (currentUser?.email?.split('@')[0]||'Player')) : (viewUid? `User ${viewUid.slice(0,6)}` : 'Player'));
+  
+  console.log('Final displayName:', displayName);
+  console.log('profileDoc.displayName:', profileDoc.displayName);
+  console.log('profileDoc.name:', profileDoc.name);
+  console.log('profileDoc.fullName:', profileDoc.fullName);
+  console.log('profileDoc.username:', profileDoc.username);
+  console.log('altName:', altName);
+  console.log('emailLocal:', emailLocal);
+  const username = profileDoc.username || profileDoc.handle || (isOwnProfile ? (currentUser?.email?.split('@')[0]||'') : '');
+  const bio = profileDoc.bio || '';
+  // Prefer explicit join date fields used in different writes, then earliest created puzzle date, then own-user metadata
+  const altCreatedAt = (createdPuzzles && createdPuzzles.length && createdPuzzles[0].createdAt) ? createdPuzzles[0].createdAt : null;
+  const joinedAt = profileDoc.joinedAt || profileDoc.createdAt || altCreatedAt || (isOwnProfile ? currentUser?.metadata?.creationTime : null);
   const isPrivate=!!profileDoc.isPrivate;
 
   const av=document.getElementById('profileAvatar');
@@ -761,7 +780,14 @@ function renderSolveHistory(){
         <div class="hi-time">${fmtTime(s.timeSeconds)}</div>
         <div class="hi-date">${s.solvedAt?fmtDate(s.solvedAt):''}</div>
       </div>`;
-    item.onclick=()=>{ if(s.puzzleId) window.location.href='game.html#explore:'+encodeURIComponent(s.puzzleId); };
+    item.onclick=()=>{
+      if(s.puzzleId){
+        window.location.href='game.html#explore:'+encodeURIComponent(s.puzzleId);
+      } else if(s.puzzleName){
+        // Old solve without puzzleId — go to explore and search by name
+        window.location.href='explore.html?q='+encodeURIComponent(s.puzzleName);
+      }
+    };
     list.appendChild(item);
     const gridEl=document.getElementById('hg-'+s.id);
     if(gridEl&&s.puzzle) renderTinyGrid(gridEl,s.puzzle);
