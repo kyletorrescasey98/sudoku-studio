@@ -297,7 +297,8 @@
     .search-results { display:flex; flex-direction:column; gap:8px; max-height:400px; overflow-y:auto; }
 
     /* ── Comments Panel (desktop left column) ── */
-    .comments-panel { width:272px; flex-shrink:0; display:flex; flex-direction:column; background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; max-height:min(576px,calc(100vh - 250px)); }
+    .left-col { display:flex; flex-direction:column; gap:8px; width:272px; flex-shrink:0; align-items:stretch; }
+    .comments-panel { display:flex; flex-direction:column; background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; max-height:min(576px,calc(100vh - 250px)); }
     .comments-panel.collapsed .comments-feed,
     .comments-panel.collapsed .comments-input-area { display:none; }
     .comments-panel.collapsed { max-height:none; }
@@ -357,6 +358,7 @@
     }
     @media (max-width:1099px) {
       .comments-panel { display:none; }
+      .left-col { display:none; }
     }
 
     /* Mobile chat button */
@@ -383,6 +385,38 @@
     .mobile-comments-body { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
     .mobile-comments-feed-wrap { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:10px 12px; display:flex; flex-direction:column; gap:8px; min-height:0; }
     .mobile-comments-input-wrap { flex-shrink:0; padding:10px 14px calc(env(safe-area-inset-bottom) + 10px); border-top:1px solid var(--border); background:var(--surface); display:flex; flex-direction:column; gap:5px; }
+
+    /* ── Solved By panel (desktop, same accordion style as comments) ── */
+    .solved-by-panel { display:flex; flex-direction:column; background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; max-height:min(400px,calc(100vh - 250px)); }
+    .solved-by-panel.collapsed .sb-list { display:none; }
+    .solved-by-panel.collapsed { max-height:none; }
+    .solved-by-panel.collapsed .comments-header { border-bottom:none; }
+    .solved-by-panel:not(.collapsed) .comments-chevron { transform:rotate(180deg); }
+    .sb-list { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:4px; }
+    .sb-item { display:flex; align-items:center; gap:9px; padding:6px 8px; border-radius:8px; background:var(--surface2); border:1px solid var(--border); }
+    .sb-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:#fff; font-size:.75rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .sb-name { font-size:.82rem; font-weight:700; color:var(--text); flex:1; }
+    .sb-date { font-size:.68rem; color:var(--text2); flex-shrink:0; }
+    @media(max-width:700px){ .solved-by-panel { display:none; } }
+
+    /* ── Mobile Solved By sheet ── */
+    .mobile-solvedby-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; }
+    .mobile-solvedby-overlay.open { display:block; }
+    .mobile-solvedby-panel {
+      position:fixed; bottom:0; left:0; right:0;
+      background:var(--surface); border-radius:20px 20px 0 0;
+      z-index:521; transform:translateY(100%);
+      transition:transform .28s cubic-bezier(.32,1,.4,1);
+      max-height: calc(100vh - env(safe-area-inset-top) - 58px);
+      display:flex; flex-direction:column;
+    }
+    .mobile-solvedby-panel.open { transform:translateY(0); }
+    .mobile-solvedby-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:12px auto 4px; flex-shrink:0; }
+    .mobile-solvedby-header { display:flex; align-items:center; justify-content:space-between; padding:10px 18px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .mobile-solvedby-title { font-size:1rem; font-weight:800; color:var(--text); }
+    .mobile-solvedby-close { background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text2); font-size:.8rem; font-weight:700; padding:6px 14px; cursor:pointer; }
+    .mobile-solvedby-close:active { background:var(--surface3); }
+    .mobile-solvedby-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:10px 14px calc(env(safe-area-inset-bottom) + 12px); display:flex; flex-direction:column; gap:6px; min-height:0; }
   </style>
 </head>
 <body>
@@ -417,6 +451,13 @@
     <button class="mobile-settings-toggle" id="msMistakesBtn" ontouchend="event.preventDefault();toggleMistakes();syncMobileSettingsToggles()" onclick="toggleMistakes();syncMobileSettingsToggles()">
       &#x1F7E1; Show Mistakes
       <span class="ms-pill"></span>
+    </button>
+  </div>
+  <div class="mobile-settings-section">
+    <div class="mobile-settings-label">Solved By</div>
+    <button class="mobile-settings-toggle" style="justify-content:space-between" ontouchend="event.preventDefault();closeMobileSettings();openMobileSolvedBy()" onclick="closeMobileSettings();openMobileSolvedBy()">
+      <span>&#x1F465; Solved By</span>
+      <span id="mobileSolvedByCount" style="font-size:.75rem;color:var(--text2);font-weight:700;margin-left:auto;"></span>
     </button>
   </div>
   <div class="mobile-settings-section">
@@ -458,6 +499,19 @@
   </div>
 </div>
 
+<!-- MOBILE SOLVED BY -->
+<div class="mobile-solvedby-overlay" id="mobileSolvedByOverlay" ontouchend="event.preventDefault();closeMobileSolvedBy()" onclick="closeMobileSolvedBy()"></div>
+<div class="mobile-solvedby-panel" id="mobileSolvedByPanel">
+  <div class="mobile-solvedby-handle"></div>
+  <div class="mobile-solvedby-header">
+    <div class="mobile-solvedby-title">&#x1F465; Solved By</div>
+    <button class="mobile-solvedby-close" ontouchend="event.preventDefault();closeMobileSolvedBy()" onclick="closeMobileSolvedBy()">&#x2190; Back</button>
+  </div>
+  <div class="mobile-solvedby-body" id="mobileSolvedByList">
+    <div class="comments-empty">Load a puzzle to see who solved it.</div>
+  </div>
+</div>
+
 <!-- NAV BAR -->
 <nav class="navbar">
   <div class="nav-logo">Sudoku Social</div>
@@ -466,7 +520,7 @@
     <a href="game.html#play" class="nav-btn" id="playNavBtn">🎮 Play</a>
     <a href="explore.html" class="nav-btn" id="searchNavBtn">🔍 Explore</a>
     <a href="create.html" class="nav-btn" id="createNavBtn">✏️ Create</a>
-    <a href="history.html" class="nav-btn" id="historyNavBtn">📊 History</a>
+    <a href="profile.html" class="nav-btn" id="historyNavBtn">👤 Profile</a>
     <button class="nav-btn" id="signOutBtn" onclick="handleSignOut()">Sign Out</button>
   </div>
 </nav>
@@ -479,7 +533,8 @@
     <button class="btn-ghost" id="pauseBtn" onclick="togglePauseTimer()" title="Pause/Resume timer">⏸️ Pause</button>
   </div>
   <div class="game-area">
-    <!-- DESKTOP COMMENTS PANEL (left column) -->
+    <!-- DESKTOP COMMENTS + SOLVED BY (left column) -->
+    <div class="left-col">
     <div class="comments-panel collapsed" id="commentsPanel" onclick="window.toggleDesktopComments(event)">
       <div class="comments-header">
         <div class="comments-header-left">
@@ -497,6 +552,20 @@
         <button class="comments-post-btn" id="commentsPostBtn" style="display:none;" onclick="window.postComment()">Post</button>
       </div>
     </div>
+    <!-- DESKTOP SOLVED BY PANEL -->
+    <div class="solved-by-panel collapsed" id="solvedByPanel" onclick="window.toggleDesktopSolvedBy(event)">
+      <div class="comments-header">
+        <div class="comments-header-left">
+          <span class="comments-chevron">&#x25BC;</span>
+          <div class="comments-header-title">&#x1F465; Solved By</div>
+        </div>
+        <span id="solvedByCount" style="font-size:.67rem;color:var(--text2);font-weight:700;"></span>
+      </div>
+      <div class="sb-list" id="solvedByList">
+        <div class="comments-empty">Load a puzzle to see who solved it.</div>
+      </div>
+    </div><!-- /solved-by-panel -->
+    </div><!-- /left-col -->
     <div class="board-wrap">
       <div class="board-container">
         <div class="board" id="board"></div>
@@ -626,8 +695,8 @@
       <a href="create.html" class="main-btn">
         <span class="mb-icon">✏️</span><span class="mb-label">Create</span>
       </a>
-      <a href="history.html" class="main-btn">
-        <span class="mb-icon">📊</span><span class="mb-label">History</span>
+      <a href="profile.html" class="main-btn">
+        <span class="mb-icon">�</span><span class="mb-label">Profile</span>
       </a>
     </div>
     <div id="searchMenu" style="display:none;">
@@ -636,7 +705,7 @@
         <div style="display:flex; gap:6px;">
           <a href="game.html#play" class="back-btn" style="margin-bottom:0; text-decoration:none;">🎮 Play</a>
           <a href="create.html" class="back-btn" style="margin-bottom:0; text-decoration:none;">✏️ Create</a>
-          <a href="history.html" class="back-btn" style="margin-bottom:0; text-decoration:none;">📊 History</a>
+          <a href="profile.html" class="back-btn" style="margin-bottom:0; text-decoration:none;">👤 Profile</a>
         </div>
       </div>
       <input type="text" id="searchInput" class="search-input" placeholder="Search by name..." onkeyup="performSearch()">
@@ -745,7 +814,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction, query, orderBy, limit, startAfter, onSnapshot, updateDoc, increment, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction, query, orderBy, where, limit, startAfter, onSnapshot, updateDoc, increment, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
@@ -795,6 +864,17 @@ async function saveSolve(difficulty, timeSeconds, mistakes) {
       solvedAt: serverTimestamp()
     });
     document.getElementById('winSaveMsg').classList.add('show');
+    // Record solver on the puzzle document
+    if(currentPuzzleId && !currentPuzzleId.startsWith('ai-')){
+      try{
+        await setDoc(doc(db,'puzzles',currentPuzzleId,'solvers',currentUser.uid),{
+          name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous',
+          solvedAt: serverTimestamp()
+        },{merge:true});
+        // Refresh the solver list
+        await window.loadSolvers(currentPuzzleId);
+      }catch(e){ console.error('saveSolverRecord:',e); }
+    }
   } catch (err) {
     console.error('Failed to save solve:', err);
   }
@@ -1713,6 +1793,7 @@ window.playLastOrNew=function(){
       gameWon=false;selected=null;multiSel=new Set();
       // Init comments for the resumed puzzle
       window.initComments(currentPuzzleId);
+      window.loadSolvers(currentPuzzleId);
       updateCommentsInputUI();
       document.getElementById('welcomeOverlay').classList.add('hidden');
       // show mobile topbar when entering play
@@ -1831,6 +1912,7 @@ window.loadCommunityPuzzle=async function(idx){
   try{ gameParsedConstraints=p.constraints?JSON.parse(p.constraints):null; }catch{ gameParsedConstraints=null; }
   // Init comments for this puzzle
   window.initComments(currentPuzzleId);
+  window.loadSolvers(currentPuzzleId);
   updateCommentsInputUI();
   document.getElementById('welcomeOverlay').classList.add('hidden');
   try{document.getElementById('mobileTopbar').classList.add('show');document.body.classList.add('has-mobile-topbar');}catch(e){}
@@ -1962,6 +2044,83 @@ window.initComments = function(puzzleId){
     console.error('Comments listener error:',err);
     setFeedHTML('<div class="comments-empty">Could not load comments.</div>');
   });
+};
+
+// ── SOLVED BY ──────────────────────────────────────────────────────────────
+let solversData = [];
+
+window.loadSolvers = async function(puzzleId){
+  solversData = [];
+  renderSolvers();
+  if(!puzzleId || puzzleId.startsWith('ai-')) return;
+  try{
+    const snap = await getDocs(query(
+      collection(db,'puzzles',puzzleId,'solvers'),
+      orderBy('solvedAt','desc')
+    ));
+    solversData = snap.docs.map(d=>({uid:d.id,...d.data()}));
+    renderSolvers();
+
+    // Backfill: if the current user has solved this puzzle but has no solver record, create one
+    if(currentUser && !solversData.some(s=>s.uid===currentUser.uid)){
+      try{
+        const me = currentUser;
+        const prevSnap = await getDocs(query(
+          collection(db,'users',me.uid,'solves'),
+          where('puzzleId','==',puzzleId),
+          limit(1)
+        ));
+        if(!prevSnap.empty){
+          const solveDoc = prevSnap.docs[0].data();
+          await setDoc(doc(db,'puzzles',puzzleId,'solvers',me.uid),{
+            name: me.displayName || me.email?.split('@')[0] || 'Anonymous',
+            solvedAt: solveDoc.solvedAt || serverTimestamp()
+          },{merge:true});
+          // Reload for consistency
+          const snap2 = await getDocs(query(collection(db,'puzzles',puzzleId,'solvers'),orderBy('solvedAt','desc')));
+          solversData = snap2.docs.map(d=>({uid:d.id,...d.data()}));
+          renderSolvers();
+        }
+      }catch(e){ console.error('backfillSolver:',e); }
+    }
+  }catch(e){ console.error('loadSolvers:',e); }
+};
+
+function renderSolvers(){
+  const count = solversData.length;
+  const countTxt = count ? count+' solver'+(count!==1?'s':'') : '';
+  const el = document.getElementById('solvedByCount');
+  if(el) el.textContent = countTxt;
+  const mEl = document.getElementById('mobileSolvedByCount');
+  if(mEl) mEl.textContent = count || '';
+
+  const html = count
+    ? solversData.map(s=>{
+        const name = s.name || 'Anonymous';
+        const initial = name[0].toUpperCase();
+        const dateStr = s.solvedAt ? timeAgo(s.solvedAt) : '';
+        return `<div class="sb-item"><div class="sb-avatar">${esc(initial)}</div><div class="sb-name">${esc(name)}</div>${dateStr?`<div class="sb-date">${esc(dateStr)}</div>`:''}</div>`;
+      }).join('')
+    : '<div class="comments-empty">No solves recorded yet.</div>';
+
+  const listEl = document.getElementById('solvedByList');
+  if(listEl) listEl.innerHTML = html;
+  const mListEl = document.getElementById('mobileSolvedByList');
+  if(mListEl) mListEl.innerHTML = html;
+}
+
+window.toggleDesktopSolvedBy = function(e){
+  if(e && e.target && e.target.closest('button')) return;
+  document.getElementById('solvedByPanel').classList.toggle('collapsed');
+};
+
+window.openMobileSolvedBy = function(){
+  document.getElementById('mobileSolvedByOverlay').classList.add('open');
+  document.getElementById('mobileSolvedByPanel').classList.add('open');
+};
+window.closeMobileSolvedBy = function(){
+  document.getElementById('mobileSolvedByOverlay').classList.remove('open');
+  document.getElementById('mobileSolvedByPanel').classList.remove('open');
 };
 
 /* Sync both feeds with the latest commentsData */
