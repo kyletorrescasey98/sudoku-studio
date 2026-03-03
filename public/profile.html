@@ -499,6 +499,10 @@ function renderAll(){
 
 function renderHeader(){
   console.log('ProfileDoc for debugging:', profileDoc);
+  console.log('ALL PROFILE FIELDS:');
+  for(let key in profileDoc) {
+    console.log(`  profileDoc.${key}:`, profileDoc[key]);
+  }
   console.log('Created puzzles for debugging:', createdPuzzles);
   console.log('ViewUID:', viewUid);
   console.log('IsOwnProfile:', isOwnProfile);
