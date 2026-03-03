@@ -1283,7 +1283,16 @@ window.togglePauseTimer=function(){
     stopTimer();
     if(btn){btn.textContent='▶️ Resume';btn.classList.add('btn-primary');}
     if(mobBtn)mobBtn.textContent='▶';
+    showPreGameOverlay('▶️ Resume',function(){
+      timerPaused=false;
+      if(!timerInterval)startTimer();
+      const b=document.getElementById('pauseBtn');
+      const mb=document.getElementById('mobilePauseBtn');
+      if(b){b.textContent='⏸️ Pause';b.classList.remove('btn-primary');}
+      if(mb)mb.textContent='⏸';
+    });
   } else {
+    closePreGameOverlay();
     if(!timerInterval)startTimer();
     if(btn){btn.textContent='⏸️ Pause';btn.classList.remove('btn-primary');}
     if(mobBtn)mobBtn.textContent='⏸';
