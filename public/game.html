@@ -838,6 +838,11 @@ onAuthStateChanged(auth, user => {
     currentUser = user;
     sessionStorage.removeItem('sudokuGuest');
     document.getElementById('navUser').textContent = '👤 ' + (user.displayName || user.email);
+    // Re-run loadSolvers now that auth is resolved, so the backfill
+    // can run even if loadSolvers was called before the user was known.
+    if(currentPuzzleId && !currentPuzzleId.startsWith('ai-')){
+      if(typeof window.loadSolvers === 'function') window.loadSolvers(currentPuzzleId);
+    }
   } else if (isGuest) {
     document.getElementById('navUser').innerHTML = '<span class="guest-badge">Guest</span>';
     document.getElementById('guestWelcomeNote').style.display = '';
