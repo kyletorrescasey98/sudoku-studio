@@ -504,20 +504,25 @@ function renderHeader(){
     console.log(`  profileDoc.${key}:`, profileDoc[key]);
   }
   console.log('Created puzzles for debugging:', createdPuzzles);
+  console.log('All solves for debugging:', allSolves);
   console.log('ViewUID:', viewUid);
   console.log('IsOwnProfile:', isOwnProfile);
   
   const emailLocal = (profileDoc.email||'').split ? (profileDoc.email||'').split('@')[0] : '';
-  // Prefer explicit profile fields (several common keys), then any created puzzle author name,
-  // then email-local, then own-user fallback or UID short
+  // Get name from puzzle author field if available
   const altName = (createdPuzzles && createdPuzzles.length && createdPuzzles[0].author) ? createdPuzzles[0].author : '';
-  const displayName = profileDoc.displayName || profileDoc.name || profileDoc.fullName || profileDoc.username || altName || emailLocal || (isOwnProfile ? (currentUser?.displayName || (currentUser?.email?.split('@')[0]||'Player')) : (viewUid? `User ${viewUid.slice(0,6)}` : 'Player'));
+  // Get name from solve records if available (this is where Charlie's name should be!)
+  const solveRecordName = (allSolves && allSolves.length && allSolves[0].name) ? allSolves[0].name : '';
+  
+  // Prefer explicit profile fields, then solve record name, then puzzle author name, then fallbacks
+  const displayName = profileDoc.displayName || profileDoc.name || profileDoc.fullName || profileDoc.username || solveRecordName || altName || emailLocal || (isOwnProfile ? (currentUser?.displayName || (currentUser?.email?.split('@')[0]||'Player')) : (viewUid? `User ${viewUid.slice(0,6)}` : 'Player'));
   
   console.log('Final displayName:', displayName);
   console.log('profileDoc.displayName:', profileDoc.displayName);
   console.log('profileDoc.name:', profileDoc.name);
   console.log('profileDoc.fullName:', profileDoc.fullName);
   console.log('profileDoc.username:', profileDoc.username);
+  console.log('solveRecordName from allSolves[0].name:', solveRecordName);
   console.log('altName:', altName);
   console.log('emailLocal:', emailLocal);
   const username = profileDoc.username || profileDoc.handle || (isOwnProfile ? (currentUser?.email?.split('@')[0]||'') : '');
