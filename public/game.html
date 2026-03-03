@@ -295,6 +295,94 @@
     .filter-select { padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:.75rem; background:var(--surface); color:var(--text); cursor:pointer; outline:none; }
     .filter-select:focus { border-color:var(--accent); }
     .search-results { display:flex; flex-direction:column; gap:8px; max-height:400px; overflow-y:auto; }
+
+    /* ── Comments Panel (desktop left column) ── */
+    .comments-panel { width:272px; flex-shrink:0; display:flex; flex-direction:column; background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; max-height:min(576px,calc(100vh - 250px)); }
+    .comments-panel.collapsed .comments-feed,
+    .comments-panel.collapsed .comments-input-area { display:none; }
+    .comments-panel.collapsed { max-height:none; }
+    .comments-header { padding:9px 13px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; background:var(--surface); cursor:pointer; user-select:none; }
+    .comments-panel.collapsed .comments-header { border-bottom:none; }
+    .comments-header:hover { background:var(--surface2); }
+    .comments-header-left { display:flex; align-items:center; gap:7px; }
+    .comments-header-title { font-size:.73rem; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--text); }
+    .comments-chevron { font-size:.65rem; color:var(--text2); transition:transform .22s; line-height:1; }
+    .comments-panel:not(.collapsed) .comments-chevron { transform:rotate(180deg); }
+    .comments-feed { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:8px; }
+    .comment-item { display:flex; flex-direction:column; gap:3px; }
+    .comment-bubble { background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:8px 10px; }
+    .comment-meta { display:flex; align-items:center; gap:6px; margin-bottom:3px; flex-wrap:wrap; }
+    .comment-username { font-size:.7rem; font-weight:700; color:var(--accent); }
+    .comment-time { font-size:.63rem; color:var(--text2); }
+    .comment-text { font-size:.79rem; color:var(--text); line-height:1.5; word-break:break-word; }
+    .comment-actions { display:flex; align-items:center; gap:6px; padding:0 2px; }
+    .comment-reply-btn { font-size:.67rem; color:var(--text2); background:none; border:none; cursor:pointer; padding:2px 4px; border-radius:4px; font-weight:600; line-height:1; }
+    .comment-reply-btn:hover { color:var(--accent); }
+    .thread-toggle-btn { font-size:.67rem; color:var(--accent); background:none; border:none; cursor:pointer; padding:2px 4px; font-weight:700; display:inline-flex; align-items:center; gap:3px; }
+    .thread-toggle-btn:hover { text-decoration:underline; }
+    .thread-replies { display:none; margin-left:12px; padding:6px 0 2px 10px; border-left:2px solid var(--border); flex-direction:column; gap:6px; }
+    .thread-replies.open { display:flex; }
+    .reply-item { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:7px 9px; }
+    .load-more-replies-btn { font-size:.67rem; color:var(--accent); background:none; border:none; cursor:pointer; padding:2px 4px; font-weight:700; text-align:left; margin-top:2px; }
+    .load-more-replies-btn:hover { text-decoration:underline; }
+    .comments-input-area { padding:8px; border-top:1px solid var(--border); flex-shrink:0; display:flex; flex-direction:column; gap:5px; background:var(--surface); }
+    .comments-textarea { width:100%; padding:7px 9px; border:1px solid var(--border); border-radius:8px; font-size:.79rem; resize:none; background:var(--surface2); color:var(--text); outline:none; font-family:inherit; line-height:1.4; }
+    .comments-textarea:focus { border-color:var(--accent); }
+    .comments-post-btn { align-self:flex-end; padding:5px 14px; background:var(--accent); color:#fff; border:none; border-radius:7px; font-size:.76rem; font-weight:700; cursor:pointer; }
+    .comments-post-btn:hover { filter:brightness(1.1); }
+    .comments-post-btn:disabled { opacity:.55; cursor:default; }
+    .comments-sign-in-note { font-size:.72rem; color:var(--text2); text-align:center; padding:6px 4px; }
+    .comments-empty { font-size:.75rem; color:var(--text2); text-align:center; padding:14px 8px; line-height:1.6; }
+    .comments-load-more-btn { font-size:.71rem; color:var(--accent); background:none; border:1px solid var(--border); border-radius:7px; padding:5px 12px; cursor:pointer; font-weight:700; text-align:center; margin:2px auto; display:block; }
+    .comments-load-more-btn:hover { border-color:var(--accent); }
+    .reply-form { display:none; flex-direction:column; gap:5px; margin-top:5px; padding-left:4px; }
+    .reply-form.open { display:flex; }
+    .reply-form-btns { display:flex; gap:6px; justify-content:flex-end; }
+    .reply-cancel-btn { padding:4px 10px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:7px; font-size:.74rem; font-weight:600; cursor:pointer; }
+    .reply-cancel-btn:hover { border-color:var(--text2); }
+
+    /* Desktop 3-column grid: equal outer columns keep board visually centered */
+    @media (min-width:1100px) {
+      .game-area {
+        display: grid;
+        grid-template-columns: 272px auto 272px;
+        align-items: start;
+        gap: 14px;
+        width: fit-content;
+        max-width: 100%;
+        margin: 0 auto;
+      }
+      .side-panel { width:190px; justify-self:start; }
+      .board { width:min(530px,calc(100vw - 596px),calc(100vh - 250px)) !important; height:min(530px,calc(100vw - 596px),calc(100vh - 250px)) !important; }
+    }
+    @media (max-width:1099px) {
+      .comments-panel { display:none; }
+    }
+
+    /* Mobile chat button */
+    .mobile-chat-btn { background:transparent; border:none; color:#fff; font-size:1.2rem; cursor:pointer; padding:4px 6px; border-radius:6px; line-height:1; flex-shrink:0; }
+
+    /* Mobile comments panel (same pattern as settings) */
+    .mobile-comments-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; }
+    .mobile-comments-overlay.open { display:block; }
+    .mobile-comments-panel {
+      position:fixed; bottom:0; left:0; right:0;
+      background:var(--surface); border-radius:20px 20px 0 0;
+      z-index:521; transform:translateY(100%);
+      transition:transform .28s cubic-bezier(.32,1,.4,1);
+      /* cap height so the header is always below the mobile topbar */
+      max-height: calc(100vh - env(safe-area-inset-top) - 58px);
+      display:flex; flex-direction:column;
+    }
+    .mobile-comments-panel.open { transform:translateY(0); }
+    .mobile-comments-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:12px auto 4px; flex-shrink:0; }
+    .mobile-comments-header { display:flex; align-items:center; justify-content:space-between; padding:10px 18px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .mobile-comments-title { font-size:1rem; font-weight:800; color:var(--text); }
+    .mobile-comments-close { background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text2); font-size:.8rem; font-weight:700; padding:6px 14px; cursor:pointer; }
+    .mobile-comments-close:active { background:var(--surface3); }
+    .mobile-comments-body { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
+    .mobile-comments-feed-wrap { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:10px 12px; display:flex; flex-direction:column; gap:8px; min-height:0; }
+    .mobile-comments-input-wrap { flex-shrink:0; padding:10px 14px calc(env(safe-area-inset-bottom) + 10px); border-top:1px solid var(--border); background:var(--surface); display:flex; flex-direction:column; gap:5px; }
   </style>
 </head>
 <body>
@@ -304,6 +392,7 @@
   <button class="mobile-back-btn" ontouchend="event.preventDefault();history.back()" onclick="history.back()">&#x2190;</button>
   <div class="mobile-puzzle-name" id="mobilePuzzleName">Sudoku</div>
   <!-- gear moved to left of timer for easier reach -->
+  <button class="mobile-chat-btn" id="mobileChatBtn" ontouchend="event.preventDefault();openMobileComments()" onclick="openMobileComments()" aria-label="Comments">&#x1F4AC;</button>
   <button class="mobile-gear-btn" id="mobileGearBtn" ontouchend="event.preventDefault();openMobileSettings()" onclick="openMobileSettings()" aria-label="Settings">&#x2699;&#xFE0F;</button>
   <div class="mobile-timer-wrap">
     <span id="mobileTimer">0:00</span>
@@ -349,6 +438,26 @@
   </div>
 </div>
 
+<!-- MOBILE COMMENTS -->
+<div class="mobile-comments-overlay" id="mobileCommentsOverlay" ontouchend="event.preventDefault();closeMobileComments()" onclick="closeMobileComments()"></div>
+<div class="mobile-comments-panel" id="mobileCommentsPanel">
+  <div class="mobile-comments-handle"></div>
+  <div class="mobile-comments-header">
+    <div class="mobile-comments-title">&#x1F4AC; Comments</div>
+    <button class="mobile-comments-close" ontouchend="event.preventDefault();closeMobileComments()" onclick="closeMobileComments()">&#x2190; Back</button>
+  </div>
+  <div class="mobile-comments-body">
+    <div class="mobile-comments-feed-wrap" id="mobileCommentsFeed">
+      <div class="comments-empty">Load a puzzle to see comments.</div>
+    </div>
+    <div class="mobile-comments-input-wrap" id="mobileCommentsInputArea">
+      <div class="comments-sign-in-note" id="mobileCommentsSignInNote" style="display:none;"><a href="index.html" style="color:var(--accent);">Sign in</a> to post a comment</div>
+      <textarea class="comments-textarea" id="mobileCommentsTextarea" placeholder="Add a comment..." rows="2" style="display:none;"></textarea>
+      <button class="comments-post-btn" id="mobileCommentsPostBtn" style="display:none;" onclick="window.postCommentMobile()">Post</button>
+    </div>
+  </div>
+</div>
+
 <!-- NAV BAR -->
 <nav class="navbar">
   <div class="nav-logo">Sudoku Social</div>
@@ -370,6 +479,24 @@
     <button class="btn-ghost" id="pauseBtn" onclick="togglePauseTimer()" title="Pause/Resume timer">⏸️ Pause</button>
   </div>
   <div class="game-area">
+    <!-- DESKTOP COMMENTS PANEL (left column) -->
+    <div class="comments-panel collapsed" id="commentsPanel" onclick="window.toggleDesktopComments(event)">
+      <div class="comments-header">
+        <div class="comments-header-left">
+          <span class="comments-chevron">&#x25BC;</span>
+          <div class="comments-header-title">&#x1F4AC; Comments</div>
+        </div>
+        <span id="commentsTotalCount" style="font-size:.67rem;color:var(--text2);font-weight:700;"></span>
+      </div>
+      <div class="comments-feed" id="commentsFeed">
+        <div class="comments-empty">Load a puzzle to see comments.</div>
+      </div>
+      <div class="comments-input-area" id="commentsInputArea">
+        <div class="comments-sign-in-note" id="commentsSignInNote" style="display:none;"><a href="index.html" style="color:var(--accent);">Sign in</a> to post a comment</div>
+        <textarea class="comments-textarea" id="commentsTextarea" placeholder="Add a comment..." rows="2" style="display:none;"></textarea>
+        <button class="comments-post-btn" id="commentsPostBtn" style="display:none;" onclick="window.postComment()">Post</button>
+      </div>
+    </div>
     <div class="board-wrap">
       <div class="board-container">
         <div class="board" id="board"></div>
@@ -618,7 +745,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction, query, orderBy, limit, startAfter, onSnapshot, updateDoc, increment, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
@@ -648,6 +775,8 @@ onAuthStateChanged(auth, user => {
   } else {
     window.location.href = 'index.html';
   }
+  // Refresh comments input UI now that auth is known
+  if(typeof updateCommentsInputUI === 'function') updateCommentsInputUI();
 });
 
 window.handleSignOut = async () => {
@@ -856,7 +985,7 @@ window.inputNumber=function(num){
     if(inputMode==='digit'){
       if(isGiven(r,c))continue;changed=true;
       if(board[r][c]===num){board[r][c]=0;}
-      else{if(num!==solution[r][c])mistakeCount++;board[r][c]=num;notes[r][c].corner.clear();notes[r][c].center.clear();removePeerNote(r,c,num);}
+      else{if(num!==solution[r][c])mistakeCount++;board[r][c]=num;notes[r][c].corner.clear();notes[r][c].center.clear();}
     } else if(inputMode==='corner'){
       if(board[r][c]!==0)continue;changed=true;
       if(notes[r][c].corner.has(num))notes[r][c].corner.delete(num);else notes[r][c].corner.add(num);
@@ -1582,6 +1711,9 @@ window.playLastOrNew=function(){
       currentPuzzleRatingCount=(typeof p.ratingCount==='number')?p.ratingCount:0;
       seconds=p.seconds||0;mistakeCount=p.mistakeCount||0;
       gameWon=false;selected=null;multiSel=new Set();
+      // Init comments for the resumed puzzle
+      window.initComments(currentPuzzleId);
+      updateCommentsInputUI();
       document.getElementById('welcomeOverlay').classList.add('hidden');
       // show mobile topbar when entering play
       try{document.getElementById('mobileTopbar').classList.add('show');document.body.classList.add('has-mobile-topbar');}catch(e){}
@@ -1697,6 +1829,9 @@ window.loadCommunityPuzzle=async function(idx){
   currentPuzzleRatingCount=(typeof p.ratingCount==='number')?p.ratingCount:0;
   // Parse constraints if present
   try{ gameParsedConstraints=p.constraints?JSON.parse(p.constraints):null; }catch{ gameParsedConstraints=null; }
+  // Init comments for this puzzle
+  window.initComments(currentPuzzleId);
+  updateCommentsInputUI();
   document.getElementById('welcomeOverlay').classList.add('hidden');
   try{document.getElementById('mobileTopbar').classList.add('show');document.body.classList.add('has-mobile-topbar');}catch(e){}
   resetZoom();
@@ -1769,6 +1904,359 @@ window.loadExplorePuzzle=async function(){
   communityPuzzles=[p];
   await window.loadCommunityPuzzle(0);
 }
+
+
+// ══════════════════════════════════════════════════════════════
+// COMMENTS
+// ══════════════════════════════════════════════════════════════
+const COMMENTS_PAGE_SIZE = 20;
+const REPLIES_PAGE_SIZE  = 10;
+
+let commentsUnsubscribe = null;   // Firestore onSnapshot unsubscribe fn
+let commentsData        = [];     // top-level comments array
+let commentsHasMore     = false;  // whether a "load more" after-doc exists
+let commentsLastDoc     = null;
+const repliesState = {};          // { commentId: {loaded, replies, lastDoc} }
+
+function esc(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function timeAgo(ts){
+  if(!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const s = (Date.now() - d.getTime()) / 1000;
+  if(s < 60) return 'just now';
+  if(s < 3600) return Math.floor(s/60)+'m ago';
+  if(s < 86400) return Math.floor(s/3600)+'h ago';
+  if(s < 604800) return Math.floor(s/86400)+'d ago';
+  return d.toLocaleDateString();
+}
+
+/* Called whenever we want to reset + start listening for a puzzle */
+window.initComments = function(puzzleId){
+  if(commentsUnsubscribe){ commentsUnsubscribe(); commentsUnsubscribe=null; }
+  commentsData=[]; commentsLastDoc=null; commentsHasMore=false;
+  Object.keys(repliesState).forEach(k=>delete repliesState[k]);
+  updateCommentsInputUI();
+
+  if(!puzzleId || puzzleId.startsWith('ai-')){
+    const msg = puzzleId && puzzleId.startsWith('ai-')
+      ? 'Comments are not available for AI-generated puzzles.'
+      : 'Load a puzzle to see comments.';
+    setFeedHTML('<div class="comments-empty">'+esc(msg)+'</div>');
+    document.getElementById('commentsTotalCount').textContent = '';
+    return;
+  }
+
+  setFeedHTML('<div class="comments-empty">Loading comments\u2026</div>');
+  const q = query(
+    collection(db,'puzzles',puzzleId,'comments'),
+    orderBy('createdAt','desc'),
+    limit(COMMENTS_PAGE_SIZE)
+  );
+  commentsUnsubscribe = onSnapshot(q, snap=>{
+    commentsData = snap.docs.map(d=>({id:d.id,...d.data()}));
+    commentsLastDoc = snap.docs.length >= COMMENTS_PAGE_SIZE ? snap.docs[snap.docs.length-1] : null;
+    commentsHasMore = !!commentsLastDoc;
+    renderCommentsData();
+  }, err=>{
+    console.error('Comments listener error:',err);
+    setFeedHTML('<div class="comments-empty">Could not load comments.</div>');
+  });
+};
+
+/* Sync both feeds with the latest commentsData */
+function renderCommentsData(){
+  if(!commentsData.length){
+    setFeedHTML('<div class="comments-empty">No comments yet. Be the first!</div>');
+    document.getElementById('commentsTotalCount').textContent = '';
+    return;
+  }
+  document.getElementById('commentsTotalCount').textContent =
+    commentsData.length + (commentsHasMore?'+':'') + ' comments';
+
+  let html = commentsData.map(buildCommentHTML).join('');
+  if(commentsHasMore){
+    html += '<button class="comments-load-more-btn" onclick="window.loadMoreComments()">Load more comments</button>';
+  }
+  setFeedHTML(html);
+}
+
+function setFeedHTML(html){
+  const d = document.getElementById('commentsFeed');
+  const m = document.getElementById('mobileCommentsFeed');
+  if(d) d.innerHTML = html;
+  if(m) m.innerHTML = html;
+}
+
+function buildCommentHTML(c){
+  const canDelete = currentUser && currentUser.uid === c.uid;
+  const rs = repliesState[c.id] || {};
+  const isOpen = rs.open || false;
+  const rCount = typeof c.replyCount === 'number' ? c.replyCount : 0;
+  const repliesInner = isOpen && rs.loaded
+    ? buildRepliesInner(c.id, rs.replies||[], rs.lastDoc)
+    : '<div class="comments-empty" style="font-size:.7rem;padding:6px 0;">Loading\u2026</div>';
+
+  return `<div class="comment-item" data-cid="${esc(c.id)}">
+    <div class="comment-bubble">
+      <div class="comment-meta">
+        <span class="comment-username">@${esc(c.username||'user')}</span>
+        <span class="comment-time">${timeAgo(c.createdAt)}</span>
+      </div>
+      <div class="comment-text">${esc(c.text)}</div>
+    </div>
+    <div class="comment-actions">
+      ${currentUser&&!isGuest?`<button class="comment-reply-btn" onclick="window.toggleReplyForm(this)">&#x21A9; Reply</button>`:''}
+      ${canDelete?`<button class="comment-reply-btn" style="color:var(--error)" onclick="window.deleteComment('${esc(c.id)}')">Delete</button>`:''}
+    </div>
+    <div class="reply-form" id="rf-${esc(c.id)}">
+      <textarea class="comments-textarea" placeholder="Write a reply\u2026" rows="2"></textarea>
+      <div class="reply-form-btns">
+        <button class="reply-cancel-btn" onclick="window.toggleReplyForm(this)">Cancel</button>
+        <button class="comments-post-btn" onclick="window.postReply(this,'${esc(c.id)}')">Reply</button>
+      </div>
+    </div>
+    ${rCount>0?`
+    <button class="thread-toggle-btn" onclick="window.toggleThread(this,'${esc(c.id)}')">${isOpen?'&#x25BC;':'&#x25B6;'} ${rCount} ${rCount===1?'reply':'replies'}</button>
+    <div class="thread-replies${isOpen?' open':''}" data-tid="${esc(c.id)}">${repliesInner}</div>
+    `:rCount===0&&isOpen?`
+    <button class="thread-toggle-btn" onclick="window.toggleThread(this,'${esc(c.id)}')">&#x25BC; 0 replies</button>
+    <div class="thread-replies open" data-tid="${esc(c.id)}">${repliesInner}</div>
+    `:''}
+  </div>`;
+}
+
+function buildRepliesInner(commentId, replies, lastDoc){
+  if(!replies.length) return '<div class="comments-empty" style="font-size:.7rem;padding:4px 0;">No replies yet.</div>';
+  const canReply = !!(currentUser && !isGuest);
+  let html = replies.map(r=>{
+    const eid = esc(r.id||'');
+    const euser = esc(r.username||'user');
+    return `
+    <div class="reply-item" data-rid="${eid}">
+      <div class="comment-meta">
+        <span class="comment-username">@${euser}</span>
+        <span class="comment-time">${timeAgo(r.createdAt)}</span>
+      </div>
+      <div class="comment-text">${esc(r.text)}</div>
+      ${canReply?`<button class="comment-reply-btn" style="margin-top:3px" onclick="window.replyToUser(this,'${esc(commentId)}','${euser}')">&#x21A9; Reply</button>`:''}
+    </div>`;
+  }).join('');
+  if(lastDoc){
+    html += `<button class="load-more-replies-btn" onclick="window.loadMoreReplies(this,'${esc(commentId)}')">Show next ${REPLIES_PAGE_SIZE} replies</button>`;
+  }
+  return html;
+}
+
+/* Toggle reply text-area open/close — works in both feeds via closest() */
+window.toggleReplyForm = function(btn){
+  const item = btn.closest('.comment-item');
+  if(!item) return;
+  const cid = item.dataset.cid;
+  // Toggle both feeds (desktop + mobile)
+  document.querySelectorAll(`.comment-item[data-cid="${cid}"] .reply-form`).forEach(rf=>{
+    const nowOpen = rf.classList.toggle('open');
+    if(nowOpen){ const ta=rf.querySelector('textarea'); if(ta) ta.focus(); }
+  });
+};
+
+/* Expand / collapse thread */
+window.toggleThread = function(btn, commentId){
+  const item = btn.closest('.comment-item');
+  const state = repliesState[commentId] || (repliesState[commentId]={loaded:false,replies:[],lastDoc:null,open:false});
+
+  if(!state.open){
+    state.open = true;
+    // Update all instances of toggle button and thread panel
+    document.querySelectorAll(`.comment-item[data-cid="${commentId}"] .thread-toggle-btn`).forEach(b=>{
+      b.innerHTML = b.innerHTML.replace('&#x25B6;','&#x25BC;').replace('▶','▼');
+    });
+    document.querySelectorAll(`.thread-replies[data-tid="${commentId}"]`).forEach(el=>el.classList.add('open'));
+    if(!state.loaded){
+      fetchReplies(commentId, false);
+    } else {
+      updateRepliesPanels(commentId);
+    }
+  } else {
+    state.open = false;
+    document.querySelectorAll(`.comment-item[data-cid="${commentId}"] .thread-toggle-btn`).forEach(b=>{
+      b.innerHTML = b.innerHTML.replace('&#x25BC;','&#x25B6;').replace('▼','▶');
+    });
+    document.querySelectorAll(`.thread-replies[data-tid="${commentId}"]`).forEach(el=>el.classList.remove('open'));
+  }
+};
+
+async function fetchReplies(commentId, loadMore){
+  const state = repliesState[commentId] || (repliesState[commentId]={loaded:false,replies:[],lastDoc:null,open:true});
+  if(!loadMore){
+    document.querySelectorAll(`.thread-replies[data-tid="${commentId}"]`).forEach(el=>{
+      el.innerHTML='<div class="comments-empty" style="font-size:.7rem;padding:6px 0;">Loading\u2026</div>';
+    });
+  }
+  try{
+    const ref = collection(db,'puzzles',currentPuzzleId,'comments',commentId,'replies');
+    const q = loadMore && state.lastDoc
+      ? query(ref, orderBy('createdAt','asc'), startAfter(state.lastDoc), limit(REPLIES_PAGE_SIZE))
+      : query(ref, orderBy('createdAt','asc'), limit(REPLIES_PAGE_SIZE));
+    const snap = await getDocs(q);
+    const newR = snap.docs.map(d=>({id:d.id,...d.data()}));
+    state.replies = loadMore ? [...state.replies, ...newR] : newR;
+    state.lastDoc = snap.docs.length >= REPLIES_PAGE_SIZE ? snap.docs[snap.docs.length-1] : null;
+    state.loaded = true;
+    updateRepliesPanels(commentId);
+  }catch(e){
+    console.error('Fetch replies error:',e);
+    document.querySelectorAll(`.thread-replies[data-tid="${commentId}"]`).forEach(el=>{
+      el.innerHTML='<div class="comments-empty" style="font-size:.7rem;padding:6px 0;">Failed to load replies.</div>';
+    });
+  }
+}
+
+function updateRepliesPanels(commentId){
+  const state = repliesState[commentId];
+  if(!state) return;
+  const html = buildRepliesInner(commentId, state.replies||[], state.lastDoc);
+  document.querySelectorAll(`.thread-replies[data-tid="${commentId}"]`).forEach(el=>{ el.innerHTML=html; });
+}
+
+window.loadMoreReplies = function(btn, commentId){
+  fetchReplies(commentId, true);
+};
+
+window.loadMoreComments = async function(){
+  if(!currentPuzzleId||!commentsLastDoc) return;
+  try{
+    const snap = await getDocs(query(
+      collection(db,'puzzles',currentPuzzleId,'comments'),
+      orderBy('createdAt','desc'),
+      startAfter(commentsLastDoc),
+      limit(COMMENTS_PAGE_SIZE)
+    ));
+    const more = snap.docs.map(d=>({id:d.id,...d.data()}));
+    commentsData = [...commentsData, ...more];
+    commentsLastDoc = snap.docs.length >= COMMENTS_PAGE_SIZE ? snap.docs[snap.docs.length-1] : null;
+    commentsHasMore = !!commentsLastDoc;
+    renderCommentsData();
+  }catch(e){ console.error('Load more comments error:',e); }
+};
+
+/* Show/hide the textarea+post button vs sign-in note */
+function updateCommentsInputUI(){
+  const signed = !!(currentUser && !isGuest);
+  const hasPuzzle = !!(currentPuzzleId && !currentPuzzleId.startsWith('ai-'));
+
+  const desktopTA   = document.getElementById('commentsTextarea');
+  const desktopBtn  = document.getElementById('commentsPostBtn');
+  const desktopNote = document.getElementById('commentsSignInNote');
+  const mobileTA    = document.getElementById('mobileCommentsTextarea');
+  const mobileBtn   = document.getElementById('mobileCommentsPostBtn');
+  const mobileNote  = document.getElementById('mobileCommentsSignInNote');
+
+  if(hasPuzzle && signed){
+    if(desktopTA)  { desktopTA.style.display=''; desktopBtn.style.display=''; desktopNote.style.display='none'; }
+    if(mobileTA)   { mobileTA.style.display=''; mobileBtn.style.display=''; mobileNote.style.display='none'; }
+  } else if(hasPuzzle && !signed){
+    if(desktopTA)  { desktopTA.style.display='none'; desktopBtn.style.display='none'; desktopNote.style.display=''; }
+    if(mobileTA)   { mobileTA.style.display='none'; mobileBtn.style.display='none'; mobileNote.style.display=''; }
+  } else {
+    if(desktopTA)  { desktopTA.style.display='none'; desktopBtn.style.display='none'; desktopNote.style.display='none'; }
+    if(mobileTA)   { mobileTA.style.display='none'; mobileBtn.style.display='none'; mobileNote.style.display='none'; }
+  }
+}
+
+async function submitComment(text){
+  if(!text||!currentUser||!currentPuzzleId) return;
+  const username = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
+  await addDoc(collection(db,'puzzles',currentPuzzleId,'comments'),{
+    text, uid:currentUser.uid, username,
+    createdAt:serverTimestamp(), replyCount:0
+  });
+}
+
+window.postComment = async function(){
+  const ta = document.getElementById('commentsTextarea');
+  const btn = document.getElementById('commentsPostBtn');
+  const text = ta?.value.trim();
+  if(!text) return;
+  btn.disabled=true;
+  try{ await submitComment(text); if(ta) ta.value=''; }
+  catch(e){ console.error('Post comment error:',e); }
+  finally{ btn.disabled=false; }
+};
+
+window.postCommentMobile = async function(){
+  const ta = document.getElementById('mobileCommentsTextarea');
+  const btn = document.getElementById('mobileCommentsPostBtn');
+  const text = ta?.value.trim();
+  if(!text) return;
+  btn.disabled=true;
+  try{ await submitComment(text); if(ta) ta.value=''; }
+  catch(e){ console.error('Post comment mobile error:',e); }
+  finally{ btn.disabled=false; }
+};
+
+window.postReply = async function(btn, commentId){
+  const form = btn.closest('.reply-form');
+  const ta = form?.querySelector('textarea');
+  const text = ta?.value.trim();
+  if(!text||!currentUser||!currentPuzzleId) return;
+  btn.disabled=true;
+  try{
+    const username = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
+    await addDoc(collection(db,'puzzles',currentPuzzleId,'comments',commentId,'replies'),{
+      text, uid:currentUser.uid, username, createdAt:serverTimestamp()
+    });
+    await updateDoc(doc(db,'puzzles',currentPuzzleId,'comments',commentId),{ replyCount:increment(1) });
+    if(ta) ta.value='';
+    // Close all reply forms for this comment
+    document.querySelectorAll(`.comment-item[data-cid="${commentId}"] .reply-form`).forEach(rf=>rf.classList.remove('open'));
+    // Reload replies in open threads
+    const state = repliesState[commentId];
+    if(state && state.open){ fetchReplies(commentId, false); }
+  }catch(e){ console.error('Post reply error:',e); }
+  finally{ btn.disabled=false; }
+};
+
+window.deleteComment = async function(commentId){
+  if(!currentUser||!currentPuzzleId) return;
+  if(!confirm('Delete this comment?')) return;
+  try{ await deleteDoc(doc(db,'puzzles',currentPuzzleId,'comments',commentId)); }
+  catch(e){ console.error('Delete comment error:',e); }
+};
+
+window.toggleDesktopComments = function(e){
+  // Don't collapse when clicking inside the feed or input area
+  if(e && e.target.closest('.comments-feed,.comments-input-area')) return;
+  document.getElementById('commentsPanel').classList.toggle('collapsed');
+};
+
+window.openMobileComments = function(){
+  updateCommentsInputUI();
+  document.getElementById('mobileCommentsOverlay').classList.add('open');
+  document.getElementById('mobileCommentsPanel').classList.add('open');
+};
+window.closeMobileComments = function(){
+  document.getElementById('mobileCommentsOverlay').classList.remove('open');
+  document.getElementById('mobileCommentsPanel').classList.remove('open');
+};
+
+/* Reply to a specific person inside a thread — pre-fills @username in the reply textarea */
+window.replyToUser = function(btn, commentId, username){
+  // Find matching comment-item (works in both desktop + mobile feeds)
+  const item = btn.closest('.comment-item') || btn.closest('[data-cid="'+commentId+'"]');
+  const allItems = document.querySelectorAll(`.comment-item[data-cid="${commentId}"]`);
+  allItems.forEach(ci=>{
+    const form = ci.querySelector('.reply-form');
+    if(!form) return;
+    form.classList.add('open');
+    const ta = form.querySelector('textarea');
+    if(!ta) return;
+    const prefix = '@'+username+' ';
+    if(!ta.value.startsWith(prefix)) ta.value = prefix + ta.value.replace(/^@\S+ /,'');
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+  });
+};
 
 function handleInitialHash(){
   try{
