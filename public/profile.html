@@ -479,6 +479,19 @@ async function loadProfile(){
     createdPuzzles=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
   }catch(e){ createdPuzzles=[]; }
 
+  // If profileDoc has no name, look it up from the solver record on any puzzle they solved
+  if(!profileDoc.displayName && !profileDoc.name && !profileDoc.fullName && !profileDoc.username){
+    const solvedPuzzleId = allSolves.find(s=>s.puzzleId)?.puzzleId;
+    if(solvedPuzzleId){
+      try{
+        const solverSnap=await getDoc(doc(db,'puzzles',solvedPuzzleId,'solvers',viewUid));
+        if(solverSnap.exists() && solverSnap.data().name){
+          profileDoc._resolvedName = solverSnap.data().name;
+        }
+      }catch(e){}
+    }
+  }
+
   renderAll();
 }
 
@@ -498,33 +511,12 @@ function renderAll(){
 }
 
 function renderHeader(){
-  console.log('ProfileDoc for debugging:', profileDoc);
-  console.log('ALL PROFILE FIELDS:');
-  for(let key in profileDoc) {
-    console.log(`  profileDoc.${key}:`, profileDoc[key]);
-  }
-  console.log('Created puzzles for debugging:', createdPuzzles);
-  console.log('All solves for debugging:', allSolves);
-  console.log('ViewUID:', viewUid);
-  console.log('IsOwnProfile:', isOwnProfile);
-  
   const emailLocal = (profileDoc.email||'').split ? (profileDoc.email||'').split('@')[0] : '';
   // Get name from puzzle author field if available
   const altName = (createdPuzzles && createdPuzzles.length && createdPuzzles[0].author) ? createdPuzzles[0].author : '';
-  // Get name from solve records if available (this is where Charlie's name should be!)
-  const solveRecordName = (allSolves && allSolves.length && allSolves[0].name) ? allSolves[0].name : '';
   
-  // Prefer explicit profile fields, then solve record name, then puzzle author name, then fallbacks
-  const displayName = profileDoc.displayName || profileDoc.name || profileDoc.fullName || profileDoc.username || solveRecordName || altName || emailLocal || (isOwnProfile ? (currentUser?.displayName || (currentUser?.email?.split('@')[0]||'Player')) : (viewUid? `User ${viewUid.slice(0,6)}` : 'Player'));
-  
-  console.log('Final displayName:', displayName);
-  console.log('profileDoc.displayName:', profileDoc.displayName);
-  console.log('profileDoc.name:', profileDoc.name);
-  console.log('profileDoc.fullName:', profileDoc.fullName);
-  console.log('profileDoc.username:', profileDoc.username);
-  console.log('solveRecordName from allSolves[0].name:', solveRecordName);
-  console.log('altName:', altName);
-  console.log('emailLocal:', emailLocal);
+  // Prefer explicit profile fields, then resolved name from solver record, then puzzle author name, then fallbacks
+  const displayName = profileDoc.displayName || profileDoc.name || profileDoc.fullName || profileDoc.username || profileDoc._resolvedName || altName || emailLocal || (isOwnProfile ? (currentUser?.displayName || (currentUser?.email?.split('@')[0]||'Player')) : (viewUid? `User ${viewUid.slice(0,6)}` : 'Player'));
   const username = profileDoc.username || profileDoc.handle || (isOwnProfile ? (currentUser?.email?.split('@')[0]||'') : '');
   const bio = profileDoc.bio || '';
   // Prefer explicit join date fields used in different writes, then earliest created puzzle date, then own-user metadata

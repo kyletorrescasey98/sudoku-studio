@@ -884,6 +884,7 @@ async function saveSolve(difficulty, timeSeconds, mistakes) {
       puzzleId: currentPuzzleId || '',
       puzzle: puzzleStr || '',
       author: currentPuzzleAuthor || '',
+      name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous',
       solvedAt: serverTimestamp()
     });
     document.getElementById('winSaveMsg').classList.add('show');
