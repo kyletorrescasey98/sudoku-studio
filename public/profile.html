@@ -523,8 +523,10 @@ function renderHeader(){
   // Get name from puzzle author field if available
   const altName = (createdPuzzles && createdPuzzles.length && createdPuzzles[0].author) ? createdPuzzles[0].author : '';
   
-  // Prefer explicit profile fields, then resolved name from solver record, then puzzle author name, then fallbacks
-  const displayName = profileDoc.displayName || profileDoc.name || profileDoc.fullName || profileDoc.username || profileDoc._resolvedName || altName || emailLocal || (isOwnProfile ? (currentUser?.displayName || (currentUser?.email?.split('@')[0]||'Player')) : (viewUid? `User ${viewUid.slice(0,6)}` : 'Player'));
+  // For own profile, pull Auth displayName early (it's the name they set at signup)
+  const authName = isOwnProfile ? (currentUser?.displayName || '') : '';
+  // Prefer explicit profile fields, then Auth name, then resolved name from solver record, then puzzle author, then email, then UID
+  const displayName = profileDoc.displayName || profileDoc.name || profileDoc.fullName || profileDoc.username || authName || profileDoc._resolvedName || altName || emailLocal || (viewUid ? `User ${viewUid.slice(0,6)}` : 'Player');
   const username = profileDoc.username || profileDoc.handle || (isOwnProfile ? (currentUser?.email?.split('@')[0]||'') : '');
   const bio = profileDoc.bio || '';
   // Prefer explicit join date fields used in different writes, then earliest created puzzle date, then own-user metadata
