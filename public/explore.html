@@ -235,7 +235,7 @@
     .cards-row::-webkit-scrollbar { display:none; }
 
     .puzzle-card {
-      flex-shrink:0; width:200px;
+      flex-shrink:0; width:260px;
       background:var(--surface); border:1px solid var(--border);
       border-radius:14px; overflow:hidden; cursor:pointer;
       transition:all .18s; animation:fadeUp .4s ease both;
@@ -247,7 +247,7 @@
       border-color:rgba(37,99,235,.3);
     }
     .card-preview {
-      height:100px; padding:8px;
+      height:160px; padding:12px;
       background:linear-gradient(135deg, #f8faff, #eef2ff);
       display:flex; align-items:center; justify-content:center;
       position:relative; overflow:hidden;
@@ -482,12 +482,89 @@
     }
     .load-more-btn:hover { border-color:var(--accent); color:var(--accent); }
 
+    /* ── PUZZLE DETAIL MODAL ── */
+    .modal-overlay {
+      display:none; position:fixed; inset:0; z-index:500;
+      background:rgba(0,0,0,.45); backdrop-filter:blur(4px);
+      align-items:center; justify-content:center;
+      animation:modalFadeIn .2s ease;
+    }
+    .modal-overlay.open { display:flex; }
+    @keyframes modalFadeIn { from{opacity:0} to{opacity:1} }
+    .modal-card {
+      background:var(--surface); border-radius:20px;
+      width:92%; max-width:480px; max-height:90vh; overflow-y:auto;
+      box-shadow:0 20px 60px rgba(0,0,0,.25);
+      animation:modalSlideUp .25s ease;
+      position:relative;
+    }
+    @keyframes modalSlideUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+    .modal-close {
+      position:absolute; top:14px; right:14px; z-index:10;
+      width:32px; height:32px; border-radius:50%;
+      border:1px solid var(--border); background:var(--surface);
+      display:flex; align-items:center; justify-content:center;
+      font-size:1rem; cursor:pointer; color:var(--text2);
+      transition:all .15s;
+    }
+    .modal-close:hover { background:var(--surface2); color:var(--error); }
+    .modal-grid-area {
+      display:flex; align-items:center; justify-content:center;
+      padding:32px 20px 20px;
+      background:linear-gradient(135deg, #f8faff, #eef2ff);
+      border-radius:20px 20px 0 0;
+    }
+    .modal-grid-wrap {
+      display:grid; grid-template-rows:repeat(9,1fr);
+      border:2.5px solid #374151; border-radius:8px; overflow:hidden;
+      width:280px; height:280px; background:#fff;
+      box-shadow:0 4px 20px rgba(0,0,0,.1);
+    }
+    .modal-body { padding:20px 24px 24px; display:flex; flex-direction:column; gap:10px; }
+    .modal-title { font-size:1.3rem; font-weight:900; color:var(--text); }
+    .modal-author { font-size:.82rem; color:var(--text2); font-weight:600; }
+    .modal-author strong { color:var(--accent); }
+    .modal-badges { display:flex; flex-wrap:wrap; gap:5px; }
+    .modal-stats-row {
+      display:flex; gap:14px; flex-wrap:wrap; margin-top:2px;
+    }
+    .modal-stat {
+      display:flex; flex-direction:column; gap:1px;
+    }
+    .modal-stat-val { font-size:.95rem; font-weight:800; color:var(--text); }
+    .modal-stat-lbl { font-size:.62rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; }
+    .modal-rules {
+      font-size:.8rem; color:var(--text2); line-height:1.5;
+      background:var(--surface2); border-radius:10px;
+      padding:12px 14px;
+    }
+    .modal-rules-title { font-weight:800; font-size:.72rem; color:var(--text); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+    .modal-play-btn {
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      width:100%; padding:14px; border-radius:12px;
+      background:var(--accent); color:#fff; border:none;
+      font-size:.95rem; font-weight:800; cursor:pointer;
+      transition:all .15s; margin-top:4px;
+      box-shadow:0 4px 14px rgba(37,99,235,.3);
+      font-family:'DM Sans',system-ui,sans-serif;
+    }
+    .modal-play-btn:hover { filter:brightness(1.1); transform:translateY(-1px); box-shadow:0 6px 20px rgba(37,99,235,.4); }
+    .modal-completed-badge {
+      display:inline-flex; align-items:center; gap:4px;
+      font-size:.72rem; font-weight:700; padding:4px 10px;
+      border-radius:999px; background:#dcfce7; color:#15803d;
+      border:1px solid #86efac;
+    }
+
     @media (max-width:680px) {
       .hero-card { grid-template-columns:1fr; }
       .hero-right { display:none; }
       .hero-title { font-size:1.5rem; }
       .hero-left { padding:24px; }
       .search-filters { gap:6px; }
+      .puzzle-card { width:220px; }
+      .card-preview { height:130px; }
+      .modal-grid-wrap { width:220px; height:220px; }
     }
   </style>
 </head>
@@ -655,6 +732,25 @@
 
 </div>
 
+<!-- PUZZLE DETAIL MODAL -->
+<div class="modal-overlay" id="puzzleModal">
+  <div class="modal-card">
+    <button class="modal-close" id="modalCloseBtn">&times;</button>
+    <div class="modal-grid-area">
+      <div class="modal-grid-wrap" id="modalGrid"></div>
+    </div>
+    <div class="modal-body">
+      <div id="modalCompleted"></div>
+      <div class="modal-title" id="modalTitle"></div>
+      <div class="modal-author" id="modalAuthor"></div>
+      <div class="modal-badges" id="modalBadges"></div>
+      <div class="modal-stats-row" id="modalStats"></div>
+      <div class="modal-rules" id="modalRules" style="display:none"></div>
+      <button class="modal-play-btn" id="modalPlayBtn">▶ Play Puzzle</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
@@ -722,6 +818,61 @@ const AVATAR_COLORS = ['linear-gradient(135deg,#2563eb,#7c3aed)','linear-gradien
 function avatarColor(name){ let h=0; for(const c of name) h=(h*31+c.charCodeAt(0))&0xffff; return AVATAR_COLORS[h%AVATAR_COLORS.length]; }
 function initials(name){ return name.replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase()||'??'; }
 function esc(str){ return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// ── PUZZLE DETAIL MODAL ─────────────────────────────
+let modalPuzzle = null;
+function openPuzzleModal(p){
+  modalPuzzle = p;
+  const modal = document.getElementById('puzzleModal');
+  // Grid
+  const gridEl = document.getElementById('modalGrid');
+  gridEl.innerHTML = '';
+  renderMiniGrid(gridEl, p.puzzle||'', 280, 11);
+  // Title & author
+  document.getElementById('modalTitle').textContent = p.name || 'Untitled';
+  document.getElementById('modalAuthor').innerHTML = `by <strong>${esc(p.author||'Unknown')}</strong>`;
+  // Badges
+  document.getElementById('modalBadges').innerHTML = variantBadgesHTML(p);
+  // Stats
+  const diff = p.difficulty||'';
+  const rating = (typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg)) ? `⭐ ${p.ratingAvg.toFixed(1)}` : 'Unrated';
+  const count = typeof p.ratingCount==='number' ? p.ratingCount : 0;
+  document.getElementById('modalStats').innerHTML = `
+    <div class="modal-stat"><div class="modal-stat-val"><span class="diff-dot diff-${(diff||'').toLowerCase()}"></span> ${diff||'—'}</div><div class="modal-stat-lbl">Difficulty</div></div>
+    <div class="modal-stat"><div class="modal-stat-val">${rating}</div><div class="modal-stat-lbl">Rating</div></div>
+    <div class="modal-stat"><div class="modal-stat-val">${count}</div><div class="modal-stat-lbl">Ratings</div></div>
+    <div class="modal-stat"><div class="modal-stat-val">${p.clueCount||'—'}</div><div class="modal-stat-lbl">Clues</div></div>
+  `;
+  // Rules / description
+  const rulesEl = document.getElementById('modalRules');
+  const variants = getPuzzleVariants(p);
+  const variantNames = variants.map(v=>v.label);
+  let rulesText = '';
+  if(p.description) rulesText = p.description;
+  else if(variantNames.length===1 && variantNames[0]==='Classic') rulesText = 'Standard Sudoku rules apply. Fill each row, column, and 3×3 box with the digits 1–9.';
+  else rulesText = 'Standard Sudoku rules apply, plus: ' + variantNames.join(', ') + '.';
+  if(rulesText){
+    rulesEl.style.display='';
+    rulesEl.innerHTML = `<div class="modal-rules-title">Rules</div>${esc(rulesText)}`;
+  } else { rulesEl.style.display='none'; }
+  // Completed badge
+  const compEl = document.getElementById('modalCompleted');
+  if(completedMap[p.id]){
+    compEl.innerHTML = `<span class="modal-completed-badge">✅ Completed</span>`;
+  } else { compEl.innerHTML=''; }
+  // Play button
+  document.getElementById('modalPlayBtn').onclick = () => { closeModal(); launchPuzzle(p); };
+  modal.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeModal(){
+  document.getElementById('puzzleModal').classList.remove('open');
+  document.body.style.overflow='';
+  modalPuzzle=null;
+}
+document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+document.getElementById('puzzleModal').addEventListener('click', (e)=>{ if(e.target===e.currentTarget) closeModal(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
 
 // Open a user's profile if public. Fetch the user doc to respect privacy.
 window.openUserProfile = async function(uid){
@@ -883,7 +1034,7 @@ function renderMiniGrid(el, clueStr, size=80, fontSize=4.5){
 function makePuzzleCard(p, rank){
   const card = document.createElement('div');
   card.className = 'puzzle-card';
-  card.onclick = () => launchPuzzle(p);
+  card.onclick = () => openPuzzleModal(p);
 
   const preview = document.createElement('div');
   preview.className = 'card-preview';
@@ -894,8 +1045,8 @@ function makePuzzleCard(p, rank){
     preview.appendChild(rb);
   }
   const gridEl = document.createElement('div');
-  gridEl.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:80px;height:80px;background:#fff;';
-  renderMiniGrid(gridEl, p.puzzle||'', 80, 4.5);
+  gridEl.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:130px;height:130px;background:#fff;';
+  renderMiniGrid(gridEl, p.puzzle||'', 130, 6);
   preview.appendChild(gridEl);
 
   const diff = p.difficulty||'';
@@ -987,14 +1138,14 @@ function buildNewFeed(){
   recent.forEach(p => {
     const item = document.createElement('div');
     item.className = 'feed-item';
-    item.onclick = () => launchPuzzle(p);
+    item.onclick = () => openPuzzleModal(p);
     const diff = p.difficulty||'';
     const g = document.createElement('div');
     g.className = 'feed-grid';
     g.style.cssText='flex-shrink:0;';
     const gridEl = document.createElement('div');
-    gridEl.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:46px;height:46px;background:#fff;';
-    renderMiniGrid(gridEl, p.puzzle||'', 46, 2.5);
+    gridEl.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:70px;height:70px;background:#fff;';
+    renderMiniGrid(gridEl, p.puzzle||'', 70, 3.5);
     g.appendChild(gridEl);
     item.innerHTML=`
       <div class="feed-info">
@@ -1125,11 +1276,11 @@ window.loadMoreResults = function(){ searchPage++; renderSearchResults(true); };
 function makeSearchResultCard(p){
   const card=document.createElement('div');
   card.className='puzzle-card'; card.style.width='100%';
-  card.onclick=()=>launchPuzzle(p);
+  card.onclick=()=>openPuzzleModal(p);
   const preview=document.createElement('div'); preview.className='card-preview';
   const gridEl=document.createElement('div');
-  gridEl.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:80px;height:80px;background:#fff;';
-  renderMiniGrid(gridEl,p.puzzle||'',80,4.5);
+  gridEl.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:130px;height:130px;background:#fff;';
+  renderMiniGrid(gridEl,p.puzzle||'',130,6);
   preview.appendChild(gridEl);
   const diff=p.difficulty||'';
   const rating=(typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg))?`★ ${p.ratingAvg.toFixed(1)}`:'Unrated';
