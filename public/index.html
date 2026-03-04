@@ -117,9 +117,10 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
     const googleProvider = new GoogleAuthProvider();
+    let signingUp = false;
 
-    // Redirect if already signed in
-    onAuthStateChanged(auth, user => { if(user) window.location.href = 'explore.html'; });
+    // Redirect if already signed in (skip during active signup so updateProfile can finish)
+    onAuthStateChanged(auth, user => { if(user && !signingUp) window.location.href = 'explore.html'; });
 
     window.switchTab = function(tab) {
       document.getElementById('form-signin').style.display = tab==='signin' ? '' : 'none';
@@ -161,10 +162,12 @@
       if(!name || !email || !pass) { showMsg('su-msg','Please fill in all fields.','error'); return; }
       if(pass.length < 6) { showMsg('su-msg','Password must be at least 6 characters.','error'); return; }
       setLoading('su-btn', true);
+      signingUp = true;
       try {
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
         await updateProfile(cred.user, { displayName: name });
         await setDoc(doc(db,'users',cred.user.uid),{ displayName: name, email: email, createdAt: serverTimestamp() },{ merge: true });
+        signingUp = false;
         window.location.href = 'explore.html';
       } catch(e) {
         showMsg('su-msg', friendlyError(e.code), 'error');
