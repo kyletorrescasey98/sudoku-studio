@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Explore — Sudoku Social</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -754,7 +755,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
-import { getFirestore, collection, getDocs, getDoc, doc, setDoc } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { getFirestore, collection, getDocs, getDoc, doc, setDoc, addDoc, query, where, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
@@ -899,7 +900,7 @@ onAuthStateChanged(auth, async user => {
     // Sync displayName & email to Firestore so other users can see it on profile pages
     try{
       const syncData = {};
-      if(user.displayName) syncData.displayName = user.displayName;
+      if(user.displayName) { syncData.displayName = user.displayName; syncData.displayNameLower = user.displayName.toLowerCase(); }
       if(user.email) syncData.email = user.email;
       if(Object.keys(syncData).length) await setDoc(doc(db,'users',user.uid), syncData, { merge: true });
     }catch(e){}
@@ -1004,9 +1005,24 @@ function buildPOTD(){
 
 // ── LAUNCH PUZZLE → game.html ─────────────────────────
 function launchPuzzle(p){
+  // Track puzzle click for trending
+  trackPuzzleView(p.id);
+  
   const data = {id:p.id||'',name:p.name||'',puzzle:p.puzzle||'',difficulty:p.difficulty||'',author:p.author||'',isAI:!!p.isAI,clueCount:p.clueCount||0,description:p.description||'',ratingAvg:p.ratingAvg||null,ratingCount:p.ratingCount||0,constraints:p.constraints||null,backgroundImage:p.backgroundImage||''};
   try { sessionStorage.setItem('explorePuzzle', JSON.stringify(data)); } catch(e){}
   window.location.href = 'game.html#explore:' + encodeURIComponent(p.id||'');
+}
+
+// ── TRACK VIEW FOR TRENDING ────────────────────────────
+async function trackPuzzleView(puzzleId){
+  if(!puzzleId) return;
+  try{
+    await addDoc(collection(db,'puzzleViews'),{
+      puzzleId: puzzleId,
+      viewedAt: serverTimestamp(),
+      userUid: currentUser?.uid || 'guest'
+    });
+  }catch(e){ console.error('trackView:',e); }
 }
 
 // ── MINI GRID RENDERER ─────────────────────────────────
@@ -1069,14 +1085,65 @@ function makePuzzleCard(p, rank){
   return card;
 }
 
-// ── BUILD TRENDING (by ratingCount) ───────────────────
-function buildTrending(filter='all'){
+// ── BUILD TRENDING (by weekly clicks + rating weight) ──
+async function buildTrending(filter='all'){
   const row = document.getElementById('trendingRow');
-  row.innerHTML = '';
+  row.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:.82rem;">Loading trending...</div>';
+  
   let puzzles = filter==='all' ? allPuzzles : allPuzzles.filter(p => (p.difficulty||'').toLowerCase()===filter);
-  const sorted = [...puzzles].sort((a,b)=>(b.ratingCount||0)-(a.ratingCount||0)).slice(0,8);
-  if(!sorted.length){ row.innerHTML='<div style="padding:20px;color:var(--text3);font-size:.82rem;">No puzzles yet</div>'; return; }
-  sorted.forEach((p,i)=>row.appendChild(makePuzzleCard(p,i+1)));
+  if(!puzzles.length){ row.innerHTML='<div style="padding:20px;color:var(--text3);font-size:.82rem;">No puzzles yet</div>'; return; }
+  
+  try{
+    // Get views from the last 7 days
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    
+    const viewsSnap = await getDocs(query(
+      collection(db,'puzzleViews'),
+      where('viewedAt','>=',weekAgo),
+      orderBy('viewedAt','desc')
+    ));
+    
+    // Count views per puzzle
+    const viewCounts = {};
+    viewsSnap.docs.forEach(doc => {
+      const data = doc.data();
+      const pid = data.puzzleId;
+      if(pid) viewCounts[pid] = (viewCounts[pid] || 0) + 1;
+    });
+    
+    // Calculate trending scores (views * rating weight)
+    const scored = puzzles.map(p => {
+      const views = viewCounts[p.id] || 0;
+      const rating = p.ratingAvg || 3.0; // Default to 3.0 for unrated
+      const ratingWeight = Math.max(0.5, rating / 5.0); // 0.5-1.0 weight based on rating
+      const trendingScore = views * ratingWeight;
+      return {...p, weeklyViews: views, trendingScore};
+    });
+    
+    // Sort by trending score, take top 8
+    const sorted = scored.sort((a,b)=>b.trendingScore-a.trendingScore).slice(0,8);
+    
+    if(!sorted.some(p=>p.weeklyViews>0)){
+      // Fallback to rating count if no weekly views
+      const fallback = [...puzzles].sort((a,b)=>(b.ratingCount||0)-(a.ratingCount||0)).slice(0,8);
+      row.innerHTML = '';
+      if(!fallback.length){ row.innerHTML='<div style="padding:20px;color:var(--text3);font-size:.82rem;">No puzzles yet</div>'; return; }
+      fallback.forEach((p,i)=>row.appendChild(makePuzzleCard(p,i+1)));
+      return;
+    }
+    
+    row.innerHTML = '';
+    sorted.forEach((p,i)=>row.appendChild(makePuzzleCard(p,i+1)));
+    
+  }catch(e){
+    console.error('buildTrending:',e);
+    // Fallback to old algorithm
+    const sorted = [...puzzles].sort((a,b)=>(b.ratingCount||0)-(a.ratingCount||0)).slice(0,8);
+    row.innerHTML = '';
+    if(!sorted.length){ row.innerHTML='<div style="padding:20px;color:var(--text3);font-size:.82rem;">No puzzles yet</div>'; return; }
+    sorted.forEach((p,i)=>row.appendChild(makePuzzleCard(p,i+1)));
+  }
 }
 
 // ── BUILD HIGHEST RATED ────────────────────────────────
@@ -1115,8 +1182,16 @@ function buildSetters(){
     card.className = 'setter-card';
     const uid = s.uid;
     const nameEsc = esc(s.name||'');
-    const avatar = `<div class="setter-avatar" style="background:${avatarColor(s.name)}"${uid?` onclick="openUserProfile('${(uid+'').replace(/'/g,"\\'")})" style="cursor:pointer"`:''}>${initials(s.name)}</div>`;
-    const nameHtml = uid ? `<div class="setter-name" onclick="openUserProfile('${(uid+'').replace(/'/g,"\\'")})" style="cursor:pointer">${nameEsc}</div>` : `<div class="setter-name">${nameEsc}</div>`;
+    
+    // Make the entire card clickable if uid exists
+    if (uid) {
+      card.style.cursor = 'pointer';
+      card.onclick = () => openUserProfile(uid);
+    }
+    
+    // Remove individual click handlers since the entire card is now clickable
+    const avatar = `<div class="setter-avatar" style="background:${avatarColor(s.name)}">${initials(s.name)}</div>`;
+    const nameHtml = `<div class="setter-name">${nameEsc}</div>`;
     const puzzlesHtml = `<div class="setter-puzzles">${s.count} puzzle${s.count===1?'':'s'}${avg?` · ★${avg}`:''}</div>`;
     card.innerHTML = avatar + nameHtml + puzzlesHtml;
     row.appendChild(card);
