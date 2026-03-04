@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Profile — Sudoku Social</title>
   <meta name="description" content="View your Sudoku profile, stats, solve history and created puzzles" />
@@ -62,6 +63,10 @@
     .profile-name { font-size:1.4rem; font-weight:900; color:var(--text); line-height:1.1; }
     .profile-username { font-size:.82rem; color:var(--text2); font-weight:600; }
     .profile-join { font-size:.72rem; color:var(--text2); display:flex; align-items:center; gap:5px; }
+    .profile-stats-row { display:flex; gap:16px; margin-bottom:8px; }
+    .profile-stat { display:flex; flex-direction:column; align-items:center; }
+    .profile-stat-num { font-size:1rem; font-weight:800; color:var(--text); }
+    .profile-stat-label { font-size:.7rem; color:var(--text2); text-transform:uppercase; letter-spacing:.5px; }
     .profile-bio-wrap { display:flex; align-items:center; gap:8px; }
     .profile-bio { font-size:.84rem; color:var(--text2); font-style:italic; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .profile-bio.empty { color:var(--surface3); }
@@ -148,7 +153,7 @@
     .history-list { display:flex; flex-direction:column; gap:8px; }
     .history-item { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 16px; display:flex; align-items:center; gap:14px; transition:all .15s; cursor:pointer; }
     .history-item:hover { border-color:rgba(37,99,235,.3); box-shadow:0 2px 10px rgba(37,99,235,.08); }
-    .hi-grid { display:grid; grid-template-rows:repeat(9,1fr); border:1.5px solid #374151; border-radius:4px; overflow:hidden; width:52px; height:52px; background:#fff; flex-shrink:0; }
+    .hi-grid { flex-shrink:0; width:126px; height:126px; border-radius:6px; overflow:hidden; background:#f0f4ff; }
     .hi-row { display:grid; grid-template-columns:repeat(9,1fr); }
     .hi-cell { border-right:.4px solid #e5e7eb; border-bottom:.4px solid #e5e7eb; display:flex; align-items:center; justify-content:center; font-size:3.2px; font-weight:700; color:#1f2937; background:#f8f9fa; }
     .hi-cell.empty { background:#fff; color:transparent; }
@@ -160,8 +165,12 @@
     .hi-name { font-size:.84rem; font-weight:800; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .hi-meta { font-size:.7rem; color:var(--text2); margin-top:2px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .hi-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
-    .hi-time { font-size:.88rem; font-weight:800; color:var(--accent); font-variant-numeric:tabular-nums; }
-    .hi-date { font-size:.65rem; color:var(--text2); }
+    .hi-time { font-size:1rem; font-weight:800; color:var(--accent); font-variant-numeric:tabular-nums; }
+    .hi-date { font-size:.78rem; color:var(--text2); font-weight:600; }
+    .hi-rank { font-size:.7rem; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--surface2); color:var(--text2); border:1px solid var(--border); white-space:nowrap; }
+    .hi-rank.gold   { background:#fefce8; color:#92400e; border-color:#fde68a; }
+    .hi-rank.silver { background:#f1f5f9; color:#475569; border-color:#cbd5e1; }
+    .hi-rank.bronze { background:#fff7ed; color:#92400e; border-color:#fed7aa; }
     .diff-badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:.65rem; font-weight:700; }
     .diff-easy   { background:#dcfce7; color:#15803d; }
     .diff-medium { background:#fef9c3; color:#854d0e; }
@@ -316,7 +325,18 @@
           <button class="icon-btn" onclick="saveName()" title="Save">✅</button>
           <button class="icon-btn" onclick="cancelName()" title="Cancel">❌</button>
         </div>
+        <div id="nameErrorMsg" style="display:none;font-size:.75rem;color:var(--error);margin-top:2px;font-weight:600;"></div>
         <div class="profile-join" id="profileJoin">📅 Joined —</div>
+        <div class="profile-stats-row" id="profileStatsRow">
+          <div class="profile-stat">
+            <span class="profile-stat-num" id="followersCount">0</span>
+            <span class="profile-stat-label">followers</span>
+          </div>
+          <div class="profile-stat">
+            <span class="profile-stat-num" id="followingCount">0</span>
+            <span class="profile-stat-label">following</span>
+          </div>
+        </div>
         <div class="profile-bio-wrap" id="bioWrap">
           <span class="profile-bio empty" id="profileBioDisplay">No bio yet…</span>
           <button class="icon-btn" id="bioEditBtn" title="Edit bio" style="display:none">✏️</button>
@@ -476,6 +496,50 @@ let solveFilterDiff   = 'all';
 let solveFilterVariant= 'all';
 let createdFilterDiff = 'all';
 let createdFilterVariant = 'all';
+
+// ── APP PUZZLE CLUES (mirrors DEFAULT_PUZZLES in game.html) ──────────────
+const AI_PUZZLE_MAP = {
+  'ai-e1':'006470908030009600107836000000008060048095721910607500060000140081000090000153870',
+  'ai-e2':'040091020500360070000007049408739200000510007025400031359008002280100000104020805',
+  'ai-e3':'003495602020006910006210000000500807000003040000107090862001079100802030005649128',
+  'ai-e4':'000000000200071860014850900439080007002030189051207340048020600020900008003610405',
+  'ai-e5':'600900000901823506003107000000090080007085263500200019800000090026370801030018624',
+  'ai-e6':'005789300000305000307041000001470000870050491460090070084900167710800020236010000',
+  'ai-e7':'405060700070834620020000080010386040096000001000091362209050130157000408800007006',
+  'ai-e8':'830600705071020083420300010000093008596700100000005290063007841050800900008906050',
+  'ai-e9':'100040009700006201900002530000000903045009020800720456080457002030098100590301780',
+  'ai-e10':'704058093000092400390000850040000708109000540068007030006830070010009080832700964',
+  'ai-m1':'040005980080600070000010035000060590000089047000154008908006000057031800010000000',
+  'ai-m2':'860020037235080000000005080000208900004019700100500000000002070620030005003007290',
+  'ai-m3':'400320580100000002082900000000000058030200700007860003008590400760182000050006000',
+  'ai-m4':'000160900906002003001009407004930001600010000000600000490000020352000010100240790',
+  'ai-m5':'002004008608002709000700020007435000106807940800090000001000400060000201003060500',
+  'ai-m6':'301670905590210040000030000900020004700000000020345098210450009000000007009000500',
+  'ai-m7':'900037010010000032200040006800900000723400859060800007000080001008601045000004000',
+  'ai-m8':'009021000053000000000040090000208050074060020208900003605432000027005300000000542',
+  'ai-m9':'000040030004507000090600000039000810000001097261800300002096003080100009005083004',
+  'ai-m10':'200600005107230000804009200000807004095300007070095000000003502003006000020700480',
+  'ai-h1':'000045080801000009900600000000160030006000002500007800040570000000809600000002051',
+  'ai-h2':'000004090380005601000000020900030750000100000072890100741300000000500000090000200',
+  'ai-h3':'200594100003000700500080000000860010094000500000000060000000900070040320002300806',
+  'ai-h4':'084000000000005006907006002000137600000000000018000300000053084020080000075600020',
+  'ai-h5':'000000300400370000070000540001040270000700000300005090100402009000650080095000020',
+  'ai-h6':'003000008001950000050200106009007000030060000000000020084030095300520000000070403',
+  'ai-h7':'930006000107209050500000800600000030000600000003050090040000270310007000060900004',
+  'ai-h8':'204000010500000007080009000000980000060000800100040560006000003010203600000018029',
+  'ai-h9':'000003597203000406000006000030000020005309080000007000007018009080000002060030050',
+  'ai-h10':'000030000701052000600000079000090500509060000047003000000000043000605080020001750',
+  'ai-x1':'204060050000900082700000030007200004900070000400600015603420000000010000000000028',
+  'ai-x2':'007040000010005040000830000020000300009000001700200800000090210500061084040070003',
+  'ai-x3':'035709020029030000000008600000000008350000004000007130143800000000090000700100000',
+  'ai-x4':'250000000007062000000890060094000001500030000000000920000008100100000004600024007',
+  'ai-x5':'000500000000006002010000805020000003004010080605049010700000000030004071000003049',
+  'ai-x6':'030200600010030000006070004500007200300000809020005003105000000040006020680003010',
+  'ai-x7':'001000900000014860000020050020000000087000046094200070700308000000100423000000600',
+  'ai-x8':'091000080600000702003060400000002600020040008009006014100007005000800000008000049',
+  'ai-x9':'000004090003000040008970000800100900090025810000040605600702000000000007020006031',
+  'ai-x10':'700036040000004803010208000070000020800402710009000006090500001000300060007000004',
+};
 let profileDoc     = {};
 
 const params    = new URLSearchParams(location.search);
@@ -546,7 +610,7 @@ onAuthStateChanged(auth, async user=>{
   // Sync current user's name & email to Firestore so other users can see it on profile pages
   try{
     const syncData = {};
-    if(user.displayName) syncData.displayName = user.displayName;
+    if(user.displayName) { syncData.displayName = user.displayName; syncData.displayNameLower = user.displayName.toLowerCase(); }
     if(user.email) syncData.email = user.email;
     if(Object.keys(syncData).length) await setDoc(doc(db,'users',user.uid), syncData, { merge: true });
   }catch(e){}
@@ -569,6 +633,47 @@ async function loadProfile(){
     const snap=await getDocs(q);
     allSolves=snap.docs.map(d=>({id:d.id,...d.data()}));
   }catch(e){ allSolves=[]; }
+
+  // Back-fill puzzle strings for solve records that predate the puzzle field
+  // or where it wasn't saved. Batch-fetch unique puzzle docs from Firestore.
+  try{
+    // First, fill ai-* puzzles from local map (never in Firestore)
+    allSolves=allSolves.map(s=>{
+      if(!s.puzzle && s.puzzleId && AI_PUZZLE_MAP[s.puzzleId]){
+        return {...s, puzzle: AI_PUZZLE_MAP[s.puzzleId]};
+      }
+      return s;
+    });
+    // Then fetch any remaining missing community puzzles from Firestore
+    const missingIds=[...new Set(
+      allSolves.filter(s=>!s.puzzle && s.puzzleId && !s.puzzleId.startsWith('ai-')).map(s=>s.puzzleId)
+    )];
+    if(missingIds.length){
+      const snaps=await Promise.all(missingIds.map(id=>getDoc(doc(db,'puzzles',id))));
+      const puzzleMap={};
+      snaps.forEach(snap=>{ if(snap.exists()) puzzleMap[snap.id]=snap.data().puzzle||''; });
+      allSolves=allSolves.map(s=>(!s.puzzle&&s.puzzleId&&puzzleMap[s.puzzleId])?{...s,puzzle:puzzleMap[s.puzzleId]}:s);
+    }
+  }catch(e){}
+
+  // Fetch leaderboard rank for each solved puzzle
+  try{
+    const uniquePuzzleIds=[...new Set(allSolves.filter(s=>s.puzzleId).map(s=>s.puzzleId))];
+    if(uniquePuzzleIds.length){
+      const solverSnaps=await Promise.all(uniquePuzzleIds.map(id=>getDocs(collection(db,'puzzles',id,'solvers'))));
+      const rankMap={};
+      solverSnaps.forEach((snap,i)=>{
+        const id=uniquePuzzleIds[i];
+        const raw=snap.docs.map(d=>({uid:d.id,...d.data()}));
+        const timed=raw.filter(s=>s.timeSeconds!=null).sort((a,b)=>a.timeSeconds-b.timeSeconds);
+        const untimed=raw.filter(s=>s.timeSeconds==null);
+        const sorted=[...timed,...untimed];
+        const pos=sorted.findIndex(s=>s.uid===viewUid);
+        rankMap[id]={rank:pos>=0?pos+1:null,total:sorted.length};
+      });
+      allSolves=allSolves.map(s=>s.puzzleId&&rankMap[s.puzzleId]?{...s,_rank:rankMap[s.puzzleId].rank,_rankOf:rankMap[s.puzzleId].total}:s);
+    }
+  }catch(e){}
 
   try{
     const q=query(collection(db,'puzzles'),where('authorUid','==',viewUid));
@@ -628,6 +733,9 @@ function renderHeader(){
   av.style.background=avatarGradient(displayName);
 
   document.getElementById('profileName').textContent=displayName;
+
+  // Update follow counts
+  updateFollowCounts();
   document.getElementById('profileUsername').textContent=username?'@'+username:'';
 
   let joinStr='—';
@@ -672,12 +780,35 @@ function renderHeader(){
 window.saveName=async function(){
   const newName=document.getElementById('nameInput').value.trim();
   if(!newName) return;
+  const nameErrEl=document.getElementById('nameErrorMsg');
+  nameErrEl.style.display='none';
+  // Check for duplicate display name (case-insensitive), excluding current user.
+  // Two parallel queries: one on displayNameLower (new accounts) and one on
+  // displayName (legacy accounts that may not have displayNameLower yet).
+  try{
+    const [snapLower, snapExact] = await Promise.all([
+      getDocs(query(collection(db,'users'), where('displayNameLower','==',newName.toLowerCase()))),
+      getDocs(query(collection(db,'users'), where('displayName','==',newName)))
+    ]);
+    const allDocs = [...snapLower.docs, ...snapExact.docs];
+    const taken = allDocs.some(d => d.id !== currentUser.uid);
+    if(taken){
+      nameErrEl.textContent='That name is already taken. Please choose a different name.';
+      nameErrEl.style.display='block';
+      return;
+    }
+  }catch(e){
+    nameErrEl.textContent='Could not verify name availability. Please try again.';
+    nameErrEl.style.display='block';
+    return;
+  }
   document.getElementById('profileName').textContent=newName;
   document.getElementById('nameDisplayRow').style.display='';
   document.getElementById('nameEditRow').style.display='none';
+  nameErrEl.style.display='none';
   profileDoc.displayName=newName;
   try{
-    await setDoc(doc(db,'users',currentUser.uid),{displayName:newName},{merge:true});
+    await setDoc(doc(db,'users',currentUser.uid),{displayName:newName,displayNameLower:newName.toLowerCase()},{merge:true});
     await updateProfile(currentUser,{displayName:newName});
   }catch(e){}
   // Update avatar
@@ -691,6 +822,8 @@ window.saveName=async function(){
 window.cancelName=function(){
   document.getElementById('nameDisplayRow').style.display='';
   document.getElementById('nameEditRow').style.display='none';
+  const nameErrEl=document.getElementById('nameErrorMsg');
+  if(nameErrEl) nameErrEl.style.display='none';
 };
 document.getElementById('nameEditBtn').addEventListener('click',()=>{
   document.getElementById('nameInput').value=document.getElementById('profileName').textContent;
@@ -738,9 +871,23 @@ async function toggleFollow(){
   if(newState) profileDoc.followers[currentUser.uid]=true;
   else delete profileDoc.followers[currentUser.uid];
   try{
-    const upd={}; upd[`followers.${currentUser.uid}`]=newState||null;
-    await setDoc(doc(db,'users',viewUid),upd,{merge:true});
+    // Update target user's followers
+    const targetUpd={}; targetUpd[`followers.${currentUser.uid}`]=newState||null;
+    await setDoc(doc(db,'users',viewUid),targetUpd,{merge:true});
+    // Update current user's following
+    const myUpd={}; myUpd[`following.${viewUid}`]=newState||null;
+    await setDoc(doc(db,'users',currentUser.uid),myUpd,{merge:true});
+    // Update counts
+    updateFollowCounts();
   }catch(e){}
+}
+
+function updateFollowCounts(){
+  const followersCount = profileDoc.followers ? Object.keys(profileDoc.followers).length : 0;
+  document.getElementById('followersCount').textContent = followersCount;
+  
+  const followingCount = profileDoc.following ? Object.keys(profileDoc.following).length : 0;
+  document.getElementById('followingCount').textContent = followingCount;
 }
 
 // ── SOLVER STATS ──────────────────────────────────────
@@ -910,6 +1057,7 @@ function renderSolveHistory(){
       </div>
       <div class="hi-right">
         <div class="hi-time">${fmtTime(s.timeSeconds)}</div>
+        ${s._rank!=null?`<div class="hi-rank ${s._rank===1?'gold':s._rank===2?'silver':s._rank===3?'bronze':''}"> ${s._rank===1?'🥇 #1':s._rank===2?'🥈 #2':s._rank===3?'🥉 #3':'#'+s._rank} of ${s._rankOf}</div>`:''}
         <div class="hi-date">${s.solvedAt?fmtDate(s.solvedAt):''}</div>
       </div>`;
     item.onclick=()=>{
@@ -922,28 +1070,66 @@ function renderSolveHistory(){
     };
     list.appendChild(item);
     const gridEl=document.getElementById('hg-'+s.id);
-    if(gridEl&&s.puzzle) renderTinyGrid(gridEl,s.puzzle);
+    if(gridEl) renderTinyGrid(gridEl, s.puzzle||'');
   }
 }
 
-function renderTinyGrid(el,clueStr){
+function renderTinyGrid(el, clueStr){
   el.innerHTML='';
-  el.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:52px;height:52px;background:#fff;flex-shrink:0;';
+  const DISPLAY=126, SCALE=2;
+  const canvas=document.createElement('canvas');
+  canvas.width=DISPLAY*SCALE; canvas.height=DISPLAY*SCALE;
+  canvas.style.cssText=`width:${DISPLAY}px;height:${DISPLAY}px;display:block;border-radius:6px;`;
+  el.style.cssText=`flex-shrink:0;width:${DISPLAY}px;height:${DISPLAY}px;border-radius:6px;overflow:hidden;`;
+
+  const ctx=canvas.getContext('2d');
+  ctx.scale(SCALE,SCALE);
+
   const digits=(clueStr||'').replace(/\D/g,'').padEnd(81,'0');
+  const PAD=1.5, gridPx=DISPLAY-PAD*2, cell=gridPx/9;
+
+  // white background
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,DISPLAY,DISPLAY);
+
+  // shade given cells
   for(let r=0;r<9;r++){
-    const row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:repeat(9,1fr);';
     for(let c=0;c<9;c++){
-      const cell=document.createElement('div');
-      const n=parseInt(digits[r*9+c]);
-      const bR=(c===2||c===5)?'1px solid #6b7280':'.4px solid #e5e7eb';
-      const bB=(r===2||r===5)?'1px solid #6b7280':'.4px solid #e5e7eb';
-      cell.style.cssText=`display:flex;align-items:center;justify-content:center;border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:3.2px;font-weight:700;color:#1f2937;background:${n?'#f8f9fa':'#fff'};`;
-      if(n) cell.textContent=n;
-      row.appendChild(cell);
+      if(parseInt(digits[r*9+c])){
+        ctx.fillStyle='#eef2ff';
+        ctx.fillRect(PAD+c*cell, PAD+r*cell, cell, cell);
+      }
     }
-    el.appendChild(row);
   }
+
+  // thin cell lines
+  ctx.strokeStyle='#d1d5db'; ctx.lineWidth=0.5;
+  for(let i=1;i<9;i++){
+    if(i%3===0) continue;
+    ctx.beginPath(); ctx.moveTo(PAD+i*cell,PAD); ctx.lineTo(PAD+i*cell,PAD+gridPx); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PAD,PAD+i*cell); ctx.lineTo(PAD+gridPx,PAD+i*cell); ctx.stroke();
+  }
+
+  // thick box lines
+  ctx.strokeStyle='#374151'; ctx.lineWidth=1.5;
+  for(let i=0;i<=9;i+=3){
+    ctx.beginPath(); ctx.moveTo(PAD+i*cell,PAD); ctx.lineTo(PAD+i*cell,PAD+gridPx); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PAD,PAD+i*cell); ctx.lineTo(PAD+gridPx,PAD+i*cell); ctx.stroke();
+  }
+
+  // numbers
+  const fs=Math.round(cell*0.62);
+  ctx.fillStyle='#1e3a8a';
+  ctx.font=`700 ${fs}px 'Segoe UI',system-ui,sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(let r=0;r<9;r++){
+    for(let c=0;c<9;c++){
+      const n=parseInt(digits[r*9+c]);
+      if(n) ctx.fillText(n, PAD+c*cell+cell/2, PAD+r*cell+cell/2+0.5);
+    }
+  }
+
+  el.appendChild(canvas);
 }
 
 // ── CREATED PUZZLES ───────────────────────────────────
