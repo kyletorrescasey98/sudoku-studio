@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Sudoku &mdash; Sign In</title>
   <meta name="description" content="Sign in to Sudoku Studio - Challenge your mind with engaging Sudoku puzzles" />
@@ -38,8 +39,6 @@
     .btn { width:100%; padding:11px; border:none; border-radius:9px; font-size:.9rem; font-weight:700; cursor:pointer; transition:filter .15s; margin-top:4px; }
     .btn-primary { background:var(--accent); color:#fff; }
     .btn-primary:hover { filter:brightness(1.1); }
-    .btn-google { background:var(--surface); color:var(--text); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px; }
-    .btn-google:hover { border-color:var(--accent); }
     .divider { display:flex; align-items:center; gap:10px; margin:16px 0; color:var(--text2); font-size:.72rem; }
     .divider::before, .divider::after { content:''; flex:1; height:1px; background:var(--border); }
     .msg { font-size:.78rem; padding:9px 12px; border-radius:8px; margin-top:12px; text-align:center; display:none; }
@@ -75,11 +74,6 @@
       </div>
       <div class="forgot" onclick="forgotPassword()">Forgot password?</div>
       <button class="btn btn-primary" id="si-btn" onclick="signIn()">Sign In</button>
-      <div class="divider">or</div>
-      <button class="btn btn-google" onclick="signInGoogle()">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.1 0 5.9 1.1 8.1 2.9l6-6C34.4 3.1 29.5 1 24 1 14.7 1 6.9 6.6 3.4 14.5l7 5.4C12.1 13.5 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.5c-.5 2.8-2.1 5.1-4.5 6.7l7 5.4C43.4 36.9 46.1 31.1 46.1 24.5z"/><path fill="#FBBC05" d="M10.4 28.1c-.6-1.7-.9-3.5-.9-5.3s.3-3.6.9-5.3l-7-5.4C1.6 15.1 0 19.4 0 24s1.6 8.9 3.4 11.9l7-5.8z"/><path fill="#34A853" d="M24 47c5.5 0 10.1-1.8 13.5-4.9l-7-5.4c-1.9 1.3-4.3 2-6.5 2-6.4 0-11.9-4-13.7-9.5l-7 5.8C6.9 41.4 14.7 47 24 47z"/></svg>
-        Continue with Google
-      </button>
       <div class="msg" id="si-msg"></div>
     </div>
 
@@ -98,25 +92,19 @@
         <input type="password" id="su-password" placeholder="Min 6 characters" />
       </div>
       <button class="btn btn-primary" id="su-btn" onclick="signUp()">Create Account</button>
-      <div class="divider">or</div>
-      <button class="btn btn-google" onclick="signInGoogle()">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.1 0 5.9 1.1 8.1 2.9l6-6C34.4 3.1 29.5 1 24 1 14.7 1 6.9 6.6 3.4 14.5l7 5.4C12.1 13.5 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.5c-.5 2.8-2.1 5.1-4.5 6.7l7 5.4C43.4 36.9 46.1 31.1 46.1 24.5z"/><path fill="#FBBC05" d="M10.4 28.1c-.6-1.7-.9-5.3s.3-3.6.9-5.3l-7-5.4C1.6 15.1 0 19.4 0 24s1.6 8.9 3.4 11.9l7-5.8z"/><path fill="#34A853" d="M24 47c5.5 0 10.1-1.8 13.5-4.9l-7-5.4c-1.9 1.3-4.3 2-6.5 2-6.4 0-11.9-4-13.7-9.5l-7 5.8C6.9 41.4 14.7 47 24 47z"/></svg>
-        Continue with Google
-      </button>
       <div class="msg" id="su-msg"></div>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
-    import { getFirestore, doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
+    import { getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
     import { firebaseConfig } from './firebase-config.js';
 
     const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
-    const googleProvider = new GoogleAuthProvider();
     let signingUp = false;
 
     // Redirect if already signed in (skip during active signup so updateProfile can finish)
@@ -162,25 +150,30 @@
       if(!name || !email || !pass) { showMsg('su-msg','Please fill in all fields.','error'); return; }
       if(pass.length < 6) { showMsg('su-msg','Password must be at least 6 characters.','error'); return; }
       setLoading('su-btn', true);
+      // Check for duplicate display name (case-insensitive)
+      // Two queries: displayNameLower (new accounts) + displayName (legacy accounts)
+      try {
+        const [snapLower, snapExact] = await Promise.all([
+          getDocs(query(collection(db,'users'), where('displayNameLower','==',name.toLowerCase()))),
+          getDocs(query(collection(db,'users'), where('displayName','==',name)))
+        ]);
+        const taken = !snapLower.empty || !snapExact.empty;
+        if(taken) {
+          showMsg('su-msg','That name is already taken. Please choose a different name.','error');
+          setLoading('su-btn', false);
+          return;
+        }
+      } catch(_) {}
       signingUp = true;
       try {
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
         await updateProfile(cred.user, { displayName: name });
-        await setDoc(doc(db,'users',cred.user.uid),{ displayName: name, email: email, createdAt: serverTimestamp() },{ merge: true });
+        await setDoc(doc(db,'users',cred.user.uid),{ displayName: name, displayNameLower: name.toLowerCase(), email: email, createdAt: serverTimestamp() },{ merge: true });
         signingUp = false;
         window.location.href = 'explore.html';
       } catch(e) {
         showMsg('su-msg', friendlyError(e.code), 'error');
         setLoading('su-btn', false);
-      }
-    };
-
-    window.signInGoogle = async function() {
-      try {
-        await signInWithPopup(auth, googleProvider);
-        window.location.href = 'explore.html';
-      } catch(e) {
-        showMsg('si-msg', friendlyError(e.code), 'error');
       }
     };
 
