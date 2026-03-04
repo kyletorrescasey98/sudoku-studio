@@ -33,7 +33,7 @@
 <body>
 <div class="card">
   <h1>🌱 Seed Default Puzzles</h1>
-  <p>Generates and uploads <strong>10 puzzles per difficulty level</strong> (40 total) to Firestore as AI-authored puzzles. Only run this once.</p>
+  <p>Generates and uploads <strong>100 puzzles per difficulty level</strong> (400 total) to Firestore as App-authored puzzles. Only run this once.</p>
   <button id="seedBtn" onclick="runSeed()">Seed Puzzles</button>
   <div id="log"></div>
 </div>
@@ -61,20 +61,28 @@ function countClues(p){return p.flat().filter(v=>v!==0).length;}
 
 // ── Name lists ──────────────────────────────────────────────
 const ADJECTIVES = [
-  'Ancient','Blazing','Crystal','Dazzling','Electric',
-  'Frosty','Golden','Hidden','Icy','Jade',
-  'Kinetic','Lunar','Mystic','Neon','Obsidian',
-  'Phantom','Quiet','Radiant','Solar','Twilight',
-  'Umbral','Vivid','Whirling','Xenon','Yellow',
-  'Zenith','Arctic','Breezy','Cobalt','Dusty'
+  'Radiant','Crimson','Frozen','Eternal','Blazing',
+  'Hollow','Ivory','Shattered','Gilded','Silent',
+  'Cursed','Forgotten','Luminous','Arcane','Veiled',
+  'Scarlet','Obsidian','Celestial','Sovereign','Phantom',
+  'Ashen','Fractal','Spectral','Infernal','Verdant',
+  'Molten','Nebular','Abyssal','Onyx','Serene',
+  'Twisted','Infinite','Primal','Exalted','Fading',
+  'Ancient','Midnight','Crystal','Hallowed','Electric',
+  'Sunken','Gilded','Boundless','Woven','Shimmering',
+  'Forsaken','Polar','Tempest','Auric','Mythic'
 ];
 const NOUNS = [
-  'Abyss','Beacon','Cascade','Delta','Eclipse',
-  'Frontier','Galaxy','Horizon','Iris','Jungle',
-  'Kraken','Labyrinth','Mirage','Nebula','Orbit',
-  'Pinnacle','Quest','Riddle','Summit','Tempest',
-  'Undertow','Vortex','Wanderer','Xenos','Yearning',
-  'Zenith','Blizzard','Cipher','Dusk','Enigma'
+  'Enigma','Oracle','Cipher','Prism','Rift',
+  'Codex','Wraith','Nexus','Sanctum','Specter',
+  'Labyrinth','Vortex','Mirage','Relic','Sigil',
+  'Abyss','Expanse','Crucible','Zenith','Beacon',
+  'Paradox','Epoch','Shroud','Monolith','Theorem',
+  'Chronicle','Cascade','Dominion','Apparition','Fracture',
+  'Meridian','Pinnacle','Reverie','Solstice','Tempest',
+  'Undertow','Vestige','Wanderer','Horizon','Eclipse',
+  'Obelisk','Nebula','Omen','Passage','Riddle',
+  'Spiral','Talisman','Umbra','Verdict','Axiom'
 ];
 const usedNames = new Set();
 function randomName() {
@@ -106,7 +114,7 @@ window.runSeed = async function() {
   btn.textContent = 'Seeding…';
 
   const difficulties = ['easy','medium','hard','expert'];
-  const PER_DIFF = 10;
+  const PER_DIFF = 100;
   let uploaded = 0, skipped = 0;
 
   for (const diff of difficulties) {
@@ -123,8 +131,8 @@ window.runSeed = async function() {
         await addDoc(collection(db, 'puzzles'), {
           name,
           puzzle:     flattenPuzzle(puz),
-          author:     'AI',
-          authorUid:  'ai-seed',
+          author:     'App',
+          authorUid:  'app-seed',
           difficulty: diff.charAt(0).toUpperCase() + diff.slice(1),
           clueCount,
           isAI:       true,
