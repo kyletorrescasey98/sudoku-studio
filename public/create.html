@@ -297,7 +297,10 @@
     <button id="solutionModalClose" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;line-height:1;padding:0 4px;">×</button>
     <div style="font-size:1.05rem;font-weight:800;margin-bottom:4px;">✏️ Enter Solution</div>
     <div style="font-size:.8rem;color:#6b7280;margin-bottom:16px;line-height:1.5;">This puzzle doesn't have a unique solution — fill in all cells to provide it manually.</div>
-    <div id="solGrid" style="display:grid;grid-template-rows:repeat(9,1fr);border:3px solid #374151;border-radius:6px;overflow:hidden;width:100%;aspect-ratio:1;background:#fff;margin-bottom:14px;"></div>
+    <div id="solGridWrap" style="position:relative;width:100%;aspect-ratio:1;margin-bottom:14px;">
+      <div id="solGrid" style="display:grid;grid-template-rows:repeat(9,1fr);border:3px solid #374151;border-radius:6px;overflow:hidden;width:100%;height:100%;background:#fff;"></div>
+      <svg id="solConstraintSvg" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:10;"></svg>
+    </div>
     <div id="solutionError" style="display:none;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:7px;padding:9px 12px;font-size:.8rem;margin-bottom:12px;"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button id="solutionCancelBtn" style="padding:8px 18px;border-radius:7px;border:1px solid #d1d5db;background:#f0f2f5;color:#374151;font-size:.84rem;font-weight:600;cursor:pointer;">Cancel</button>
@@ -671,6 +674,7 @@ function flattenPuzzle(arr){ return arr.flat().join(''); }
 function unflattenPuzzle(str){ const a=[]; for(let i=0;i<9;i++){const row=[];for(let j=0;j<9;j++)row.push(parseInt(str[i*9+j])||0);a.push(row);}return a; }
 function isFullGrid(g){ return g.every(r=>r.every(v=>v>=1&&v<=9)); }
 function isSolutionValid(puz,sol){ for(let r=0;r<9;r++) for(let c=0;c<9;c++){if(puz[r][c]&&puz[r][c]!==sol[r][c])return false;if(hasConflict(sol,r,c))return false;}return true; }
+function hasVariantConstraints(){ return C.thermometers.length||C.arrows.length||C.killerCages.length||C.renbans.length||C.palindromes.length||C.whispers.length||C.betweens.length||C.oddCells.length||C.evenCells.length||(C.extraRegions||[]).length||C.globals.antiknight||C.globals.antiking||C.globals.nonconsecutive||C.globals.diagonalpos||C.globals.diagonalneg||C.globals.disjoint; }
 
 // ══════════════════════════════════════════
 // RENDER BOARD
@@ -1390,7 +1394,11 @@ window.analyzeBoard=function(){
     else if(sols>1) html.push('<div class="analysis-item warning">⚠️ Multiple solutions — provide one manually on save</div>');
     else html.push('<div class="analysis-item error">❌ No solution exists</div>');
   } else if(clues<17&&!hasErrors) {
-    html.push('<div class="analysis-item info">💡 Need ≥17 clues to test uniqueness</div>');
+    if(hasVariantConstraints()){
+      html.push('<div class="analysis-item info">💡 Variant puzzle — solution will be required on save</div>');
+    } else {
+      html.push('<div class="analysis-item info">💡 Need ≥17 clues to test uniqueness</div>');
+    }
   }
 
   document.getElementById('analysisContent').innerHTML=html.join('');
@@ -1408,7 +1416,7 @@ function dedupeViolationPairs(pairs){
 
 window.checkUnique=function(){
   let clues=0; for(let r=0;r<9;r++) for(let c=0;c<9;c++) if(puzzle[r][c]) clues++;
-  if(clues<17){ alert('❌ Need at least 17 clues'); return; }
+  if(clues<17&&!hasVariantConstraints()){ alert('❌ Need at least 17 clues'); return; }
   for(let r=0;r<9;r++) for(let c=0;c<9;c++) if(puzzle[r][c]&&hasConflict(puzzle,r,c)){ alert('❌ Fix standard conflicts first'); return; }
   const constraintViolations = getConstraintViolations();
   if(constraintViolations.length){ alert('❌ Fix constraint violations first:\n• '+constraintViolations.slice(0,3).join('\n• ')+(constraintViolations.length>3?'\n  …and more':'')); return; }
@@ -1472,7 +1480,7 @@ function getConstraintViolations(){
 
 window.saveSudoku=async function(){
   let clues=0; for(let r=0;r<9;r++) for(let c=0;c<9;c++) if(puzzle[r][c]) clues++;
-  if(clues<1){ alert('❌ Add some clues first.'); return; }
+  if(clues<1&&!hasVariantConstraints()){ alert('❌ Add some clues or constraints first.'); return; }
   if(!currentUser){ alert('❌ Sign in to save.'); return; }
   for(let r=0;r<9;r++) for(let c=0;c<9;c++) if(puzzle[r][c]&&hasConflict(puzzle,r,c)){ alert('❌ Fix standard conflicts first.'); return; }
   const cvs=getConstraintViolations();
@@ -1492,21 +1500,73 @@ function openSolutionModal(){ solBoard=puzzle.map(r=>[...r]); solSel=null; docum
 function closeSolutionModal(){ document.getElementById('solutionModal').style.display='none'; }
 function renderSolGrid(){
   const g=document.getElementById('solGrid'); g.innerHTML='';
+  const oddSet=new Set(C.oddCells), evenSet=new Set(C.evenCells);
   for(let r=0;r<9;r++){
     const row=document.createElement('div'); row.style.cssText='display:grid;grid-template-columns:repeat(9,1fr);';
     for(let c=0;c<9;c++){
+      const k=rcToKey(r,c);
       const isGiven=!!puzzle[r][c],val=solBoard[r][c],isSel=solSel&&solSel[0]===r&&solSel[1]===c;
       const conflict=val&&hasConflict(solBoard,r,c);
       let bg=isSel?'rgba(37,99,235,.18)':(isGiven?'#f0f2f5':'#fff'); if(conflict) bg='rgba(220,38,38,.12)';
       const bR=(c===2||c===5)?'2px solid #6b7280':'1px solid #e5e7eb', bB=(r===2||r===5)?'2px solid #6b7280':'1px solid #e5e7eb';
       const cell=document.createElement('div');
-      cell.style.cssText=`display:flex;align-items:center;justify-content:center;aspect-ratio:1;cursor:${isGiven?'default':'pointer'};background:${bg};border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:clamp(12px,3vw,22px);font-weight:700;color:${isGiven?'#1f2937':(conflict?'#dc2626':'#2563eb')};user-select:none;`;
-      if(val) cell.textContent=val;
+      cell.style.cssText=`position:relative;display:flex;align-items:center;justify-content:center;aspect-ratio:1;cursor:${isGiven?'default':'pointer'};background:${bg};border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:clamp(12px,3vw,22px);font-weight:700;color:${isGiven?'#1f2937':(conflict?'#dc2626':'#2563eb')};user-select:none;z-index:0;`;
+      if(oddSet.has(k)) cell.classList.add('odd-cell');
+      if(evenSet.has(k)) cell.classList.add('even-cell');
+      if(val){ const span=document.createElement('span'); span.style.cssText='position:relative;z-index:20;'; span.textContent=val; cell.appendChild(span); }
       if(!isGiven) cell.addEventListener('click',()=>{ solSel=[r,c]; renderSolGrid(); });
       row.appendChild(cell);
     }
     g.appendChild(row);
   }
+  renderSolConstraints();
+}
+function renderSolConstraints(){
+  const svg=document.getElementById('solConstraintSvg'); svg.innerHTML='';
+  const gridEl=document.getElementById('solGrid');
+  if(!gridEl.offsetWidth) return;
+  const W=gridEl.offsetWidth, H=gridEl.offsetHeight;
+  const cw=W/9, ch=H/9;
+  if(C.globals.diagonalpos) svg.appendChild(svgEl('line',{x1:0,y1:H,x2:W,y2:0,stroke:'#6366f1',strokeWidth:1.5,opacity:.45,strokeDasharray:'6 3'}));
+  if(C.globals.diagonalneg) svg.appendChild(svgEl('line',{x1:0,y1:0,x2:W,y2:H,stroke:'#6366f1',strokeWidth:1.5,opacity:.45,strokeDasharray:'6 3'}));
+  C.extraRegions.forEach(r=>drawCage(svg,r.cells,'#f59e0b','#fef3c7',.3,cw,ch,false,''));
+  C.killerCages.forEach(cage=>drawCage(svg,cage.cells,'#374151','none',0,cw,ch,true,cage.value));
+  C.thermometers.forEach(t=>{
+    if(!t.cells.length) return;
+    if(t.cells.length>=2){
+      const pts=t.cells.map(k=>{ const rc=keyToRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
+      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#9ca3af',strokeWidth:cw*.3,strokeLinecap:'round',strokeLinejoin:'round'}));
+    }
+    const rc=keyToRC(t.cells[0]); if(!rc) return;
+    svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.34,fill:'#9ca3af',stroke:'#6b7280',strokeWidth:1.5}));
+  });
+  C.arrows.forEach(a=>{
+    const line=a.lines[0]; if(!line||line.length<2) return;
+    const brc=keyToRC(a.bulb[0]);
+    if(brc) svg.appendChild(svgEl('circle',{cx:brc[1]*cw+cw/2,cy:brc[0]*ch+ch/2,r:cw*.34,fill:'none',stroke:'#374151',strokeWidth:2}));
+    const pts=line.map(k=>{ const rc=keyToRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
+    if(pts.length>=2){
+      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#374151',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'}));
+      const last=keyToRC(line[line.length-1]), prev=keyToRC(line[line.length-2]);
+      if(last&&prev){
+        const ang=Math.atan2((last[0]-prev[0])*ch,(last[1]-prev[1])*cw);
+        const tx=last[1]*cw+cw/2, ty=last[0]*ch+ch/2, hl=cw*.3;
+        const p1x=tx-hl*Math.cos(ang-Math.PI/6), p1y=ty-hl*Math.sin(ang-Math.PI/6);
+        const p2x=tx-hl*Math.cos(ang+Math.PI/6), p2y=ty-hl*Math.sin(ang+Math.PI/6);
+        svg.appendChild(svgEl('polygon',{points:`${tx},${ty} ${p1x},${p1y} ${p2x},${p2y}`,fill:'#374151'}));
+      }
+    }
+  });
+  C.renbans.forEach(l=>drawLine(svg,l.cells,'#7c3aed',cw*.18,cw,ch));
+  C.whispers.forEach(l=>drawLine(svg,l.cells,'#22c55e',cw*.18,cw,ch));
+  C.palindromes.forEach(l=>drawLine(svg,l.cells,'#f59e0b',cw*.18,cw,ch));
+  C.betweens.forEach(l=>{
+    drawLine(svg,l.cells,'#0ea5e9',cw*.14,cw,ch);
+    [l.cells[0],l.cells[l.cells.length-1]].forEach(k=>{
+      const rc=keyToRC(k); if(!rc) return;
+      svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.28,fill:'white',stroke:'#0ea5e9',strokeWidth:2}));
+    });
+  });
 }
 function solInput(n){ if(!solSel) return; const[r,c]=solSel; if(puzzle[r][c]) return; solBoard[r][c]=n; renderSolGrid(); }
 function solErase(){ if(!solSel) return; const[r,c]=solSel; if(puzzle[r][c]) return; solBoard[r][c]=0; renderSolGrid(); }
