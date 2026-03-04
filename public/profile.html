@@ -67,6 +67,8 @@
     .profile-bio.empty { color:var(--surface3); }
     .bio-edit-input { flex:1; min-width:0; font-size:.84rem; padding:4px 8px; border:1px solid var(--border); border-radius:6px; color:var(--text); background:var(--surface2); outline:none; font-family:inherit; }
     .bio-edit-input:focus { border-color:var(--accent); }
+    .name-edit-input { font-size:1.4rem; font-weight:900; padding:2px 8px; border:1px solid var(--border); border-radius:6px; color:var(--text); background:var(--surface2); outline:none; font-family:inherit; width:200px; }
+    .name-edit-input:focus { border-color:var(--accent); }
     .icon-btn { background:none; border:none; cursor:pointer; color:var(--text2); font-size:.85rem; padding:2px 4px; border-radius:4px; transition:color .12s; flex-shrink:0; }
     .icon-btn:hover { color:var(--accent); }
     .profile-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
@@ -183,8 +185,66 @@
     .card-name { font-size:.82rem; font-weight:800; color:var(--text); margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .card-stats-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
     .card-stat-pill { font-size:.65rem; font-weight:700; color:var(--text2); display:flex; align-items:center; gap:3px; }
-    .card-edit-btn { width:100%; padding:7px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:.72rem; font-weight:700; cursor:pointer; transition:all .15s; }
-    .card-edit-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(37,99,235,.05); }
+    .card-edit-btn { display:none; }
+    .card-edit-btn:hover { display:none; }
+
+    /* ── CREATED PUZZLE MODAL ── */
+    .cp-modal-overlay {
+      display:none; position:fixed; inset:0; z-index:500;
+      background:rgba(0,0,0,.45); backdrop-filter:blur(4px);
+      align-items:center; justify-content:center;
+    }
+    .cp-modal-overlay.open { display:flex; }
+    .cp-modal {
+      background:var(--surface); border-radius:18px;
+      width:90%; max-width:400px; overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,.25);
+      animation:fadeUp .25s ease;
+      position:relative;
+    }
+    .cp-modal-close {
+      position:absolute; top:12px; right:12px; z-index:10;
+      width:30px; height:30px; border-radius:50%;
+      border:1px solid var(--border); background:var(--surface);
+      display:flex; align-items:center; justify-content:center;
+      font-size:.95rem; cursor:pointer; color:var(--text2);
+      transition:all .15s;
+    }
+    .cp-modal-close:hover { background:var(--surface2); color:var(--error); }
+    .cp-modal-preview {
+      display:flex; align-items:center; justify-content:center;
+      padding:28px 20px 18px;
+      background:linear-gradient(135deg,#f8faff,#eef2ff);
+    }
+    .cp-modal-body { padding:16px 20px 22px; display:flex; flex-direction:column; gap:8px; }
+    .cp-modal-title { font-size:1.15rem; font-weight:900; color:var(--text); }
+    .cp-modal-meta { font-size:.75rem; color:var(--text2); font-weight:600; display:flex; gap:10px; flex-wrap:wrap; }
+    .cp-modal-actions { display:flex; flex-direction:column; gap:8px; margin-top:6px; }
+    .cp-modal-btn {
+      width:100%; padding:11px; border-radius:10px;
+      font-size:.85rem; font-weight:700; cursor:pointer;
+      border:none; transition:all .15s;
+      font-family:inherit;
+    }
+    .cp-modal-btn.play { background:var(--accent); color:#fff; box-shadow:0 3px 12px rgba(37,99,235,.3); }
+    .cp-modal-btn.play:hover { filter:brightness(1.1); }
+    .cp-modal-btn.delete { background:var(--surface2); color:var(--error); border:1.5px solid var(--border); }
+    .cp-modal-btn.delete:hover { border-color:var(--error); background:rgba(220,38,38,.06); }
+    .cp-modal-confirm {
+      display:none; padding:14px 16px; background:#fef2f2; border-top:1px solid #fecaca;
+      text-align:center;
+    }
+    .cp-modal-confirm.open { display:block; }
+    .cp-modal-confirm p { font-size:.82rem; color:var(--error); font-weight:700; margin-bottom:10px; }
+    .cp-confirm-btns { display:flex; gap:8px; justify-content:center; }
+    .cp-confirm-btn {
+      padding:8px 18px; border-radius:8px; font-size:.78rem;
+      font-weight:700; cursor:pointer; border:none; font-family:inherit;
+    }
+    .cp-confirm-btn.yes { background:var(--error); color:#fff; }
+    .cp-confirm-btn.yes:hover { filter:brightness(1.1); }
+    .cp-confirm-btn.no { background:var(--surface); color:var(--text2); border:1px solid var(--border); }
+    .cp-confirm-btn.no:hover { background:var(--surface2); }
 
     /* ── EMPTY STATE ── */
     .empty-state { text-align:center; padding:48px 20px; color:var(--text2); }
@@ -246,9 +306,15 @@
         <div class="profile-avatar" id="profileAvatar">?</div>
       </div>
       <div class="profile-info">
-        <div class="profile-name-row">
+        <div class="profile-name-row" id="nameDisplayRow">
           <div class="profile-name" id="profileName">—</div>
+          <button class="icon-btn" id="nameEditBtn" title="Edit name" style="display:none">✏️</button>
           <div class="profile-username" id="profileUsername"></div>
+        </div>
+        <div class="profile-name-row" id="nameEditRow" style="display:none">
+          <input class="name-edit-input" id="nameInput" maxlength="40" placeholder="Your name" />
+          <button class="icon-btn" onclick="saveName()" title="Save">✅</button>
+          <button class="icon-btn" onclick="cancelName()" title="Cancel">❌</button>
         </div>
         <div class="profile-join" id="profileJoin">📅 Joined —</div>
         <div class="profile-bio-wrap" id="bioWrap">
@@ -366,10 +432,33 @@
   </div><!-- /contentArea -->
 </div>
 
+<!-- Created Puzzle Modal -->
+<div class="cp-modal-overlay" id="cpModal">
+  <div class="cp-modal">
+    <button class="cp-modal-close" id="cpModalClose">&times;</button>
+    <div class="cp-modal-preview" id="cpModalPreview"></div>
+    <div class="cp-modal-body">
+      <div class="cp-modal-title" id="cpModalTitle"></div>
+      <div class="cp-modal-meta" id="cpModalMeta"></div>
+      <div class="cp-modal-actions">
+        <button class="cp-modal-btn play" id="cpPlayBtn">▶ Play Puzzle</button>
+        <button class="cp-modal-btn delete" id="cpDeleteBtn">🗑 Delete Puzzle</button>
+      </div>
+    </div>
+    <div class="cp-modal-confirm" id="cpConfirm">
+      <p>Are you sure? This will permanently delete this puzzle and all its history.</p>
+      <div class="cp-confirm-btns">
+        <button class="cp-confirm-btn yes" id="cpConfirmYes">Yes, Delete</button>
+        <button class="cp-confirm-btn no" id="cpConfirmNo">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp }        from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
-import { getFirestore, collection, getDocs, getDoc, setDoc, doc, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { getAuth, onAuthStateChanged, signOut, updateProfile } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
+import { getFirestore, collection, getDocs, getDoc, setDoc, doc, query, orderBy, where, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
@@ -554,6 +643,7 @@ function renderHeader(){
   document.getElementById('bioInput').value=bio;
 
   if(isOwnProfile) document.getElementById('bioEditBtn').style.display='';
+  if(isOwnProfile) document.getElementById('nameEditBtn').style.display='';
 
   const actions=document.getElementById('profileActions');
   actions.innerHTML='';
@@ -577,6 +667,37 @@ function renderHeader(){
     actions.appendChild(followBtn);
   }
 }
+
+// ── NAME EDIT ────────────────────────────────────────
+window.saveName=async function(){
+  const newName=document.getElementById('nameInput').value.trim();
+  if(!newName) return;
+  document.getElementById('profileName').textContent=newName;
+  document.getElementById('nameDisplayRow').style.display='';
+  document.getElementById('nameEditRow').style.display='none';
+  profileDoc.displayName=newName;
+  try{
+    await setDoc(doc(db,'users',currentUser.uid),{displayName:newName},{merge:true});
+    await updateProfile(currentUser,{displayName:newName});
+  }catch(e){}
+  // Update avatar
+  const av=document.getElementById('profileAvatar');
+  av.textContent=initials(newName);
+  av.style.background=avatarGradient(newName);
+  const nav=document.getElementById('navAvatarEl');
+  nav.textContent=newName[0].toUpperCase();
+  nav.style.background=avatarGradient(newName);
+};
+window.cancelName=function(){
+  document.getElementById('nameDisplayRow').style.display='';
+  document.getElementById('nameEditRow').style.display='none';
+};
+document.getElementById('nameEditBtn').addEventListener('click',()=>{
+  document.getElementById('nameInput').value=document.getElementById('profileName').textContent;
+  document.getElementById('nameDisplayRow').style.display='none';
+  document.getElementById('nameEditRow').style.display='flex';
+  document.getElementById('nameInput').focus();
+});
 
 // ── BIO EDIT ─────────────────────────────────────────
 window.saveBio=async function(){
@@ -859,9 +980,9 @@ function renderCreatedPuzzles(){
           <span class="card-stat-pill">${rating}</span>
           <span class="card-stat-pill" style="color:var(--text2)">${dateStr}</span>
         </div>
-        ${isOwnProfile?`<button class="card-edit-btn" onclick="editPuzzle('${escHtml(p.id)}',event)">✏️ Edit</button>`:''}
       </div>`;
     grid.appendChild(card);
+    card.addEventListener('click',()=>openCreatedPuzzleModal(p));
     const previewEl=document.getElementById('cp-'+p.id);
     if(previewEl&&p.puzzle) renderCardGrid(previewEl,p.puzzle);
   }
@@ -889,6 +1010,95 @@ function renderCardGrid(container,clueStr){
 }
 
 window.editPuzzle=function(id,e){ e.stopPropagation(); window.location.href='create.html?edit='+encodeURIComponent(id); };
+
+// ── CREATED PUZZLE MODAL ────────────────────────────
+let cpModalPuzzle=null;
+function openCreatedPuzzleModal(p){
+  cpModalPuzzle=p;
+  // Render preview grid
+  const prevEl=document.getElementById('cpModalPreview');
+  prevEl.innerHTML='';
+  const wrap=document.createElement('div');
+  wrap.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:2px solid #374151;border-radius:6px;overflow:hidden;width:180px;height:180px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.1);';
+  renderCardGrid(wrap, p.puzzle||'');
+  // renderCardGrid puts a child div inside, but we want to use the wrap itself
+  // Actually, let's just build it inline
+  prevEl.innerHTML='';
+  const digits=(p.puzzle||'').replace(/\D/g,'').padEnd(81,'0');
+  const grid2=document.createElement('div');
+  grid2.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:2px solid #374151;border-radius:6px;overflow:hidden;width:180px;height:180px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.1);';
+  for(let r=0;r<9;r++){
+    const row=document.createElement('div'); row.style.cssText='display:grid;grid-template-columns:repeat(9,1fr);';
+    for(let c=0;c<9;c++){
+      const cell=document.createElement('div');
+      const n=parseInt(digits[r*9+c]);
+      const bR=(c===2||c===5)?'1.5px solid #6b7280':'.5px solid #e5e7eb';
+      const bB=(r===2||r===5)?'1.5px solid #6b7280':'.5px solid #e5e7eb';
+      cell.style.cssText=`display:flex;align-items:center;justify-content:center;border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:7px;font-weight:700;color:#1f2937;background:${n?'#f8f9fa':'#fff'};`;
+      if(n) cell.textContent=n;
+      row.appendChild(cell);
+    }
+    grid2.appendChild(row);
+  }
+  prevEl.appendChild(grid2);
+  // Title & meta
+  document.getElementById('cpModalTitle').textContent=p.name||'Untitled';
+  const diff=p.difficulty||'';
+  const rating=(typeof p.ratingAvg==='number'&&p.ratingCount>0)?'⭐ '+p.ratingAvg.toFixed(1):'Unrated';
+  const solves=p.solveCount||0;
+  document.getElementById('cpModalMeta').innerHTML=`
+    <span>${diff}</span>
+    <span>${rating}</span>
+    <span>▶ ${solves} solve${solves!==1?'s':''}</span>
+  `;
+  // Show/hide delete for own profile
+  document.getElementById('cpDeleteBtn').style.display=isOwnProfile?'':'none';
+  // Reset confirm
+  document.getElementById('cpConfirm').classList.remove('open');
+  // Play
+  document.getElementById('cpPlayBtn').onclick=()=>{
+    closeCpModal();
+    launchPuzzle(p);
+  };
+  // Delete
+  document.getElementById('cpDeleteBtn').onclick=()=>{
+    document.getElementById('cpConfirm').classList.add('open');
+  };
+  document.getElementById('cpConfirmNo').onclick=()=>{
+    document.getElementById('cpConfirm').classList.remove('open');
+  };
+  document.getElementById('cpConfirmYes').onclick=async()=>{
+    try{
+      // Delete puzzle document
+      await deleteDoc(doc(db,'puzzles',p.id));
+      // Delete solver sub-collection docs
+      try{
+        const solversSnap=await getDocs(collection(db,'puzzles',p.id,'solvers'));
+        for(const s of solversSnap.docs) await deleteDoc(s.ref);
+      }catch(e){}
+      // Remove from local array and re-render
+      createdPuzzles=createdPuzzles.filter(x=>x.id!==p.id);
+      closeCpModal();
+      renderCreatedPuzzles();
+      renderSetterStats();
+    }catch(err){ alert('❌ Delete failed: '+err.message); }
+  };
+  document.getElementById('cpModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeCpModal(){
+  document.getElementById('cpModal').classList.remove('open');
+  document.body.style.overflow='';
+  cpModalPuzzle=null;
+}
+document.getElementById('cpModalClose').addEventListener('click',closeCpModal);
+document.getElementById('cpModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeCpModal(); });
+
+function launchPuzzle(p){
+  const data={id:p.id||'',name:p.name||'',puzzle:p.puzzle||'',difficulty:p.difficulty||'',author:p.author||'',isAI:!!p.isAI,clueCount:p.clueCount||0,description:p.description||'',ratingAvg:p.ratingAvg||null,ratingCount:p.ratingCount||0,constraints:p.constraints||null,backgroundImage:p.backgroundImage||''};
+  try{ sessionStorage.setItem('explorePuzzle',JSON.stringify(data)); }catch(e){}
+  window.location.href='game.html#explore:'+encodeURIComponent(p.id||'');
+}
 
 // ── TABS ─────────────────────────────────────────────
 window.switchTab=function(tab){
