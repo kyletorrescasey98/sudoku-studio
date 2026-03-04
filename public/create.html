@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create Sudoku</title>
   <meta name="description" content="Create your own Sudoku puzzles and share them with others" />
@@ -108,6 +109,34 @@
     .num-btn:hover { border-color:var(--accent); color:var(--accent); }
     .erase-btn { grid-column:1/-1; background:var(--surface2); border:1px solid transparent; border-radius:7px; color:var(--text2); font-size:.75rem; font-weight:600; padding:7px; cursor:pointer; transition:all .12s; }
     .erase-btn:hover { border-color:var(--error); color:var(--error); }
+
+    /* INPUT MODE BAR */
+    .mode-bar { display:grid; grid-template-columns:1fr 1fr; gap:3px; background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:3px; transition:border-color .2s; width:100%; }
+    .mode-tab { padding:6px 2px; border-radius:6px; border:none; background:transparent; color:var(--text2); font-size:.69rem; font-weight:700; cursor:pointer; transition:all .15s; white-space:nowrap; text-align:center; }
+    .mode-tab:hover { color:var(--text); }
+    .mode-tab.active { box-shadow:0 1px 3px rgba(0,0,0,.08); }
+    .mode-tab.active.m-digit  { background:#dbeafe; color:#2563eb; }
+    .mode-tab.active.m-corner { background:#fef3c7; color:#d97706; }
+    .mode-tab.active.m-center { background:#ede9fe; color:#7c3aed; }
+    .mode-tab.active.m-color  { background:#dcfce7; color:#16a34a; }
+
+    /* CELL NOTES & COLORS */
+    .cell-bg-color { position:absolute; inset:0; pointer-events:none; z-index:0; }
+    .centre-notes { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; pointer-events:none; z-index:5; padding:1px; line-height:1; }
+    .cn-digit { font-size:clamp(8px,1.8vw,14px); font-weight:700; color:var(--accent); padding:0 .3px; }
+    .corner-notes { position:absolute; inset:0; pointer-events:none; z-index:5; }
+    .corner-notes span { position:absolute; font-size:clamp(7px,1.5vw,12px); font-weight:800; color:var(--accent); line-height:1; }
+    .cn-tl { top:6%;  left:5%; } .cn-tc { top:6%;  left:50%; transform:translateX(-50%); } .cn-tr { top:6%;  right:5%; }
+    .cn-ml { top:50%; left:5%;  transform:translateY(-50%); }                               .cn-mr { top:50%; right:5%; transform:translateY(-50%); }
+    .cn-bl { bottom:6%; left:5%; } .cn-bc { bottom:6%; left:50%; transform:translateX(-50%); } .cn-br { bottom:6%; right:5%; }
+
+    /* COLOR PALETTE */
+    .color-palette { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
+    .color-swatch { aspect-ratio:1; border-radius:6px; border:2px solid transparent; cursor:pointer; transition:transform .1s,border-color .1s; }
+    .color-swatch:hover { transform:scale(1.08); }
+    .color-swatch.active { border-color:#1f2937; transform:scale(1.08); }
+    .color-swatch.none-sw { background:var(--surface2); border:2px dashed var(--border); display:flex; align-items:center; justify-content:center; font-size:.8rem; color:var(--text2); }
+    .color-swatch.none-sw:hover { border-color:var(--error); color:var(--error); }
 
     /* TOGGLE (globals) */
     .toggle-btn { display:flex; align-items:center; gap:6px; padding:6px 9px; background:var(--surface2); border:1px solid transparent; border-radius:8px; color:var(--text2); font-size:.72rem; font-weight:600; cursor:pointer; transition:all .15s; width:100%; }
@@ -216,24 +245,29 @@
       <div class="panel-card">
         <div class="panel-label">Tool</div>
         <div class="tool-tabs">
-          <button class="tool-tab active" data-tab="digits"  onclick="switchToolTab('digits')">Digits</button>
-          <button class="tool-tab"        data-tab="lines"   onclick="switchToolTab('lines')">Lines</button>
-          <button class="tool-tab"        data-tab="regions" onclick="switchToolTab('regions')">Regions</button>
-          <button class="tool-tab"        data-tab="globals" onclick="switchToolTab('globals')">Global</button>
+          <button class="tool-tab active" data-tab="digits"      onclick="switchToolTab('digits')">Digits</button>
+          <button class="tool-tab"        data-tab="constraints" onclick="switchToolTab('constraints')">Constraints</button>
+          <button class="tool-tab"        data-tab="globals"     onclick="switchToolTab('globals')">Global</button>
         </div>
 
         <!-- DIGITS -->
         <div id="tab-digits">
           <div class="numpad" id="numpad"></div>
+          <div class="mode-bar" id="digitModeBar" style="margin-top:6px;">
+            <button class="mode-tab m-digit active" id="dmode-digit"  onclick="setDigitMode('digit')">✏️ Digit</button>
+            <button class="mode-tab m-corner"       id="dmode-corner" onclick="setDigitMode('corner')">◤ Corner</button>
+            <button class="mode-tab m-center"       id="dmode-center" onclick="setDigitMode('center')">⊙ Centre</button>
+            <button class="mode-tab m-color"        id="dmode-color"  onclick="setDigitMode('color')">🎨 Color</button>
+          </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px;">
             <button class="tool-btn" id="tool-odd"  onclick="setMarkTool('odd')">⭕ Odd</button>
             <button class="tool-btn" id="tool-even" onclick="setMarkTool('even')">⬜ Even</button>
           </div>
-          <div class="hint-text" style="margin-top:4px;">Select a cell, then click Odd/Even to mark it.</div>
+          <div class="hint-text" style="margin-top:4px;">Select a cell, then type digits.</div>
         </div>
 
-        <!-- LINES -->
-        <div id="tab-lines" style="display:none">
+        <!-- CONSTRAINTS (Lines + Regions merged) -->
+        <div id="tab-constraints" style="display:none">
           <div class="tool-grid">
             <button class="tool-btn" id="tool-thermo"     onclick="setLineTool('thermo')">🌡️ Thermo</button>
             <button class="tool-btn" id="tool-arrow"      onclick="setLineTool('arrow')">➡️ Arrow</button>
@@ -241,24 +275,18 @@
             <button class="tool-btn" id="tool-whisper"    onclick="setLineTool('whisper')">🤫 Whisper</button>
             <button class="tool-btn" id="tool-palindrome" onclick="setLineTool('palindrome')">↔️ Palindrome</button>
             <button class="tool-btn" id="tool-between"    onclick="setLineTool('between')">⟷ Between</button>
-            <button class="tool-btn wide danger" id="tool-delline" onclick="setLineTool('delline')">🗑️ Delete Line</button>
-          </div>
-          <div class="hint-text" style="margin-top:6px;">Click &amp; drag across cells to draw a line.</div>
-        </div>
-
-        <!-- REGIONS -->
-        <div id="tab-regions" style="display:none">
-          <div class="tool-grid">
+            <button class="tool-btn" id="tool-xv-x"      onclick="setLineTool('xv-x')">✕ XV: X (=10)</button>
+            <button class="tool-btn" id="tool-xv-v"      onclick="setLineTool('xv-v')">∨ XV: V (=5)</button>
             <button class="tool-btn wide" id="tool-killer" onclick="setRegionTool('killer')">🔢 Killer Cage</button>
             <button class="tool-btn wide" id="tool-extra"  onclick="setRegionTool('extra')">🔷 Extra Region</button>
-            <button class="tool-btn wide danger" id="tool-delregion" onclick="setRegionTool('delregion')">🗑️ Delete Region</button>
           </div>
           <div class="cage-sum-row">
             <span style="font-size:.72rem;color:var(--text2);font-weight:600;">Sum:</span>
             <input type="number" id="cageSumInput" class="cage-sum-input" placeholder="?" min="1" max="999" />
           </div>
           <button class="tool-btn wide" id="finishCageBtn" style="display:none;border-color:var(--success);color:var(--success);margin-top:2px;" onclick="finishRegion()">✓ Finish Region</button>
-          <div class="hint-text" style="margin-top:4px;">Click cells to build a region, then click ✓ Finish.</div>
+          <button class="tool-btn wide danger" id="tool-delconstraint" onclick="setDeleteConstraint()">🗑️ Delete Constraint</button>
+          <div class="hint-text" style="margin-top:4px;">Drag cells to draw lines · Click cells to build regions · Delete removes lines &amp; regions.</div>
         </div>
 
         <!-- GLOBALS -->
@@ -270,6 +298,12 @@
           <button class="toggle-btn" id="tog-diagonalneg"    onclick="toggleGlobal('diagonalneg')">╲ Diagonal − <span class="pill"></span></button>
           <button class="toggle-btn" id="tog-disjoint"       onclick="toggleGlobal('disjoint')">⊞ Disjoint Groups <span class="pill"></span></button>
         </div>
+      </div>
+
+      <!-- COLOR PALETTE -->
+      <div class="panel-card" id="colorPaletteCard" style="display:none;">
+        <div class="panel-label">Cell Color</div>
+        <div class="color-palette" id="colorPalette"></div>
       </div>
 
       <!-- ACTIONS -->
@@ -379,7 +413,7 @@ onAuthStateChanged(auth, async user => {
     // Sync displayName & email to Firestore so other users can see it on profile pages
     try{
       const syncData = {};
-      if(user.displayName) syncData.displayName = user.displayName;
+      if(user.displayName) { syncData.displayName = user.displayName; syncData.displayNameLower = user.displayName.toLowerCase(); }
       if(user.email) syncData.email = user.email;
       if(Object.keys(syncData).length) await setDoc(doc(db,'users',user.uid), syncData, { merge: true });
     }catch(e){}
@@ -440,9 +474,18 @@ let pendingDraft=null;
 
 // Tool state
 let activeTab = 'digits';
+let digitMode = 'digit'; // 'digit'|'corner'|'center'|'color'
+let activeColor = '#fca5a5';
 let lineTool = null;    // 'thermo'|'arrow'|'renban'|'whisper'|'palindrome'|'between'|'delline'
 let regionTool = null;  // 'killer'|'extra'|'delregion'
 let markTool = null;    // 'odd'|'even'
+
+// Notes & cell colors
+let cellNotes = Array.from({length:9},()=>Array.from({length:9},()=>({corner:new Set(),center:new Set()})));
+let cellColor = Array.from({length:9},()=>Array(9).fill(null));
+
+const CREATE_PALETTE=['#fca5a5','#fdba74','#fcd34d','#a3e635','#6ee7b7','#67e8f9','#93c5fd','#c4b5fd','#f9a8d4','#fb7185','#f97316','#eab308','#84cc16','#22c55e','#0ea5e9','#6366f1','#dc2626','#7c3aed','#065f46','#1e3a5f'];
+const CORNER_SLOTS=['cn-tl','cn-tc','cn-tr','cn-ml','cn-mr','cn-bl','cn-bc','cn-br'];
 
 // Drawing state
 let drawPath = [];
@@ -455,7 +498,7 @@ function freshConstraints(){
   return {
     thermometers:[], arrows:[], renbans:[], whispers:[],
     palindromes:[], betweens:[], killerCages:[], extraRegions:[],
-    oddCells:[], evenCells:[],
+    oddCells:[], evenCells:[], xvs:[],
     globals:{antiknight:false,antiking:false,nonconsecutive:false,diagonalpos:false,diagonalneg:false,disjoint:false}
   };
 }
@@ -663,6 +706,23 @@ function hasConflict(g,r,c){
     }
   }
   
+  // XV — X means two adjacent cells sum to 10, V means sum to 5
+  if((C.xvs||[]).length){
+    for(const xv of C.xvs){
+      if(xv.cells.includes(k)){
+        const other=xv.cells[0]===k?xv.cells[1]:xv.cells[0];
+        const orc=keyToRC(other);
+        if(orc){
+          const ov=g[orc[0]][orc[1]];
+          if(ov){
+            const target=xv.type==='X'?10:5;
+            if(n+ov!==target) return true;
+          }
+        }
+      }
+    }
+  }
+
   return false;
 }
 function isValid(g,r,c,n){ for(let i=0;i<9;i++){if(i!==c&&g[r][i]===n)return false;if(i!==r&&g[i][c]===n)return false;} const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3; for(let rr=br;rr<br+3;rr++) for(let cc=bc;cc<bc+3;cc++) if((rr!==r||cc!==c)&&g[rr][cc]===n)return false; return true; }
@@ -674,7 +734,7 @@ function flattenPuzzle(arr){ return arr.flat().join(''); }
 function unflattenPuzzle(str){ const a=[]; for(let i=0;i<9;i++){const row=[];for(let j=0;j<9;j++)row.push(parseInt(str[i*9+j])||0);a.push(row);}return a; }
 function isFullGrid(g){ return g.every(r=>r.every(v=>v>=1&&v<=9)); }
 function isSolutionValid(puz,sol){ for(let r=0;r<9;r++) for(let c=0;c<9;c++){if(puz[r][c]&&puz[r][c]!==sol[r][c])return false;if(hasConflict(sol,r,c))return false;}return true; }
-function hasVariantConstraints(){ return C.thermometers.length||C.arrows.length||C.killerCages.length||C.renbans.length||C.palindromes.length||C.whispers.length||C.betweens.length||C.oddCells.length||C.evenCells.length||(C.extraRegions||[]).length||C.globals.antiknight||C.globals.antiking||C.globals.nonconsecutive||C.globals.diagonalpos||C.globals.diagonalneg||C.globals.disjoint; }
+function hasVariantConstraints(){ return C.thermometers.length||C.arrows.length||C.killerCages.length||C.renbans.length||C.palindromes.length||C.whispers.length||C.betweens.length||C.oddCells.length||C.evenCells.length||(C.extraRegions||[]).length||(C.xvs||[]).length||C.globals.antiknight||C.globals.antiking||C.globals.nonconsecutive||C.globals.diagonalpos||C.globals.diagonalneg||C.globals.disjoint; }
 
 // ══════════════════════════════════════════
 // RENDER BOARD
@@ -709,6 +769,7 @@ function countConstraintItems(cons){
     +(cons.extraRegions?.length||0)
     +(cons.oddCells?.length||0)
     +(cons.evenCells?.length||0)
+    +(cons.xvs?.length||0)
     +(cons.globals?Object.values(cons.globals).filter(Boolean).length:0);
 }
 
@@ -721,12 +782,22 @@ function hasMeaningfulDraft(draft){
   return !!(hasGrid||hasMeta||hasBg||hasConstraints);
 }
 
+function serializeNotes(){
+  return cellNotes.map(row=>row.map(n=>({corner:[...n.corner],center:[...n.center]})));
+}
+function deserializeNotes(raw){
+  if(!Array.isArray(raw)||raw.length!==9) return Array.from({length:9},()=>Array.from({length:9},()=>({corner:new Set(),center:new Set()})));
+  return raw.map(row=>Array.isArray(row)?row.map(n=>({corner:new Set(Array.isArray(n?.corner)?n.corner:[]),center:new Set(Array.isArray(n?.center)?n.center:[])})):Array.from({length:9},()=>({corner:new Set(),center:new Set()})));
+}
+
 function getCreateDraftState(){
   return {
     version:1,
     updatedAt:Date.now(),
     puzzle:puzzle.map(r=>[...r]),
     constraints:JSON.parse(JSON.stringify(C)),
+    notes:serializeNotes(),
+    cellColor:cellColor.map(r=>[...r]),
     name:document.getElementById('sudokuName')?.value||'',
     description:document.getElementById('sudokuDescription')?.value||'',
     backgroundImage:boardBackgroundImage||''
@@ -754,6 +825,8 @@ function applyDraftState(draft){
     ?draft.puzzle.map(r=>Array.isArray(r)?r.map(v=>parseInt(v)||0):Array(9).fill(0))
     :Array.from({length:9},()=>Array(9).fill(0));
   C=(draft.constraints&&typeof draft.constraints==='object')?draft.constraints:freshConstraints();
+  cellNotes=deserializeNotes(draft.notes);
+  cellColor=Array.isArray(draft.cellColor)&&draft.cellColor.length===9?draft.cellColor.map(r=>Array.isArray(r)?[...r]:Array(9).fill(null)):Array.from({length:9},()=>Array(9).fill(null));
   boardBackgroundImage=typeof draft.backgroundImage==='string'?draft.backgroundImage:'';
   selected=null;
   drawPath=[];
@@ -846,8 +919,26 @@ function renderBoard(){
       if(evenSet.has(k)) cls.push('even-cell');
       if(selSet.has(k)) cls.push('selected');
       cell.className=cls.join(' ');
+      // Cell background color
+      const col=cellColor[r][c];
+      if(col){ const cd=document.createElement('div'); cd.className='cell-bg-color'; cd.style.background=col+'55'; cell.appendChild(cd); }
       if(puzzle[r][c]){
         const sp=document.createElement('span'); sp.className='cell-number'; sp.textContent=puzzle[r][c]; cell.appendChild(sp);
+      } else {
+        // Centre notes
+        const cen=cellNotes[r][c].center;
+        if(cen.size>0){
+          const div=document.createElement('div'); div.className='centre-notes';
+          [...cen].sort((a,b)=>a-b).forEach(n=>{ const s=document.createElement('span'); s.className='cn-digit'; s.textContent=n; div.appendChild(s); });
+          cell.appendChild(div);
+        }
+        // Corner notes
+        const cor=cellNotes[r][c].corner;
+        if(cor.size>0){
+          const div=document.createElement('div'); div.className='corner-notes';
+          [...cor].sort((a,b)=>a-b).forEach((n,i)=>{ const s=document.createElement('span'); s.className=CORNER_SLOTS[i]||'cn-br'; s.textContent=n; div.appendChild(s); });
+          cell.appendChild(div);
+        }
       }
       cell.addEventListener('mousedown',e=>onCellDown(e,r,c));
       cell.addEventListener('mouseenter',e=>onCellEnter(e,r,c));
@@ -915,7 +1006,7 @@ function onCellDown(e,r,c){
   if(activeTab==='digits'){
     selected=[r,c]; render(); return;
   }
-  if(lineTool==='delline'){ deleteLinesAt(k); render(); return; }
+  if(lineTool==='delline'){ deleteLinesAt(k); if(regionTool==='delregion') deleteRegionsAt(k); render(); return; }
   if(regionTool==='delregion'){ deleteRegionsAt(k); render(); return; }
   if(regionTool==='killer'||regionTool==='extra'){
     const idx=regionCells.indexOf(k);
@@ -948,6 +1039,28 @@ function commitPath(){
   else if(lineTool==='whisper')   C.whispers.push({cells});
   else if(lineTool==='palindrome')C.palindromes.push({cells});
   else if(lineTool==='between')   C.betweens.push({cells});
+  else if(lineTool==='xv-x'||lineTool==='xv-v'){
+    // Only place on exactly 2 orthogonally adjacent cells
+    if(cells.length>=2){
+      const k1=cells[0], k2=cells[cells.length===2?1:1];
+      const rc1=keyToRC(k1), rc2=keyToRC(k2);
+      if(rc1&&rc2){
+        const dr=Math.abs(rc1[0]-rc2[0]), dc=Math.abs(rc1[1]-rc2[1]);
+        if((dr===1&&dc===0)||(dr===0&&dc===1)){
+          const type=lineTool==='xv-x'?'X':'V';
+          // Toggle: if same edge+type exists remove it, else replace/add
+          const existIdx=(C.xvs||[]).findIndex(x=>(x.cells[0]===k1&&x.cells[1]===k2)||(x.cells[0]===k2&&x.cells[1]===k1));
+          if(!C.xvs) C.xvs=[];
+          if(existIdx>=0){
+            if(C.xvs[existIdx].type===type) C.xvs.splice(existIdx,1);
+            else C.xvs[existIdx].type=type;
+          } else {
+            C.xvs.push({cells:[k1,k2],type});
+          }
+        }
+      }
+    }
+  }
 }
 
 window.finishRegion=function(){
@@ -967,6 +1080,7 @@ function deleteLinesAt(k){
   C.whispers=C.whispers.filter(l=>!l.cells.includes(k));
   C.palindromes=C.palindromes.filter(l=>!l.cells.includes(k));
   C.betweens=C.betweens.filter(l=>!l.cells.includes(k));
+  if(C.xvs) C.xvs=C.xvs.filter(x=>!x.cells.includes(k));
 }
 function deleteRegionsAt(k){
   C.killerCages=C.killerCages.filter(c=>!c.cells.includes(k));
@@ -978,14 +1092,19 @@ function deleteRegionsAt(k){
 // ══════════════════════════════════════════
 window.switchToolTab=function(tab){
   activeTab=tab;
-  ['digits','lines','regions','globals'].forEach(t=>{
+  ['digits','constraints','globals'].forEach(t=>{
     document.getElementById('tab-'+t).style.display=t===tab?'':'none';
     document.querySelector(`[data-tab="${t}"]`).classList.toggle('active',t===tab);
   });
-  if(tab!=='lines') lineTool=null;
-  if(tab!=='regions'){ regionTool=null; regionCells=[]; document.getElementById('finishCageBtn').style.display='none'; }
+  if(tab!=='constraints'){ lineTool=null; regionTool=null; regionCells=[]; document.getElementById('finishCageBtn').style.display='none'; }
   if(tab!=='digits') markTool=null;
   clearToolActive(); render();
+};
+
+window.setDeleteConstraint=function(){
+  lineTool='delline'; regionTool='delregion';
+  clearToolActive();
+  const btn=document.getElementById('tool-delconstraint'); if(btn) btn.classList.add('active');
 };
 
 function clearToolActive(){ document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active')); }
@@ -1018,10 +1137,48 @@ window.toggleGlobal=function(key){
 };
 
 // ══════════════════════════════════════════
-// DIGIT INPUT
+// DIGIT INPUT MODES
 // ══════════════════════════════════════════
-function inputNumber(num){ if(!selected) return; puzzle[selected[0]][selected[1]]=num; render(); }
-function eraseCell(){ if(!selected) return; puzzle[selected[0]][selected[1]]=0; render(); }
+window.setDigitMode=function(mode){
+  digitMode=mode;
+  ['digit','corner','center','color'].forEach(m=>{
+    document.getElementById('dmode-'+m).classList.toggle('active',m===mode);
+  });
+  const colors={digit:'var(--border)',corner:'#d97706',center:'#7c3aed',color:'#16a34a'};
+  document.getElementById('digitModeBar').style.borderColor=colors[mode]||'var(--border)';
+  document.getElementById('colorPaletteCard').style.display=mode==='color'?'':'none';
+};
+
+function inputNumber(num){
+  if(!selected) return;
+  const[r,c]=selected;
+  if(digitMode==='digit'){
+    puzzle[r][c]=num; render();
+  } else if(digitMode==='corner'){
+    if(puzzle[r][c]) return;
+    if(cellNotes[r][c].corner.has(num)) cellNotes[r][c].corner.delete(num);
+    else cellNotes[r][c].corner.add(num);
+    render();
+  } else if(digitMode==='center'){
+    if(puzzle[r][c]) return;
+    if(cellNotes[r][c].center.has(num)) cellNotes[r][c].center.delete(num);
+    else cellNotes[r][c].center.add(num);
+    render();
+  } else if(digitMode==='color'){
+    cellColor[r][c]=cellColor[r][c]===activeColor?null:activeColor;
+    render();
+  }
+}
+
+function eraseCell(){
+  if(!selected) return;
+  const[r,c]=selected;
+  puzzle[r][c]=0;
+  cellNotes[r][c].corner.clear();
+  cellNotes[r][c].center.clear();
+  cellColor[r][c]=null;
+  render();
+}
 
 function buildNumpad(){
   const np=document.getElementById('numpad');
@@ -1031,6 +1188,21 @@ function buildNumpad(){
   }
   const eb=document.createElement('button'); eb.className='erase-btn'; eb.textContent='⌫ Clear Cell';
   eb.addEventListener('click',()=>eraseCell()); np.appendChild(eb);
+}
+
+function buildColorPalette(){
+  const pal=document.getElementById('colorPalette');
+  const ns=document.createElement('div'); ns.className='color-swatch none-sw'; ns.title='Clear color'; ns.textContent='×';
+  ns.addEventListener('click',()=>{ if(selected){ cellColor[selected[0]][selected[1]]=null; render(); } }); pal.appendChild(ns);
+  CREATE_PALETTE.forEach(hex=>{
+    const sw=document.createElement('div'); sw.className='color-swatch'+(hex===activeColor?' active':''); sw.style.background=hex; sw.title=hex; sw.dataset.color=hex;
+    sw.addEventListener('click',()=>{
+      activeColor=hex;
+      pal.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active')); sw.classList.add('active');
+      if(selected){ cellColor[selected[0]][selected[1]]=hex; render(); }
+    });
+    pal.appendChild(sw);
+  });
 }
 
 // ══════════════════════════════════════════
@@ -1067,29 +1239,31 @@ function renderConstraints(){
     if(!t.cells.length) return;
     if(t.cells.length>=2){
       const pts=t.cells.map(k=>{ const rc=keyToRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
-      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#9ca3af',strokeWidth:cw*.3,strokeLinecap:'round',strokeLinejoin:'round'}));
+      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#a8a8a8',strokeWidth:cw*.28,strokeLinecap:'round',strokeLinejoin:'round'}));
     }
     const rc=keyToRC(t.cells[0]); if(!rc) return;
-    svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.34,fill:'#9ca3af',stroke:'#6b7280',strokeWidth:1.5}));
+    svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.34,fill:'#a8a8a8',stroke:'#909090',strokeWidth:1.5}));
   });
 
-  // Arrows
+  // Arrows - draw line first, then circle on top to mask overlap
   C.arrows.forEach(a=>{
     const line=a.lines[0]; if(!line||line.length<2) return;
-    const brc=keyToRC(a.bulb[0]);
-    if(brc) svg.appendChild(svgEl('circle',{cx:brc[1]*cw+cw/2,cy:brc[0]*ch+ch/2,r:cw*.34,fill:'none',stroke:'#374151',strokeWidth:2}));
-    const pts=line.map(k=>{ const rc=keyToRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
-    if(pts.length>=2){
-      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#374151',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'}));
-      const last=keyToRC(line[line.length-1]), prev=keyToRC(line[line.length-2]);
-      if(last&&prev){
-        const ang=Math.atan2((last[0]-prev[0])*ch,(last[1]-prev[1])*cw);
-        const tx=last[1]*cw+cw/2, ty=last[0]*ch+ch/2, hl=cw*.3;
-        const p1x=tx-hl*Math.cos(ang-Math.PI/6), p1y=ty-hl*Math.sin(ang-Math.PI/6);
-        const p2x=tx-hl*Math.cos(ang+Math.PI/6), p2y=ty-hl*Math.sin(ang+Math.PI/6);
-        svg.appendChild(svgEl('polygon',{points:`${tx},${ty} ${p1x},${p1y} ${p2x},${p2y}`,fill:'#374151'}));
-      }
+    const brc=keyToRC(a.bulb[0]); if(!brc) return;
+    const bx=brc[1]*cw+cw/2, by=brc[0]*ch+ch/2, br=cw*.33;
+    const centers=line.map(k=>{ const rc=keyToRC(k); return rc?[rc[1]*cw+cw/2,rc[0]*ch+ch/2]:null; }).filter(Boolean);
+    if(centers.length>=2){
+      // Draw shaft from bulb center outward (circle will cover the overlap)
+      const linePts=centers.map(([x,y])=>`${x},${y}`).join(' ');
+      svg.appendChild(svgEl('polyline',{points:linePts,fill:'none',stroke:'#aaaaaa',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round'}));
+      // Arrowhead
+      const [lx,ly]=centers[centers.length-1], [px,py]=centers[centers.length-2];
+      const ang=Math.atan2(ly-py,lx-px), hl=cw*.22;
+      const p1x=lx-hl*Math.cos(ang-Math.PI/5), p1y=ly-hl*Math.sin(ang-Math.PI/5);
+      const p2x=lx-hl*Math.cos(ang+Math.PI/5), p2y=ly-hl*Math.sin(ang+Math.PI/5);
+      svg.appendChild(svgEl('polyline',{points:`${p1x},${p1y} ${lx},${ly} ${p2x},${p2y}`,fill:'none',stroke:'#aaaaaa',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round'}));
     }
+    // Circle drawn last so it sits on top and masks the line
+    svg.appendChild(svgEl('circle',{cx:bx,cy:by,r:br,fill:'white',stroke:'#aaaaaa',strokeWidth:1.5}));
   });
 
   // Colored lines
@@ -1104,16 +1278,35 @@ function renderConstraints(){
     });
   });
 
+  // XV labels
+  (C.xvs||[]).forEach(xv=>{
+    const rc1=keyToRC(xv.cells[0]), rc2=keyToRC(xv.cells[1]);
+    if(!rc1||!rc2) return;
+    const mx=((rc1[1]+rc2[1])/2)*cw+cw/2;
+    const my=((rc1[0]+rc2[0])/2)*ch+ch/2;
+    const fs=Math.max(10,cw*.38);
+    // White background circle to punch through the border line
+    svg.appendChild(svgEl('circle',{cx:mx,cy:my,r:cw*.22,fill:'white',stroke:'none'}));
+    const t=svgEl('text',{x:mx,y:my,fill:'#111827','font-size':fs,'font-weight':'900','font-family':'Segoe UI,system-ui,sans-serif','text-anchor':'middle','dominant-baseline':'central','letter-spacing':'-1'});
+    t.textContent=xv.type; svg.appendChild(t);
+  });
+
   // Drawing preview
   if(drawPath.length>=1&&lineTool&&lineTool!=='delline'){
-    const colors={thermo:'#9ca3af',arrow:'#374151',renban:'#7c3aed',whisper:'#22c55e',palindrome:'#f59e0b',between:'#0ea5e9'};
+    const colors={thermo:'#9ca3af',arrow:'#aaaaaa',renban:'#7c3aed',whisper:'#22c55e',palindrome:'#f59e0b',between:'#0ea5e9'};
     const col=colors[lineTool]||'#374151';
     if(drawPath.length>=2){
       const pts=drawPath.map(k=>{ const rc=keyToRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
       svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:col,strokeWidth:cw*.2,strokeLinecap:'round',strokeLinejoin:'round',opacity:.65}));
     }
     const rc=keyToRC(drawPath[0]);
-    if(rc) svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.32,fill:lineTool==='thermo'?'#9ca3af':col,opacity:.35}));
+    if(rc){
+      if(lineTool==='arrow'){
+        svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.33,fill:'white',stroke:'#aaaaaa',strokeWidth:1.5,opacity:.85}));
+      } else {
+        svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.32,fill:lineTool==='thermo'?'#9ca3af':col,opacity:.35}));
+      }
+    }
   }
 
   // Region-building preview
@@ -1146,8 +1339,8 @@ function drawCage(svg,cells,strokeColor,fillColor,fillOpacity,cw,ch,showDash,sum
     ];
     edges.forEach(e=>{
       if(!cellSet.has(rcToKey(e.nr,e.nc))){
-        const line=svgEl('line',{x1:e.x1,y1:e.y1,x2:e.x2,y2:e.y2,stroke:strokeColor,strokeWidth:1.8});
-        if(showDash) line.setAttribute('stroke-dasharray','3.5 2');
+        const line=svgEl('line',{x1:e.x1,y1:e.y1,x2:e.x2,y2:e.y2,stroke:strokeColor,strokeWidth:1.2});
+        if(showDash) line.setAttribute('stroke-dasharray','3 2');
         svg.appendChild(line);
       }
     });
@@ -1167,6 +1360,7 @@ function updateBadges(){
   const items=[];
   if(C.thermometers.length) items.push(`🌡️ Thermo ×${C.thermometers.length}`);
   if(C.arrows.length) items.push(`➡️ Arrow ×${C.arrows.length}`);
+  if((C.xvs||[]).length) items.push(`✕∨ XV ×${C.xvs.length}`);
   if(C.killerCages.length) items.push(`🔢 Killer ×${C.killerCages.length}`);
   if(C.renbans.length) items.push(`〰️ Renban ×${C.renbans.length}`);
   if(C.whispers.length) items.push(`🤫 Whisper ×${C.whispers.length}`);
@@ -1496,7 +1690,7 @@ window.saveSudoku=async function(){
 // ══════════════════════════════════════════
 let solBoard=Array.from({length:9},()=>Array(9).fill(0)), solSel=null;
 
-function openSolutionModal(){ solBoard=puzzle.map(r=>[...r]); solSel=null; document.getElementById('solutionError').style.display='none'; renderSolGrid(); document.getElementById('solutionModal').style.display='flex'; }
+function openSolutionModal(){ solBoard=puzzle.map(r=>[...r]); solSel=null; document.getElementById('solutionError').style.display='none'; document.getElementById('solutionModal').style.display='flex'; requestAnimationFrame(()=>renderSolGrid()); }
 function closeSolutionModal(){ document.getElementById('solutionModal').style.display='none'; }
 function renderSolGrid(){
   const g=document.getElementById('solGrid'); g.innerHTML='';
@@ -1510,7 +1704,7 @@ function renderSolGrid(){
       let bg=isSel?'rgba(37,99,235,.18)':(isGiven?'#f0f2f5':'#fff'); if(conflict) bg='rgba(220,38,38,.12)';
       const bR=(c===2||c===5)?'2px solid #6b7280':'1px solid #e5e7eb', bB=(r===2||r===5)?'2px solid #6b7280':'1px solid #e5e7eb';
       const cell=document.createElement('div');
-      cell.style.cssText=`position:relative;display:flex;align-items:center;justify-content:center;aspect-ratio:1;cursor:${isGiven?'default':'pointer'};background:${bg};border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:clamp(12px,3vw,22px);font-weight:700;color:${isGiven?'#1f2937':(conflict?'#dc2626':'#2563eb')};user-select:none;z-index:0;`;
+      cell.style.cssText=`position:relative;display:flex;align-items:center;justify-content:center;aspect-ratio:1;cursor:${isGiven?'default':'pointer'};background:${bg};border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:clamp(12px,3vw,22px);font-weight:700;color:${isGiven?'#1f2937':(conflict?'#dc2626':'#2563eb')};user-select:none;`;
       if(oddSet.has(k)) cell.classList.add('odd-cell');
       if(evenSet.has(k)) cell.classList.add('even-cell');
       if(val){ const span=document.createElement('span'); span.style.cssText='position:relative;z-index:20;'; span.textContent=val; cell.appendChild(span); }
@@ -1535,27 +1729,26 @@ function renderSolConstraints(){
     if(!t.cells.length) return;
     if(t.cells.length>=2){
       const pts=t.cells.map(k=>{ const rc=keyToRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
-      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#9ca3af',strokeWidth:cw*.3,strokeLinecap:'round',strokeLinejoin:'round'}));
+      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#a8a8a8',strokeWidth:cw*.28,strokeLinecap:'round',strokeLinejoin:'round'}));
     }
     const rc=keyToRC(t.cells[0]); if(!rc) return;
-    svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.34,fill:'#9ca3af',stroke:'#6b7280',strokeWidth:1.5}));
+    svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.34,fill:'#a8a8a8',stroke:'#909090',strokeWidth:1.5}));
   });
   C.arrows.forEach(a=>{
     const line=a.lines[0]; if(!line||line.length<2) return;
-    const brc=keyToRC(a.bulb[0]);
-    if(brc) svg.appendChild(svgEl('circle',{cx:brc[1]*cw+cw/2,cy:brc[0]*ch+ch/2,r:cw*.34,fill:'none',stroke:'#374151',strokeWidth:2}));
-    const pts=line.map(k=>{ const rc=keyToRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
-    if(pts.length>=2){
-      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#374151',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'}));
-      const last=keyToRC(line[line.length-1]), prev=keyToRC(line[line.length-2]);
-      if(last&&prev){
-        const ang=Math.atan2((last[0]-prev[0])*ch,(last[1]-prev[1])*cw);
-        const tx=last[1]*cw+cw/2, ty=last[0]*ch+ch/2, hl=cw*.3;
-        const p1x=tx-hl*Math.cos(ang-Math.PI/6), p1y=ty-hl*Math.sin(ang-Math.PI/6);
-        const p2x=tx-hl*Math.cos(ang+Math.PI/6), p2y=ty-hl*Math.sin(ang+Math.PI/6);
-        svg.appendChild(svgEl('polygon',{points:`${tx},${ty} ${p1x},${p1y} ${p2x},${p2y}`,fill:'#374151'}));
-      }
+    const brc=keyToRC(a.bulb[0]); if(!brc) return;
+    const bx=brc[1]*cw+cw/2, by=brc[0]*ch+ch/2, br=cw*.33;
+    const centers=line.map(k=>{ const rc=keyToRC(k); return rc?[rc[1]*cw+cw/2,rc[0]*ch+ch/2]:null; }).filter(Boolean);
+    if(centers.length>=2){
+      const linePts=centers.map(([x,y])=>`${x},${y}`).join(' ');
+      svg.appendChild(svgEl('polyline',{points:linePts,fill:'none',stroke:'#aaaaaa',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round'}));
+      const [lx,ly]=centers[centers.length-1], [px,py]=centers[centers.length-2];
+      const ang=Math.atan2(ly-py,lx-px), hl=cw*.22;
+      const p1x=lx-hl*Math.cos(ang-Math.PI/5), p1y=ly-hl*Math.sin(ang-Math.PI/5);
+      const p2x=lx-hl*Math.cos(ang+Math.PI/5), p2y=ly-hl*Math.sin(ang+Math.PI/5);
+      svg.appendChild(svgEl('polyline',{points:`${p1x},${p1y} ${lx},${ly} ${p2x},${p2y}`,fill:'none',stroke:'#aaaaaa',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round'}));
     }
+    svg.appendChild(svgEl('circle',{cx:bx,cy:by,r:br,fill:'white',stroke:'#aaaaaa',strokeWidth:1.5}));
   });
   C.renbans.forEach(l=>drawLine(svg,l.cells,'#7c3aed',cw*.18,cw,ch));
   C.whispers.forEach(l=>drawLine(svg,l.cells,'#22c55e',cw*.18,cw,ch));
@@ -1566,6 +1759,17 @@ function renderSolConstraints(){
       const rc=keyToRC(k); if(!rc) return;
       svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.28,fill:'white',stroke:'#0ea5e9',strokeWidth:2}));
     });
+  });
+  // XV labels
+  (C.xvs||[]).forEach(xv=>{
+    const rc1=keyToRC(xv.cells[0]), rc2=keyToRC(xv.cells[1]);
+    if(!rc1||!rc2) return;
+    const mx=((rc1[1]+rc2[1])/2)*cw+cw/2;
+    const my=((rc1[0]+rc2[0])/2)*ch+ch/2;
+    const fs=Math.max(10,cw*.38);
+    svg.appendChild(svgEl('circle',{cx:mx,cy:my,r:cw*.22,fill:'white',stroke:'none'}));
+    const t=svgEl('text',{x:mx,y:my,fill:'#111827','font-size':fs,'font-weight':'900','font-family':'Segoe UI,system-ui,sans-serif','text-anchor':'middle','dominant-baseline':'central','letter-spacing':'-1'});
+    t.textContent=xv.type; svg.appendChild(t);
   });
 }
 function solInput(n){ if(!solSel) return; const[r,c]=solSel; if(puzzle[r][c]) return; solBoard[r][c]=n; renderSolGrid(); }
@@ -2026,7 +2230,10 @@ document.addEventListener('keydown',e=>{
   // Enter finishes region
   if(e.key==='Enter'&&(regionTool==='killer'||regionTool==='extra')&&regionCells.length>0){ finishRegion(); return; }
 
+  // Mode shortcuts: D=digit, R=corner, E=center, L=color
   if(activeTab==='digits'){
+    const modeMap={d:'digit',r:'corner',e:'center',l:'color'};
+    const m=modeMap[e.key.toLowerCase()]; if(m){ window.setDigitMode(m); return; }
     if(e.key>='1'&&e.key<='9'){ inputNumber(+e.key); return; }
     if(e.key==='0'||e.key==='Backspace'||e.key==='Delete'){ eraseCell(); return; }
   }
@@ -2039,6 +2246,7 @@ document.addEventListener('keydown',e=>{
 // INIT
 // ══════════════════════════════════════════
 buildNumpad();
+buildColorPalette();
 render();
 initDraftFlow();
 

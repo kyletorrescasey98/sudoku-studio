@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Sudoku</title>
   <meta name="description" content="Play Sudoku - Challenge your mind with engaging number puzzles" />
@@ -419,6 +420,38 @@
     .mobile-solvedby-close { background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text2); font-size:.8rem; font-weight:700; padding:6px 14px; cursor:pointer; }
     .mobile-solvedby-close:active { background:var(--surface3); }
     .mobile-solvedby-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:10px 14px calc(env(safe-area-inset-bottom) + 12px); display:flex; flex-direction:column; gap:6px; min-height:0; }
+  </style>
+  <style>
+    /* ── Leaderboard modal ── */
+    .lb-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:600; align-items:center; justify-content:center; padding:16px; }
+    .lb-overlay.open { display:flex; }
+    .lb-modal { background:var(--surface); border:1px solid var(--border); border-radius:16px; width:100%; max-width:480px; max-height:85vh; display:flex; flex-direction:column; overflow:hidden; animation:lbIn .2s ease; }
+    @keyframes lbIn { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:scale(1)} }
+    .lb-header { display:flex; align-items:flex-start; justify-content:space-between; padding:16px 18px 10px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .lb-title { font-size:1.1rem; font-weight:800; color:var(--text); }
+    .lb-subtitle { font-size:.73rem; color:var(--text2); margin-top:3px; }
+    .lb-close { background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text2); font-size:.85rem; font-weight:700; padding:6px 12px; cursor:pointer; flex-shrink:0; }
+    .lb-close:hover { border-color:var(--accent); color:var(--accent); }
+    .lb-list { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:4px; }
+    .lb-row { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:9px; background:var(--surface2); border:1px solid var(--border); }
+    .lb-medal { font-size:1.1rem; width:26px; text-align:center; flex-shrink:0; }
+    .lb-rank-num { width:26px; text-align:center; font-size:.7rem; font-weight:700; color:var(--text2); flex-shrink:0; }
+    .lb-av { width:30px; height:30px; border-radius:50%; background:var(--accent); color:#fff; font-size:.76rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .lb-info { flex:1; min-width:0; }
+    .lb-name { font-size:.83rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .lb-date { font-size:.66rem; color:var(--text2); margin-top:1px; }
+    .lb-time { font-size:.82rem; font-weight:700; color:var(--text2); flex-shrink:0; font-variant-numeric:tabular-nums; }
+    .lb-time.lb-time-set { color:var(--success,#16a34a); }
+    .lb-footer { padding:10px 12px 14px; border-top:1px solid var(--border); flex-shrink:0; }
+    .lb-load-more { width:100%; padding:10px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; font-size:.85rem; font-weight:700; cursor:pointer; color:var(--accent); }
+    .lb-load-more:hover { border-color:var(--accent); }
+    /* ── Solved By panel overrides ── */
+    .sb-item { display:flex; align-items:center; gap:7px; padding:6px 8px; border-radius:8px; background:var(--surface2); border:1px solid var(--border); }
+    .sb-medal { font-size:.95rem; flex-shrink:0; }
+    .sb-rank-num { width:18px; text-align:center; font-size:.67rem; font-weight:700; color:var(--text2); flex-shrink:0; }
+    .sb-time { font-size:.72rem; font-weight:700; color:var(--success,#16a34a); flex-shrink:0; font-variant-numeric:tabular-nums; }
+    .sb-more-btn { width:100%; margin-top:6px; padding:9px; background:transparent; border:1px dashed var(--border); border-radius:8px; font-size:.78rem; font-weight:700; color:var(--accent); cursor:pointer; }
+    .sb-more-btn:hover { background:var(--surface2); border-color:var(--accent); }
   </style>
 </head>
 <body>
@@ -857,7 +890,7 @@ onAuthStateChanged(auth, async user => {
     // Sync displayName & email to Firestore so other users can see it on profile pages
     try{
       const syncData = {};
-      if(user.displayName) syncData.displayName = user.displayName;
+      if(user.displayName) { syncData.displayName = user.displayName; syncData.displayNameLower = user.displayName.toLowerCase(); }
       if(user.email) syncData.email = user.email;
       if(Object.keys(syncData).length) await setDoc(doc(db,'users',user.uid), syncData, { merge: true });
     }catch(e){}
@@ -897,13 +930,18 @@ async function saveSolve(difficulty, timeSeconds, mistakes) {
       solvedAt: serverTimestamp()
     });
     document.getElementById('winSaveMsg').classList.add('show');
-    // Record solver on the puzzle — works for both AI and community puzzles
+    // Record solver on the puzzle — only save the FIRST solve (never overwrite)
     if(currentPuzzleId){
       try{
-        await setDoc(doc(db,'puzzles',currentPuzzleId,'solvers',currentUser.uid),{
-          name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous',
-          solvedAt: serverTimestamp()
-        },{merge:true});
+        const solverRef = doc(db,'puzzles',currentPuzzleId,'solvers',currentUser.uid);
+        const existing = await getDoc(solverRef);
+        if(!existing.exists()){
+          await setDoc(solverRef,{
+            name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous',
+            solvedAt: serverTimestamp(),
+            timeSeconds: timeSeconds
+          });
+        }
         // Refresh the solver list
         await window.loadSolvers(currentPuzzleId);
       }catch(e){ console.error('saveSolverRecord:',e); }
@@ -1388,27 +1426,28 @@ function renderGameConstraints(){
     if(!t.cells||t.cells.length<1) return;
     if(t.cells.length>=2){
       const pts=t.cells.map(k=>{ const rc=keyToRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
-      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#9ca3af',strokeWidth:cw*.28,strokeLinecap:'round',strokeLinejoin:'round'}));
+      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#d4d4d4',strokeWidth:cw*.28,strokeLinecap:'round',strokeLinejoin:'round'}));
     }
     const rc=keyToRC(t.cells[0]); if(!rc) return;
-    svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.33,fill:'#9ca3af',stroke:'#6b7280',strokeWidth:1.5}));
+    svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.33,fill:'#d4d4d4',stroke:'#bbbbbb',strokeWidth:1.5}));
   });
 
-  // Arrows
+  // Arrows - draw line first, then circle on top to mask overlap
   (GC.arrows||[]).forEach(a=>{
     const line=a.lines&&a.lines[0]; if(!line||line.length<2) return;
-    const brc=keyToRC((a.bulb&&a.bulb[0])||line[0]);
-    if(brc) svg.appendChild(svgEl('circle',{cx:brc[1]*cw+cw/2,cy:brc[0]*ch+ch/2,r:cw*.33,fill:'none',stroke:'#374151',strokeWidth:2}));
-    const pts=line.map(k=>{ const rc=keyToRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
-    if(pts.length>=2){
-      svg.appendChild(svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#374151',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'}));
-      const last=keyToRC(line[line.length-1]),prev=keyToRC(line[line.length-2]);
-      if(last&&prev){
-        const ang=Math.atan2((last[0]-prev[0])*ch,(last[1]-prev[1])*cw);
-        const tx=last[1]*cw+cw/2,ty=last[0]*ch+ch/2,hl=cw*.28;
-        svg.appendChild(svgEl('polygon',{points:`${tx},${ty} ${tx-hl*Math.cos(ang-Math.PI/6)},${ty-hl*Math.sin(ang-Math.PI/6)} ${tx-hl*Math.cos(ang+Math.PI/6)},${ty-hl*Math.sin(ang+Math.PI/6)}`,fill:'#374151'}));
-      }
+    const brc=keyToRC((a.bulb&&a.bulb[0])||line[0]); if(!brc) return;
+    const bx=brc[1]*cw+cw/2, by=brc[0]*ch+ch/2, br=cw*.33;
+    const centers=line.map(k=>{ const rc=keyToRC(k); return rc?[rc[1]*cw+cw/2,rc[0]*ch+ch/2]:null; }).filter(Boolean);
+    if(centers.length>=2){
+      const linePts=centers.map(([x,y])=>`${x},${y}`).join(' ');
+      svg.appendChild(svgEl('polyline',{points:linePts,fill:'none',stroke:'#aaaaaa',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round'}));
+      const [lx,ly]=centers[centers.length-1],[px,py]=centers[centers.length-2];
+      const ang=Math.atan2(ly-py,lx-px),hl=cw*.22;
+      const p1x=lx-hl*Math.cos(ang-Math.PI/5),p1y=ly-hl*Math.sin(ang-Math.PI/5);
+      const p2x=lx-hl*Math.cos(ang+Math.PI/5),p2y=ly-hl*Math.sin(ang+Math.PI/5);
+      svg.appendChild(svgEl('polyline',{points:`${p1x},${p1y} ${lx},${ly} ${p2x},${p2y}`,fill:'none',stroke:'#aaaaaa',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round'}));
     }
+    svg.appendChild(svgEl('circle',{cx:bx,cy:by,r:br,fill:'white',stroke:'#aaaaaa',strokeWidth:1.5}));
   });
 
   // Lines
@@ -1449,7 +1488,7 @@ function gameDrawCage(svg,cells,stroke,fill,fillOp,cw,ch,dashed,label){
     const x0=c*cw+pad,y0=r*ch+pad,x1=x0+cw-pad*2,y1=y0+ch-pad*2;
     [{x1:x0,y1:y0,x2:x1,y2:y0,nr:r-1,nc:c},{x1:x0,y1:y1,x2:x1,y2:y1,nr:r+1,nc:c},{x1:x0,y1:y0,x2:x0,y2:y1,nr:r,nc:c-1},{x1:x1,y1:y0,x2:x1,y2:y1,nr:r,nc:c+1}].forEach(e=>{
       const nk=`R${e.nr+1}C${e.nc+1}`;
-      if(!cellSet.has(nk)){ const ln=svgEl('line',{x1:e.x1,y1:e.y1,x2:e.x2,y2:e.y2,stroke,strokeWidth:1.8}); if(dashed) ln.setAttribute('stroke-dasharray','3.5 2'); svg.appendChild(ln); }
+      if(!cellSet.has(nk)){ const ln=svgEl('line',{x1:e.x1,y1:e.y1,x2:e.x2,y2:e.y2,stroke,strokeWidth:1.2}); if(dashed) ln.setAttribute('stroke-dasharray','3 2'); svg.appendChild(ln); }
     });
   });
   if(label){ const rc=keyToRC(cells[0]); if(!rc) return; const[fr,fc]=rc; const txt=svgEl('text',{x:fc*cw+pad+2,y:fr*ch+pad+9,fill:stroke,'font-size':Math.max(8,cw*.22),'font-weight':'700','font-family':'Segoe UI,system-ui,sans-serif'}); txt.textContent=label; svg.appendChild(txt); }
@@ -2095,6 +2134,12 @@ window.initComments = function(puzzleId){
 // ── SOLVED BY ──────────────────────────────────────────────────────────────
 let solversData = [];
 
+function formatSolveTime(secs){
+  if(secs == null || secs === '') return null;
+  const s = Math.round(secs), m = Math.floor(s/60), r = s%60;
+  return m ? `${m}:${String(r).padStart(2,'0')}` : `${s}s`;
+}
+
 window.loadSolvers = async function(puzzleId){
   solversData = [];
   renderSolvers();
@@ -2104,69 +2149,151 @@ window.loadSolvers = async function(puzzleId){
       collection(db,'puzzles',puzzleId,'solvers'),
       orderBy('solvedAt','desc')
     ));
-    solversData = snap.docs.map(d=>({uid:d.id,...d.data()}));
+    const raw = snap.docs.map(d=>({uid:d.id,...d.data()}));
+    // Fastest-time solvers first, untimed appended after
+    const timed   = raw.filter(s=>s.timeSeconds!=null).sort((a,b)=>a.timeSeconds-b.timeSeconds);
+    const untimed = raw.filter(s=>s.timeSeconds==null);
+    solversData = [...timed,...untimed];
     renderSolvers();
 
-    // Backfill: if the current user has solved this puzzle but has no solver record, create one
-    if(currentUser && !solversData.some(s=>s.uid===currentUser.uid)){
-      try{
-        const me = currentUser;
-        // First try matching by puzzleId
-        let prevSnap = await getDocs(query(
-          collection(db,'users',me.uid,'solves'),
-          where('puzzleId','==',puzzleId),
-          limit(1)
-        ));
-        // Fallback: match by puzzleName (handles old solves where puzzleId was not saved)
-        if(prevSnap.empty && currentPuzzleName){
-          prevSnap = await getDocs(query(
+    // Backfill: add a missing solver record OR patch a missing timeSeconds on an existing one
+    if(currentUser){
+      const myRecord = solversData.find(s=>s.uid===currentUser.uid);
+      const needsCreate = !myRecord;
+      const needsTime   = myRecord && myRecord.timeSeconds==null;
+      if(needsCreate || needsTime){
+        try{
+          const me = currentUser;
+          let prevSnap = await getDocs(query(
             collection(db,'users',me.uid,'solves'),
-            where('puzzleName','==',currentPuzzleName),
+            where('puzzleId','==',puzzleId),
             limit(1)
           ));
-        }
-        if(!prevSnap.empty){
-          const solveDoc = prevSnap.docs[0].data();
-          await setDoc(doc(db,'puzzles',puzzleId,'solvers',me.uid),{
-            name: me.displayName || me.email?.split('@')[0] || 'Anonymous',
-            solvedAt: solveDoc.solvedAt || serverTimestamp()
-          },{merge:true});
-          // Also patch the puzzleId onto the old solve doc so future lookups work
-          if(!solveDoc.puzzleId){
-            try{ await setDoc(prevSnap.docs[0].ref,{puzzleId},{merge:true}); }catch(_){}
+          if(prevSnap.empty && currentPuzzleName){
+            prevSnap = await getDocs(query(
+              collection(db,'users',me.uid,'solves'),
+              where('puzzleName','==',currentPuzzleName),
+              limit(1)
+            ));
           }
-          // Reload for consistency
-          const snap2 = await getDocs(query(collection(db,'puzzles',puzzleId,'solvers'),orderBy('solvedAt','desc')));
-          solversData = snap2.docs.map(d=>({uid:d.id,...d.data()}));
-          renderSolvers();
-        }
-      }catch(e){ console.error('backfillSolver:',e); }
+          if(!prevSnap.empty){
+            const solveDoc = prevSnap.docs[0].data();
+            if(solveDoc.timeSeconds!=null){
+              // Patch (or create) the solver record with the time from the user's solve log
+              await setDoc(doc(db,'puzzles',puzzleId,'solvers',me.uid),{
+                name: me.displayName || me.email?.split('@')[0] || 'Anonymous',
+                ...(needsCreate ? {solvedAt: solveDoc.solvedAt || serverTimestamp()} : {}),
+                timeSeconds: solveDoc.timeSeconds
+              },{merge:true});
+              if(!solveDoc.puzzleId){
+                try{ await setDoc(prevSnap.docs[0].ref,{puzzleId},{merge:true}); }catch(_){}
+              }
+              // Reload so the patched time shows up
+              const snap2 = await getDocs(query(collection(db,'puzzles',puzzleId,'solvers'),orderBy('solvedAt','desc')));
+              const raw2 = snap2.docs.map(d=>({uid:d.id,...d.data()}));
+              const timed2   = raw2.filter(s=>s.timeSeconds!=null).sort((a,b)=>a.timeSeconds-b.timeSeconds);
+              const untimed2 = raw2.filter(s=>s.timeSeconds==null);
+              solversData = [...timed2,...untimed2];
+              renderSolvers();
+            } else if(needsCreate){
+              // No time available — just create the record without one
+              await setDoc(doc(db,'puzzles',puzzleId,'solvers',me.uid),{
+                name: me.displayName || me.email?.split('@')[0] || 'Anonymous',
+                solvedAt: solveDoc.solvedAt || serverTimestamp()
+              },{merge:true});
+              if(!solveDoc.puzzleId){
+                try{ await setDoc(prevSnap.docs[0].ref,{puzzleId},{merge:true}); }catch(_){}
+              }
+              const snap2 = await getDocs(query(collection(db,'puzzles',puzzleId,'solvers'),orderBy('solvedAt','desc')));
+              const raw2 = snap2.docs.map(d=>({uid:d.id,...d.data()}));
+              const timed2   = raw2.filter(s=>s.timeSeconds!=null).sort((a,b)=>a.timeSeconds-b.timeSeconds);
+              const untimed2 = raw2.filter(s=>s.timeSeconds==null);
+              solversData = [...timed2,...untimed2];
+              renderSolvers();
+            }
+          }
+        }catch(e){ console.error('backfillSolver:',e); }
+      }
     }
   }catch(e){ console.error('loadSolvers:',e); }
 };
 
 function renderSolvers(){
-  const count = solversData.length;
-  const countTxt = count ? count+' solver'+(count!==1?'s':'') : '';
+  const total = solversData.length;
+  const countTxt = total ? total+' solver'+(total!==1?'s':'') : '';
   const el = document.getElementById('solvedByCount');
   if(el) el.textContent = countTxt;
   const mEl = document.getElementById('mobileSolvedByCount');
-  if(mEl) mEl.textContent = count || '';
+  if(mEl) mEl.textContent = total || '';
 
-  const html = count
-    ? solversData.map(s=>{
+  const medals = ['🥇','🥈','🥉'];
+  const top10 = solversData.slice(0,10);
+  const itemsHtml = top10.length
+    ? top10.map((s,i)=>{
         const name = s.name || 'Anonymous';
         const initial = name[0].toUpperCase();
+        const timeStr = formatSolveTime(s.timeSeconds);
         const dateStr = s.solvedAt ? timeAgo(s.solvedAt) : '';
         const clickAttr = s.uid ? ` onclick="openUserProfile('${esc(s.uid)}')"` : '';
-        return `<div class="sb-item"><div class="sb-avatar">${esc(initial)}</div><div class="sb-name"${clickAttr} style="cursor:${s.uid?'pointer':'default'}">${esc(name)}</div>${dateStr?`<div class="sb-date">${esc(dateStr)}</div>`:''}</div>`;
+        const rankEl = i<3 ? `<span class="sb-medal">${medals[i]}</span>` : `<span class="sb-rank-num">${i+1}</span>`;
+        return `<div class="sb-item">${rankEl}<div class="sb-avatar">${esc(initial)}</div><div class="sb-name"${clickAttr} style="cursor:${s.uid?'pointer':'default'}">${esc(name)}</div>${timeStr?`<div class="sb-time">${esc(timeStr)}</div>`:''}<div class="sb-date">${esc(dateStr)}</div></div>`;
       }).join('')
     : '<div class="comments-empty">No solves recorded yet.</div>';
 
+  const moreBtn = total > 10
+    ? `<button class="sb-more-btn" onclick="window.openLeaderboard()">View Full Leaderboard (${total})</button>`
+    : '';
+
   const listEl = document.getElementById('solvedByList');
-  if(listEl) listEl.innerHTML = html;
+  if(listEl) listEl.innerHTML = itemsHtml + moreBtn;
   const mListEl = document.getElementById('mobileSolvedByList');
-  if(mListEl) mListEl.innerHTML = html;
+  if(mListEl) mListEl.innerHTML = itemsHtml + moreBtn;
+}
+
+// ── LEADERBOARD MODAL ─────────────────────────────────────────────────────
+const LB_PAGE_SIZE = 25;
+let lbPage = 0;
+
+window.openLeaderboard = function(){
+  lbPage = 0;
+  const overlay = document.getElementById('lbOverlay');
+  if(overlay) overlay.classList.add('open');
+  const countEl = document.getElementById('lbTotalCount');
+  if(countEl) countEl.textContent = solversData.length+' solver'+(solversData.length!==1?'s':'')+' · Fastest times first';
+  renderLeaderboardPage(true);
+};
+
+window.closeLeaderboard = function(){
+  document.getElementById('lbOverlay')?.classList.remove('open');
+};
+
+window.lbLoadMore = function(){
+  lbPage++;
+  renderLeaderboardPage(false);
+};
+
+function renderLeaderboardPage(reset){
+  const list = document.getElementById('lbList');
+  if(!list) return;
+  const medals = ['🥇','🥈','🥉'];
+  const start = lbPage * LB_PAGE_SIZE;
+  const end = start + LB_PAGE_SIZE;
+  const page = solversData.slice(start, end);
+  if(reset) list.innerHTML = '';
+  page.forEach((s,i)=>{
+    const rank = start + i;
+    const name = s.name || 'Anonymous';
+    const initial = name[0].toUpperCase();
+    const timeStr = formatSolveTime(s.timeSeconds) || '—';
+    const dateStr = s.solvedAt ? timeAgo(s.solvedAt) : '';
+    const clickAttr = s.uid ? ` onclick="openUserProfile('${esc(s.uid)}')" style="cursor:pointer"` : '';
+    const rankEl = rank<3 ? `<span class="lb-medal">${medals[rank]}</span>` : `<span class="lb-rank-num">${rank+1}</span>`;
+    list.insertAdjacentHTML('beforeend',
+      `<div class="lb-row">${rankEl}<div class="lb-av">${esc(initial)}</div><div class="lb-info"><div class="lb-name"${clickAttr}>${esc(name)}</div>${dateStr?`<div class="lb-date">${esc(dateStr)}</div>`:''}</div><div class="lb-time${s.timeSeconds!=null?' lb-time-set':''}">${esc(timeStr)}</div></div>`
+    );
+  });
+  const loadMoreBtn = document.getElementById('lbLoadMore');
+  if(loadMoreBtn) loadMoreBtn.style.display = end < solversData.length ? '' : 'none';
 }
 
 window.toggleDesktopSolvedBy = function(e){
@@ -2504,5 +2631,21 @@ window.addEventListener('pageshow', function(){
   if(window.location.hash==='#play') ensureMobileTopbarVisible();
 });
 </script>
+<!-- LEADERBOARD MODAL -->
+<div class="lb-overlay" id="lbOverlay" onclick="if(event.target===this)window.closeLeaderboard()">
+  <div class="lb-modal">
+    <div class="lb-header">
+      <div>
+        <div class="lb-title">🏆 Leaderboard</div>
+        <div class="lb-subtitle" id="lbTotalCount"></div>
+      </div>
+      <button class="lb-close" onclick="window.closeLeaderboard()">✕ Close</button>
+    </div>
+    <div class="lb-list" id="lbList"></div>
+    <div class="lb-footer">
+      <button class="lb-load-more" id="lbLoadMore" onclick="window.lbLoadMore()" style="display:none">Load more</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
