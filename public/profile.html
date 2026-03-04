@@ -38,6 +38,32 @@
     .nav-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; color:#fff; cursor:pointer; flex-shrink:0; }
     .nav-menu-btn { display:none; padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:1rem; cursor:pointer; align-items:center; justify-content:center; }
     .nav-menu-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+    /* ── AVATAR CUSTOMIZATION MODAL ── */
+    .avatar-modal-overlay { display:none; position:fixed; inset:0; z-index:600; background:rgba(0,0,0,.5); backdrop-filter:blur(4px); align-items:center; justify-content:center; animation:modalFadeIn .2s ease; }
+    .avatar-modal-overlay.open { display:flex; }
+    .avatar-modal { background:var(--surface); border-radius:20px; width:92%; max-width:520px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.3); animation:modalSlideUp .25s ease; position:relative; }
+    .avatar-modal-header { padding:20px 24px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .avatar-modal-title { font-size:1.1rem; font-weight:800; }
+    .avatar-modal-close { background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text3); padding:4px; border-radius:6px; transition:all .15s; }
+    .avatar-modal-close:hover { background:var(--surface2); color:var(--text); }
+    .avatar-modal-content { padding:24px; }
+    .avatar-option-section { margin-bottom:32px; }
+    .avatar-option-title { font-size:.9rem; font-weight:800; color:var(--text); margin-bottom:12px; text-transform:uppercase; letter-spacing:.5px; }
+    .avatar-options-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(60px,1fr)); gap:12px; }
+    .avatar-option { width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; border:3px solid transparent; transition:all .15s; font-size:1.8rem; }
+    .avatar-option:hover { transform:scale(1.1); border-color:var(--accent); }
+    .avatar-option.selected { border-color:var(--accent); box-shadow:0 0 0 2px rgba(37,99,235,.2); }
+    .avatar-option.emoji { font-size:2rem; background:var(--surface2); }
+    .avatar-option.initials { color:#fff; font-size:1.2rem; font-weight:900; }
+    .avatar-option.pattern { background-size:cover; background-position:center; }
+    .avatar-modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:12px; }
+    .btn-avatar { padding:10px 20px; border-radius:8px; font-weight:700; cursor:pointer; transition:all .15s; border:none; font-size:.9rem; }
+    .btn-avatar-cancel { background:var(--surface2); color:var(--text2); }
+    .btn-avatar-cancel:hover { background:var(--border); }
+    .btn-avatar-save { background:var(--accent); color:#fff; }
+    .btn-avatar-save:hover { filter:brightness(1.1); }
+
     .nav-menu-dropdown { display:none; position:fixed; top:52px; right:12px; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.18); z-index:1000; min-width:170px; overflow:hidden; }
     .nav-menu-dropdown.open { display:block; }
     .nav-menu-item { display:block; padding:9px 14px; font-size:.82rem; color:var(--text); text-decoration:none; background:var(--surface); border-bottom:1px solid var(--surface2); cursor:pointer; text-align:left; width:100%; border-left:none; border-right:none; border-top:none; font-family:inherit; }
@@ -56,8 +82,13 @@
 
     /* ── PROFILE HEADER ── */
     .profile-header { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:28px 28px 24px; display:flex; gap:22px; align-items:flex-start; animation:fadeUp .35s ease both; }
-    .profile-avatar-wrap { flex-shrink:0; }
-    .profile-avatar { width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:900; color:#fff; box-shadow:0 4px 16px rgba(0,0,0,.15); letter-spacing:-1px; }
+    .profile-avatar-wrap { flex-shrink:0; position:relative; }
+    .profile-avatar { width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:900; color:#fff; box-shadow:0 4px 16px rgba(0,0,0,.15); letter-spacing:-1px; cursor:pointer; transition:transform .15s; }
+    .profile-avatar:hover { transform:scale(1.05); }
+    .profile-avatar.emoji { font-size:3rem; background:var(--surface2) !important; border:3px solid var(--border); }
+    .profile-avatar.pattern { background-size:cover; background-position:center; }
+    .avatar-edit-btn { position:absolute; bottom:-2px; right:-2px; width:24px; height:24px; border-radius:50%; background:var(--accent); color:#fff; border:2px solid var(--surface); font-size:.7rem; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s; }
+    .avatar-edit-btn:hover { background:var(--accent2); transform:scale(1.1); }
     .profile-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
     .profile-name-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .profile-name { font-size:1.4rem; font-weight:900; color:var(--text); line-height:1.1; }
@@ -313,6 +344,7 @@
     <div class="profile-header" id="profileHeader">
       <div class="profile-avatar-wrap">
         <div class="profile-avatar" id="profileAvatar">?</div>
+        <div class="avatar-edit-btn" id="avatarEditBtn" title="Customize avatar" style="display:none">✏️</div>
       </div>
       <div class="profile-info">
         <div class="profile-name-row" id="nameDisplayRow">
@@ -475,6 +507,41 @@
   </div>
 </div>
 
+<!-- Avatar Customization Modal -->
+<div class="avatar-modal-overlay" id="avatarModal">
+  <div class="avatar-modal">
+    <div class="avatar-modal-header">
+      <div class="avatar-modal-title">Customize Avatar</div>
+      <button class="avatar-modal-close" id="avatarModalClose">&times;</button>
+    </div>
+    <div class="avatar-modal-content">
+      
+      <!-- Emoji Avatars -->
+      <div class="avatar-option-section">
+        <div class="avatar-option-title">🎭 Emoji Avatars</div>
+        <div class="avatar-options-grid" id="emojiOptions"></div>
+      </div>
+      
+      <!-- Initials with Colors -->
+      <div class="avatar-option-section">
+        <div class="avatar-option-title">📝 Initials</div>
+        <div class="avatar-options-grid" id="initialsOptions"></div>
+      </div>
+      
+      <!-- Pattern Avatars -->
+      <div class="avatar-option-section">
+        <div class="avatar-option-title">🎨 Patterns</div>
+        <div class="avatar-options-grid" id="patternOptions"></div>
+      </div>
+      
+    </div>
+    <div class="avatar-modal-footer">
+      <button class="btn-avatar btn-avatar-cancel" id="avatarCancelBtn">Cancel</button>
+      <button class="btn-avatar btn-avatar-save" id="avatarSaveBtn">Save Avatar</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp }        from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut, updateProfile } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
@@ -580,6 +647,181 @@ function relDate(ts){
 }
 function escHtml(str){ const d=document.createElement('span'); d.textContent=str; return d.innerHTML; }
 
+// ── AVATAR CUSTOMIZATION SYSTEM ─────────────────────────
+const EMOJI_AVATARS = [
+  '😀','😃','😄','😁','😊','🙂','😉','😍','🥰','😘','😗','😙','😚','🤗','🤔','🤭',
+  '🤫','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷',
+  '🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐','😕',
+  '😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱',
+  '😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩',
+  '🤡','👹','👺','👻','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿',
+  '😾','🙈','🙉','🙊','💋','💌','💘','💝','💖','💗','💓','💞','💕','💟','❣️','💔',
+  '❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍','💯','💢','💥','💫','💦','💨','🕳️'
+];
+
+const PATTERN_AVATARS = [
+  'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+  'linear-gradient(45deg, #f093fb 0%, #f5576c 100%)', 
+  'linear-gradient(45deg, #4facfe 0%, #00f2fe 100%)',
+  'linear-gradient(45deg, #43e97b 0%, #38f9d7 100%)',
+  'linear-gradient(45deg, #fa709a 0%, #fee140 100%)',
+  'linear-gradient(45deg, #a8edea 0%, #fed6e3 100%)',
+  'linear-gradient(45deg, #ff9a9e 0%, #fecfef 100%)',
+  'linear-gradient(45deg, #ffecd2 0%, #fcb69f 100%)',
+  'linear-gradient(45deg, #a18cd1 0%, #fbc2eb 100%)',
+  'linear-gradient(45deg, #fad0c4 0%, #ffd1ff 100%)',
+  'linear-gradient(45deg, #e0c3fc 0%, #9bb5ff 100%)',
+  'linear-gradient(45deg, #fbc2eb 0%, #a6c1ee 100%)',
+  'conic-gradient(from 0deg, #667eea, #764ba2, #667eea)',
+  'conic-gradient(from 45deg, #f093fb, #f5576c, #f093fb)',
+  'conic-gradient(from 90deg, #4facfe, #00f2fe, #4facfe)',
+  'radial-gradient(circle, #667eea 0%, #764ba2 100%)',
+  'radial-gradient(circle, #f093fb 0%, #f5576c 100%)',
+  'radial-gradient(circle, #4facfe 0%, #00f2fe 100%)'
+];
+
+let selectedAvatar = null;
+
+// Avatar rendering function
+function renderAvatar(element, avatarData, name) {
+  if (!avatarData || avatarData.type === 'initials') {
+    // Default initials avatar
+    element.textContent = initials(name);
+    element.style.background = avatarGradient(name);
+    element.className = element.className.replace(/\b(emoji|pattern)\b/g, '').trim();
+  } else if (avatarData.type === 'emoji') {
+    // Emoji avatar
+    element.textContent = avatarData.value;
+    element.style.background = '';
+    element.className = (element.className.replace(/\b(emoji|pattern)\b/g, '') + ' emoji').trim();
+  } else if (avatarData.type === 'pattern') {
+    // Pattern avatar
+    element.textContent = '';
+    element.style.background = avatarData.value;
+    element.className = (element.className.replace(/\b(emoji|pattern)\b/g, '') + ' pattern').trim();
+  }
+}
+
+// Open avatar customization modal
+function openAvatarModal() {
+  document.getElementById('avatarModal').classList.add('open');
+  populateAvatarOptions();
+  
+  // Set current selection
+  const currentAvatar = profileDoc.avatar || { type: 'initials' };
+  selectAvatarOption(currentAvatar);
+}
+
+// Close avatar customization modal
+function closeAvatarModal() {
+  document.getElementById('avatarModal').classList.remove('open');
+  selectedAvatar = null;
+}
+
+// Populate avatar options in modal
+function populateAvatarOptions() {
+  const displayName = profileDoc.displayName || currentUser?.displayName || '';
+  
+  // Emoji options
+  const emojiContainer = document.getElementById('emojiOptions');
+  emojiContainer.innerHTML = '';
+  EMOJI_AVATARS.forEach(emoji => {
+    const option = document.createElement('div');
+    option.className = 'avatar-option emoji';
+    option.textContent = emoji;
+    option.onclick = () => selectAvatarOption({ type: 'emoji', value: emoji });
+    emojiContainer.appendChild(option);
+  });
+  
+  // Initials options with different colors  
+  const initialsContainer = document.getElementById('initialsOptions');
+  initialsContainer.innerHTML = '';
+  AVATAR_COLORS.forEach((gradient, index) => {
+    const option = document.createElement('div');
+    option.className = 'avatar-option initials';
+    option.style.background = gradient;
+    option.textContent = initials(displayName);
+    option.onclick = () => selectAvatarOption({ type: 'initials', colorIndex: index });
+    initialsContainer.appendChild(option);
+  });
+  
+  // Pattern options
+  const patternContainer = document.getElementById('patternOptions');
+  patternContainer.innerHTML = '';
+  PATTERN_AVATARS.forEach((pattern, index) => {
+    const option = document.createElement('div');
+    option.className = 'avatar-option pattern';
+    option.style.background = pattern;
+    option.onclick = () => selectAvatarOption({ type: 'pattern', value: pattern, index });
+    patternContainer.appendChild(option);
+  });
+}
+
+// Select avatar option
+function selectAvatarOption(avatarData) {
+  // Remove previous selection
+  document.querySelectorAll('.avatar-option.selected').forEach(el => el.classList.remove('selected'));
+  
+  // Find and select current option
+  let targetElement = null;
+  if (avatarData.type === 'emoji') {
+    targetElement = Array.from(document.querySelectorAll('#emojiOptions .avatar-option'))
+      .find(el => el.textContent === avatarData.value);
+  } else if (avatarData.type === 'initials') {
+    const containers = document.querySelectorAll('#initialsOptions .avatar-option');
+    targetElement = containers[avatarData.colorIndex || 0];
+  } else if (avatarData.type === 'pattern') {
+    const containers = document.querySelectorAll('#patternOptions .avatar-option');
+    targetElement = containers[avatarData.index || 0];
+  }
+  
+  if (targetElement) {
+    targetElement.classList.add('selected');
+  }
+  
+  selectedAvatar = avatarData;
+}
+
+// Save avatar selection
+async function saveAvatar() {
+  if (!selectedAvatar || !currentUser) return;
+  
+  try {
+    // Save to Firestore
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      avatar: selectedAvatar
+    }, { merge: true });
+    
+    // Update local data
+    profileDoc.avatar = selectedAvatar;
+    
+    // Update UI
+    const displayName = profileDoc.displayName || currentUser.displayName || '';
+    const profileAvatar = document.getElementById('profileAvatar');
+    renderAvatar(profileAvatar, selectedAvatar, displayName);
+    
+    // Update nav avatar if it exists
+    const navAvatar = document.querySelector('.nav-avatar');
+    if (navAvatar) {
+      renderAvatar(navAvatar, selectedAvatar, displayName);
+    }
+    
+    closeAvatarModal();
+  } catch (error) {
+    console.error('Failed to save avatar:', error);
+    alert('Failed to save avatar. Please try again.');
+  }
+}
+
+// Initialize avatar modal events
+document.getElementById('avatarEditBtn').addEventListener('click', openAvatarModal);
+document.getElementById('avatarModalClose').addEventListener('click', closeAvatarModal);
+document.getElementById('avatarCancelBtn').addEventListener('click', closeAvatarModal);  
+document.getElementById('avatarSaveBtn').addEventListener('click', saveAvatar);
+document.getElementById('avatarModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeAvatarModal();
+});
+
 // ── NAV ──────────────────────────────────────────────
 function initNavMenu(){
   const btn=document.getElementById('navMenuBtn');
@@ -603,6 +845,7 @@ onAuthStateChanged(auth, async user=>{
 
   const av=document.getElementById('navAvatarEl');
   const navName=user.displayName||user.email||'U';
+  // Use default initials for nav avatar initially - will be updated when profile loads
   av.textContent=navName[0].toUpperCase();
   av.style.background=avatarGradient(navName);
   av.onclick=()=>{ window.location.href='profile.html'; };
@@ -729,8 +972,20 @@ function renderHeader(){
   const isPrivate=!!profileDoc.isPrivate;
 
   const av=document.getElementById('profileAvatar');
-  av.textContent=initials(displayName);
-  av.style.background=avatarGradient(displayName);
+  renderAvatar(av, profileDoc.avatar, displayName);
+
+  // Show avatar edit button for own profile
+  const avatarEditBtn = document.getElementById('avatarEditBtn');
+  if (isOwnProfile && currentUser) {
+    avatarEditBtn.style.display = 'flex';
+    // Update nav avatar for own profile
+    const navAvatar = document.getElementById('navAvatarEl');
+    if (navAvatar) {
+      renderAvatar(navAvatar, profileDoc.avatar, displayName);
+    }
+  } else {
+    avatarEditBtn.style.display = 'none';
+  }
 
   document.getElementById('profileName').textContent=displayName;
 
@@ -813,11 +1068,9 @@ window.saveName=async function(){
   }catch(e){}
   // Update avatar
   const av=document.getElementById('profileAvatar');
-  av.textContent=initials(newName);
-  av.style.background=avatarGradient(newName);
+  renderAvatar(av, profileDoc.avatar, newName);
   const nav=document.getElementById('navAvatarEl');
-  nav.textContent=newName[0].toUpperCase();
-  nav.style.background=avatarGradient(newName);
+  renderAvatar(nav, profileDoc.avatar, newName);
 };
 window.cancelName=function(){
   document.getElementById('nameDisplayRow').style.display='';
