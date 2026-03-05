@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "node migrate-solver-records.mjs",
+    "seed": "node seed-puzzles.mjs",
+    "debug": "node debug-solve.mjs",
+    "fix": "node fix-solver-record.mjs"
   },
   "repository": {
     "type": "git",
@@ -13,7 +17,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/kyletorrescasey98/sudoku-studio/issues"
   },
