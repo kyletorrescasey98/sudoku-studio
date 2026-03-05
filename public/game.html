@@ -398,6 +398,8 @@
     .sb-list { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:4px; }
     .sb-item { display:flex; align-items:center; gap:9px; padding:6px 8px; border-radius:8px; background:var(--surface2); border:1px solid var(--border); }
     .sb-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:#fff; font-size:.75rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .sb-avatar.emoji { font-size:16px; background:var(--surface2) !important; color:var(--text) !important; border:1px solid var(--border); }
+    .sb-avatar.pattern { background-size:cover; background-position:center; }
     .sb-name { font-size:.82rem; font-weight:700; color:var(--text); flex:1; }
     .sb-date { font-size:.68rem; color:var(--text2); flex-shrink:0; }
     @media(max-width:700px){ .solved-by-panel { display:none; } }
@@ -437,6 +439,8 @@
     .lb-medal { font-size:1.1rem; width:26px; text-align:center; flex-shrink:0; }
     .lb-rank-num { width:26px; text-align:center; font-size:.7rem; font-weight:700; color:var(--text2); flex-shrink:0; }
     .lb-av { width:30px; height:30px; border-radius:50%; background:var(--accent); color:#fff; font-size:.76rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .lb-av.emoji { font-size:18px; background:var(--surface2) !important; color:var(--text) !important; border:1px solid var(--border); }
+    .lb-av.pattern { background-size:cover; background-position:center; }
     .lb-info { flex:1; min-width:0; }
     .lb-name { font-size:.83rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .lb-date { font-size:.66rem; color:var(--text2); margin-top:1px; }
@@ -552,6 +556,7 @@
   <div class="nav-logo">Sudoku Social</div>
   <div class="nav-right">
     <span class="nav-user" id="navUser"></span>
+    <a href="main.html" class="nav-btn" id="homeNavBtn">🏠 Home</a>
     <a href="game.html#play" class="nav-btn" id="playNavBtn">🎮 Play</a>
     <a href="explore.html" class="nav-btn" id="searchNavBtn">🔍 Explore</a>
     <a href="create.html" class="nav-btn" id="createNavBtn">✏️ Create</a>
@@ -721,6 +726,9 @@
     <div class="welcome-logo">Sudoku Social</div>
     <div class="welcome-sub">Challenge your mind</div>
     <div id="mainMenu" style="display:flex; flex-direction:column; gap:10px;">
+      <a href="main.html" class="main-btn">
+        <span class="mb-icon">🏠</span><span class="mb-label">Home</span>
+      </a>
       <a href="game.html#play" class="main-btn">
         <span class="mb-icon">🎮</span><span class="mb-label">Play</span>
       </a>
@@ -738,6 +746,7 @@
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px;">
         <button class="back-btn" style="margin-bottom:0;" onclick="showMainMenu()">← Back</button>
         <div style="display:flex; gap:6px;">
+          <a href="main.html" class="back-btn" style="margin-bottom:0; text-decoration:none;">🏠 Home</a>
           <a href="game.html#play" class="back-btn" style="margin-bottom:0; text-decoration:none;">🎮 Play</a>
           <a href="create.html" class="back-btn" style="margin-bottom:0; text-decoration:none;">✏️ Create</a>
           <a href="profile.html" class="back-btn" style="margin-bottom:0; text-decoration:none;">👤 Profile</a>
@@ -822,6 +831,7 @@
     <div class="win-save-msg" id="winSaveMsg">✅ Solve saved to your history!</div>
     <div class="win-btns">
       <button class="btn-primary" onclick="closeWin();startNewGame()">Play Again</button>
+      <button class="btn-ghost" onclick="window.location.href='main.html'">🏠 Home</button>
       <button class="btn-ghost" onclick="window.location.href='explore.html'">🔍 Explore</button>
       <button class="btn-ghost" onclick="closeWin()">Close</button>
     </div>
@@ -1865,6 +1875,14 @@ window.startNewGame=function(showIntro=false){
 }
 
 window.playLastOrNew=function(){
+  // Check if the home page requested a new game with a specific difficulty
+  const newgameDiff=localStorage.getItem('sudoku_newgame_difficulty');
+  if(newgameDiff){
+    localStorage.removeItem('sudoku_newgame_difficulty');
+    try{document.getElementById('mobileTopbar').classList.add('show');document.body.classList.add('has-mobile-topbar');}catch(e){}
+    window.startNewGameWithDifficulty(newgameDiff);
+    return;
+  }
   // Always show the mobile topbar when navigating to Play
   try{document.getElementById('mobileTopbar').classList.add('show');document.body.classList.add('has-mobile-topbar');}catch(e){}
   const lastPuzzle=localStorage.getItem('lastPuzzle');
@@ -1907,6 +1925,33 @@ window.showMainMenu=function(){
   document.getElementById('searchMenu').style.display='none';
   hideMobileTopbarIfNotPlay();
 }
+
+window.startNewGameWithDifficulty=async function(diff){
+  // Normalise: "easy" -> "Easy"
+  const diffNorm=diff.charAt(0).toUpperCase()+diff.slice(1).toLowerCase();
+  // Filter DEFAULT_PUZZLES by matching difficulty
+  const pool=DEFAULT_PUZZLES.filter(p=>p.difficulty===diffNorm);
+  if(!pool.length){ window.startNewGame(true); return; }
+
+  let candidates=pool;
+  // If user is logged in, try to filter out already-solved puzzles
+  if(currentUser){
+    try{
+      const solvesSnap=await getDocs(collection(db,'users',currentUser.uid,'solves'));
+      const solvedIds=new Set(solvesSnap.docs.map(d=>d.data().puzzleId).filter(Boolean));
+      const unsolved=pool.filter(p=>!solvedIds.has(p.id));
+      // Use unsolved list if there are any; otherwise fall back to full pool (all solved)
+      if(unsolved.length>0) candidates=unsolved;
+    }catch(e){ /* ignore — fall back to full pool */ }
+  }
+
+  // Pick a random puzzle from candidates
+  const chosen=candidates[Math.floor(Math.random()*candidates.length)];
+  communityPuzzles=[chosen];
+  await window.loadCommunityPuzzle(0);
+}
+
+
 
 window.showSearchOverlay=function(){
   window.location.href='explore.html';
@@ -2134,6 +2179,72 @@ window.initComments = function(puzzleId){
 // ── SOLVED BY ──────────────────────────────────────────────────────────────
 let solversData = [];
 
+// ── AVATAR SYSTEM (copied from profile.html) ──────────────────────────────
+const AVATAR_COLORS = [
+  'linear-gradient(135deg,#2563eb,#7c3aed)',
+  'linear-gradient(135deg,#ec4899,#f97316)',
+  'linear-gradient(135deg,#16a34a,#0ea5e9)',
+  'linear-gradient(135deg,#f59e0b,#ef4444)',
+  'linear-gradient(135deg,#7c3aed,#ec4899)',
+  'linear-gradient(135deg,#0ea5e9,#16a34a)'
+];
+
+const EMOJI_AVATARS = [
+  '😀','😃','😄','😁','😊','🙂','😉','😍','🥰','😘','😗','😙','😚','🤗','🤔','🤭',
+  '🤫','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷',
+  '🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐','😕',
+  '😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱',
+  '😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩',
+  '🤡','👹','👺','👻','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿',
+  '😾','🙈','🙉','🙊','💋','💌','💘','💝','💖','💗','💓','💞','💕','💟','❣️','💔',
+  '❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍','💯','💢','💥','💫','💦','💨','🕳️'
+];
+
+const PATTERN_AVATARS = [
+  'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+  'linear-gradient(45deg, #f093fb 0%, #f5576c 100%)', 
+  'linear-gradient(45deg, #4facfe 0%, #00f2fe 100%)',
+  'linear-gradient(45deg, #43e97b 0%, #38f9d7 100%)',
+  'linear-gradient(45deg, #fa709a 0%, #fee140 100%)',
+  'linear-gradient(45deg, #a8edea 0%, #fed6e3 100%)',
+  'linear-gradient(45deg, #ff9a9e 0%, #fecfef 100%)',
+  'linear-gradient(45deg, #ffecd2 0%, #fcb69f 100%)',
+  'linear-gradient(45deg, #a18cd1 0%, #fbc2eb 100%)',
+  'linear-gradient(45deg, #fad0c4 0%, #ffd1ff 100%)',
+  'linear-gradient(45deg, #e0c3fc 0%, #9bb5ff 100%)',
+  'linear-gradient(45deg, #fbc2eb 0%, #a6c1ee 100%)',
+  'conic-gradient(from 0deg, #667eea, #764ba2, #667eea)',
+  'conic-gradient(from 45deg, #f093fb, #f5576c, #f093fb)',
+  'conic-gradient(from 90deg, #4facfe, #00f2fe, #4facfe)',
+  'radial-gradient(circle, #667eea 0%, #764ba2 100%)',
+  'radial-gradient(circle, #f093fb 0%, #f5576c 100%)',
+  'radial-gradient(circle, #4facfe 0%, #00f2fe 100%)'
+];
+
+function avatarGradient(name){
+  let h=0; for(const ch of (name||'?')) h=(h*31+ch.charCodeAt(0))&0xffff;
+  return AVATAR_COLORS[h%AVATAR_COLORS.length];
+}
+
+function initials(name){
+  return (name||'?').trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';
+}
+
+function renderAvatarToHtml(avatarData, name, className = 'sb-avatar') {
+  if (!avatarData || avatarData.type === 'initials') {
+    // Default initials avatar
+    return `<div class="${className}" style="background:${avatarGradient(name)}">${esc(initials(name))}</div>`;
+  } else if (avatarData.type === 'emoji') {
+    // Emoji avatar
+    return `<div class="${className} emoji" style="background:var(--surface2);border:2px solid var(--border)">${esc(avatarData.value)}</div>`;
+  } else if (avatarData.type === 'pattern') {
+    // Pattern avatar
+    return `<div class="${className} pattern" style="background:${avatarData.value}"></div>`;
+  }
+  // Fallback
+  return `<div class="${className}" style="background:${avatarGradient(name)}">${esc(initials(name))}</div>`;
+}
+
 function formatSolveTime(secs){
   if(secs == null || secs === '') return null;
   const s = Math.round(secs), m = Math.floor(s/60), r = s%60;
@@ -2150,9 +2261,40 @@ window.loadSolvers = async function(puzzleId){
       orderBy('solvedAt','desc')
     ));
     const raw = snap.docs.map(d=>({uid:d.id,...d.data()}));
+    
+    // Fetch user profile data for avatars (batch fetch unique UIDs)
+    const uniqueUids = [...new Set(raw.map(s => s.uid).filter(uid => uid))];
+    const avatarMap = {};
+    if (uniqueUids.length) {
+      try {
+        const userSnaps = await Promise.all(
+          uniqueUids.map(uid => getDoc(doc(db, 'users', uid)))
+        );
+        userSnaps.forEach((userSnap, i) => {
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            avatarMap[uniqueUids[i]] = {
+              avatar: userData.avatar,
+              displayName: userData.displayName || userData.name || null
+            };
+          }
+        });
+        console.log('Loaded avatar data for solvers:', avatarMap);
+      } catch(e) {
+        console.error('Error loading user avatars:', e);
+      }
+    }
+    
+    // Attach avatar data to solver records
+    const enrichedRaw = raw.map(s => ({
+      ...s,
+      _avatarData: avatarMap[s.uid]?.avatar || null,
+      _displayName: avatarMap[s.uid]?.displayName || s.name
+    }));
+    
     // Fastest-time solvers first, untimed appended after
-    const timed   = raw.filter(s=>s.timeSeconds!=null).sort((a,b)=>a.timeSeconds-b.timeSeconds);
-    const untimed = raw.filter(s=>s.timeSeconds==null);
+    const timed   = enrichedRaw.filter(s=>s.timeSeconds!=null).sort((a,b)=>a.timeSeconds-b.timeSeconds);
+    const untimed = enrichedRaw.filter(s=>s.timeSeconds==null);
     solversData = [...timed,...untimed];
     renderSolvers();
 
@@ -2230,13 +2372,13 @@ function renderSolvers(){
   const top10 = solversData.slice(0,10);
   const itemsHtml = top10.length
     ? top10.map((s,i)=>{
-        const name = s.name || 'Anonymous';
-        const initial = name[0].toUpperCase();
+        const name = s._displayName || s.name || 'Anonymous';
         const timeStr = formatSolveTime(s.timeSeconds);
         const dateStr = s.solvedAt ? timeAgo(s.solvedAt) : '';
         const clickAttr = s.uid ? ` onclick="openUserProfile('${esc(s.uid)}')"` : '';
         const rankEl = i<3 ? `<span class="sb-medal">${medals[i]}</span>` : `<span class="sb-rank-num">${i+1}</span>`;
-        return `<div class="sb-item">${rankEl}<div class="sb-avatar">${esc(initial)}</div><div class="sb-name"${clickAttr} style="cursor:${s.uid?'pointer':'default'}">${esc(name)}</div>${timeStr?`<div class="sb-time">${esc(timeStr)}</div>`:''}<div class="sb-date">${esc(dateStr)}</div></div>`;
+        const avatarHtml = renderAvatarToHtml(s._avatarData, name, 'sb-avatar');
+        return `<div class="sb-item">${rankEl}${avatarHtml}<div class="sb-name"${clickAttr} style="cursor:${s.uid?'pointer':'default'}">${esc(name)}</div>${timeStr?`<div class="sb-time">${esc(timeStr)}</div>`:''}<div class="sb-date">${esc(dateStr)}</div></div>`;
       }).join('')
     : '<div class="comments-empty">No solves recorded yet.</div>';
 
@@ -2282,14 +2424,14 @@ function renderLeaderboardPage(reset){
   if(reset) list.innerHTML = '';
   page.forEach((s,i)=>{
     const rank = start + i;
-    const name = s.name || 'Anonymous';
-    const initial = name[0].toUpperCase();
+    const name = s._displayName || s.name || 'Anonymous';
     const timeStr = formatSolveTime(s.timeSeconds) || '—';
     const dateStr = s.solvedAt ? timeAgo(s.solvedAt) : '';
     const clickAttr = s.uid ? ` onclick="openUserProfile('${esc(s.uid)}')" style="cursor:pointer"` : '';
     const rankEl = rank<3 ? `<span class="lb-medal">${medals[rank]}</span>` : `<span class="lb-rank-num">${rank+1}</span>`;
+    const avatarHtml = renderAvatarToHtml(s._avatarData, name, 'lb-av');
     list.insertAdjacentHTML('beforeend',
-      `<div class="lb-row">${rankEl}<div class="lb-av">${esc(initial)}</div><div class="lb-info"><div class="lb-name"${clickAttr}>${esc(name)}</div>${dateStr?`<div class="lb-date">${esc(dateStr)}</div>`:''}</div><div class="lb-time${s.timeSeconds!=null?' lb-time-set':''}">${esc(timeStr)}</div></div>`
+      `<div class="lb-row">${rankEl}${avatarHtml}<div class="lb-info"><div class="lb-name"${clickAttr}>${esc(name)}</div>${dateStr?`<div class="lb-date">${esc(dateStr)}</div>`:''}</div><div class="lb-time${s.timeSeconds!=null?' lb-time-set':''}">${esc(timeStr)}</div></div>`
     );
   });
   const loadMoreBtn = document.getElementById('lbLoadMore');

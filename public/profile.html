@@ -311,6 +311,7 @@
   <a href="game.html" class="nav-logo">Sudoku Social</a>
   <div class="nav-right">
     <div class="nav-links">
+      <a href="main.html" class="nav-btn">🏠 Home</a>
       <a href="game.html#play" class="nav-btn">🎮 Play</a>
       <a href="explore.html" class="nav-btn">🔍 Explore</a>
       <a href="create.html" class="nav-btn">✏️ Create</a>
@@ -323,6 +324,7 @@
 </nav>
 
 <div class="nav-menu-dropdown" id="navMenuDropdown">
+  <a href="main.html" class="nav-menu-item">🏠 Home</a>
   <a href="game.html#play" class="nav-menu-item">🎮 Play</a>
   <a href="explore.html" class="nav-menu-item">🔍 Explore</a>
   <a href="create.html" class="nav-menu-item">✏️ Create</a>
@@ -545,7 +547,7 @@
 <script type="module">
 import { initializeApp }        from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut, updateProfile } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
-import { getFirestore, collection, getDocs, getDoc, setDoc, doc, query, orderBy, where, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { getFirestore, collection, getDocs, getDoc, setDoc, doc, query, orderBy, where, deleteDoc, deleteField } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
@@ -864,12 +866,40 @@ onAuthStateChanged(auth, async user=>{
   ca.style.display='flex';
 });
 
+// Global variable to track our follow status
+let ourFollowingData = {};
+
 // ── LOAD ALL DATA ─────────────────────────────────────
 async function loadProfile(){
   try{
+    // Always load the target user's profile data
     const snap=await getDoc(doc(db,'users',viewUid));
     profileDoc=snap.exists()?snap.data():{};
-  }catch(e){ profileDoc={}; }
+    console.log(`Loaded profile for user ${viewUid} (${isOwnProfile ? 'own' : 'other'} profile):`, profileDoc);
+    console.log('Their followers:', profileDoc.followers);
+    console.log('Their following:', profileDoc.following);
+    
+    // If viewing someone else's profile, also load our own following data
+    if (!isOwnProfile && currentUser) {
+      try {
+        const ourSnap = await getDoc(doc(db,'users',currentUser.uid));
+        if(ourSnap.exists()) {
+          ourFollowingData = ourSnap.data().following || {};
+          console.log('Our following data:', ourFollowingData);
+        }
+      } catch(e) {
+        console.error('Error loading our following data:', e);
+        ourFollowingData = {};
+      }
+    } else {
+      // If viewing our own profile, our following data is in profileDoc
+      ourFollowingData = profileDoc.following || {};
+    }
+  }catch(e){ 
+    console.error('Error loading profile:', e);
+    profileDoc={}; 
+    ourFollowingData = {};
+  }
 
   try{
     const q=query(collection(db,'users',viewUid,'solves'),orderBy('solvedAt','desc'));
@@ -1021,11 +1051,14 @@ function renderHeader(){
       </label>`;
     actions.appendChild(toggleWrap);
   } else {
-    const followed=profileDoc.followers&&profileDoc.followers[currentUser.uid];
+    // For viewing another user's profile, check our following data
+    const isFollowingUser = !!(ourFollowingData && ourFollowingData[viewUid] === true);
+    console.log('Are we following this user?', isFollowingUser);
+    
     const followBtn=document.createElement('button');
     followBtn.className='btn-sm primary';
     followBtn.id='followBtn';
-    followBtn.textContent=followed?'✓ Following':'+ Follow';
+    followBtn.textContent=isFollowingUser?'✓ Following':'+ Follow';
     followBtn.onclick=toggleFollow;
     actions.appendChild(followBtn);
   }
@@ -1115,32 +1148,104 @@ window.togglePrivacy=async function(checked){
 
 // ── FOLLOW / UNFOLLOW ─────────────────────────────────
 async function toggleFollow(){
-  if(!currentUser) return;
-  const isFollowing=!!(profileDoc.followers&&profileDoc.followers[currentUser.uid]);
+  if(!currentUser || !viewUid || viewUid === currentUser.uid) return;
+  
+  const isFollowing=!!(ourFollowingData && ourFollowingData[viewUid] === true);
   const newState=!isFollowing;
+  console.log(`Current user ${currentUser.uid} ${newState ? 'following' : 'unfollowing'} user ${viewUid}`);
+  console.log('Toggle follow - Current state:', isFollowing, 'New state:', newState);
+  console.log('Current followers before update:', profileDoc.followers);
+  console.log('Our following before update:', ourFollowingData);
+  
   const btn=document.getElementById('followBtn');
   if(btn) btn.textContent=newState?'✓ Following':'+ Follow';
+  
+  // Update local data optimistically
   profileDoc.followers=profileDoc.followers||{};
-  if(newState) profileDoc.followers[currentUser.uid]=true;
-  else delete profileDoc.followers[currentUser.uid];
+  if(newState) {
+    profileDoc.followers[currentUser.uid] = true;
+    ourFollowingData[viewUid] = true;
+  } else {
+    delete profileDoc.followers[currentUser.uid];
+    delete ourFollowingData[viewUid];
+  }
+  
   try{
-    // Update target user's followers
-    const targetUpd={}; targetUpd[`followers.${currentUser.uid}`]=newState||null;
-    await setDoc(doc(db,'users',viewUid),targetUpd,{merge:true});
-    // Update current user's following
-    const myUpd={}; myUpd[`following.${viewUid}`]=newState||null;
-    await setDoc(doc(db,'users',currentUser.uid),myUpd,{merge:true});
-    // Update counts
+    // Method 1: Read-Modify-Write approach for target user's followers
+    console.log('Reading target user document...');
+    const targetUserRef = doc(db,'users',viewUid);
+    const targetUserSnap = await getDoc(targetUserRef);
+    const targetUserData = targetUserSnap.exists() ? targetUserSnap.data() : {};
+    
+    const updatedFollowers = targetUserData.followers || {};
+    if(newState) {
+      updatedFollowers[currentUser.uid] = true;
+    } else {
+      delete updatedFollowers[currentUser.uid];
+    }
+    
+    console.log('Writing target user followers:', updatedFollowers);
+    await setDoc(targetUserRef, { followers: updatedFollowers }, { merge: true });
+    console.log('Target user followers updated successfully');
+    
+    // Method 2: Read-Modify-Write approach for current user's following
+    console.log('Reading current user document...');
+    const currentUserRef = doc(db,'users',currentUser.uid);
+    const currentUserSnap = await getDoc(currentUserRef);
+    const currentUserData = currentUserSnap.exists() ? currentUserSnap.data() : {};
+    
+    const updatedFollowing = currentUserData.following || {};
+    if(newState) {
+      updatedFollowing[viewUid] = true;
+    } else {
+      delete updatedFollowing[viewUid];
+    }
+    
+    console.log('Writing current user following:', updatedFollowing);
+    await setDoc(currentUserRef, { following: updatedFollowing }, { merge: true });
+    console.log('Current user following updated successfully');
+    
+    console.log('All database updates completed successfully');
+    
+    // Update the UI counts
     updateFollowCounts();
-  }catch(e){}
+    
+    // Verify the button state
+    const finalIsFollowing = !!(ourFollowingData && ourFollowingData[viewUid] === true);
+    if(btn) btn.textContent = finalIsFollowing ? '✓ Following' : '+ Follow';
+    console.log('Final follow state:', finalIsFollowing);
+    
+  }catch(e){
+    console.error('Follow toggle failed:', e);
+    alert('Follow action failed. Please try again.');
+    
+    // Revert optimistic update on error
+    if(newState) {
+      delete profileDoc.followers[currentUser.uid];
+      delete ourFollowingData[viewUid];
+    } else {
+      profileDoc.followers[currentUser.uid] = true;
+      ourFollowingData[viewUid] = true;
+    }
+    if(btn) btn.textContent=isFollowing?'✓ Following':'+ Follow';
+    updateFollowCounts();
+  }
 }
 
 function updateFollowCounts(){
-  const followersCount = profileDoc.followers ? Object.keys(profileDoc.followers).length : 0;
+  // Count followers: only count entries that are explicitly true
+  const followersCount = profileDoc.followers ? 
+    Object.values(profileDoc.followers).filter(val => val === true).length : 0;
   document.getElementById('followersCount').textContent = followersCount;
   
-  const followingCount = profileDoc.following ? Object.keys(profileDoc.following).length : 0;
+  // Count following: only count entries that are explicitly true
+  const followingCount = profileDoc.following ? 
+    Object.values(profileDoc.following).filter(val => val === true).length : 0;
   document.getElementById('followingCount').textContent = followingCount;
+  
+  console.log('Updated follow counts - Followers:', followersCount, 'Following:', followingCount);
+  console.log('Raw followers data:', profileDoc.followers);
+  console.log('Raw following data:', profileDoc.following);
 }
 
 // ── SOLVER STATS ──────────────────────────────────────

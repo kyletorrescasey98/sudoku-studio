@@ -108,7 +108,7 @@
     let signingUp = false;
 
     // Redirect if already signed in (skip during active signup so updateProfile can finish)
-    onAuthStateChanged(auth, user => { if(user && !signingUp) window.location.href = 'explore.html'; });
+    onAuthStateChanged(auth, user => { if(user && !signingUp) window.location.href = 'main.html'; });
 
     window.switchTab = function(tab) {
       document.getElementById('form-signin').style.display = tab==='signin' ? '' : 'none';
@@ -136,7 +136,7 @@
       setLoading('si-btn', true);
       try {
         await signInWithEmailAndPassword(auth, email, pass);
-        window.location.href = 'explore.html';
+        window.location.href = 'main.html';
       } catch(e) {
         showMsg('si-msg', friendlyError(e.code), 'error');
         setLoading('si-btn', false);
@@ -170,7 +170,7 @@
         await updateProfile(cred.user, { displayName: name });
         await setDoc(doc(db,'users',cred.user.uid),{ displayName: name, displayNameLower: name.toLowerCase(), email: email, createdAt: serverTimestamp() },{ merge: true });
         signingUp = false;
-        window.location.href = 'explore.html';
+        window.location.href = 'main.html';
       } catch(e) {
         showMsg('su-msg', friendlyError(e.code), 'error');
         setLoading('su-btn', false);
