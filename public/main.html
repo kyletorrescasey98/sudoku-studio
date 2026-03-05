@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Home — Sudoku Social</title>
+  <meta name="description" content="Sudoku Social — Challenge your mind with engaging Sudoku puzzles" />
+  <meta property="og:title" content="Sudoku Social" />
+  <meta property="og:description" content="Challenge your mind with engaging Sudoku puzzles" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://sudokusocial.web.app/" />
+  <meta property="og:image" content="https://sudokusocial.web.app/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Sudoku Social" />
+  <meta name="twitter:description" content="Challenge your mind with engaging Sudoku puzzles" />
+  <meta name="twitter:image" content="https://sudokusocial.web.app/og-image.png" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg:#f8f9fa; --surface:#ffffff; --surface2:#f0f2f5; --surface3:#e4e6ea;
+      --accent:#2563eb; --accent2:#7c3aed; --text:#111827; --text2:#6b7280;
+      --error:#dc2626; --success:#16a34a; --border:#d1d5db;
+    }
+    body {
+      font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+      background:var(--bg); color:var(--text);
+      min-height:100vh; display:flex; flex-direction:column;
+      align-items:center; overflow-x:hidden;
+    }
+
+    /* ── NAVBAR ── */
+    .navbar {
+      width:100%; background:var(--surface);
+      border-bottom:1px solid var(--border);
+      padding:0 20px; height:52px;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; flex-shrink:0; position:sticky; top:0; z-index:100;
+    }
+    .nav-logo {
+      font-size:1.1rem; font-weight:900; letter-spacing:6px;
+      text-transform:uppercase;
+      background:linear-gradient(120deg,var(--accent) 30%,var(--accent2));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      text-decoration:none;
+    }
+    .nav-right { display:flex; align-items:center; gap:8px; }
+    .nav-links { display:flex; align-items:center; gap:6px; }
+    .nav-btn {
+      padding:5px 12px; border-radius:7px; border:1px solid var(--border);
+      background:var(--surface2); color:var(--text);
+      font-size:.75rem; font-weight:600; cursor:pointer; transition:all .15s;
+      text-decoration:none; display:inline-flex; align-items:center; gap:5px;
+      white-space:nowrap;
+    }
+    .nav-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .nav-btn.active { background:rgba(37,99,235,.1); color:var(--accent); border-color:rgba(37,99,235,.3); }
+    .nav-btn.danger:hover { border-color:var(--error); color:var(--error); }
+    .nav-avatar {
+      width:32px; height:32px; border-radius:50%;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      display:flex; align-items:center; justify-content:center;
+      font-size:.75rem; font-weight:800; color:#fff; cursor:pointer; flex-shrink:0;
+    }
+    .nav-menu-btn {
+      display:none; padding:6px 10px; border-radius:999px;
+      border:1px solid var(--border); background:var(--surface2);
+      color:var(--text); font-size:1rem; cursor:pointer;
+      align-items:center; justify-content:center;
+    }
+    .nav-menu-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .nav-menu-dropdown {
+      display:none; position:fixed; top:52px; right:12px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.18);
+      z-index:200; min-width:170px; overflow:hidden;
+    }
+    .nav-menu-dropdown.open { display:block; }
+    .nav-menu-item {
+      display:block; padding:9px 14px; font-size:.82rem; color:var(--text);
+      text-decoration:none; background:var(--surface);
+      border-bottom:1px solid var(--surface2); cursor:pointer;
+      text-align:left; width:100%;
+      border-left:none; border-right:none; border-top:none;
+      font-family:inherit;
+    }
+    .nav-menu-item:last-child { border-bottom:none; }
+    .nav-menu-item:hover { background:var(--surface2); }
+    .nav-menu-item.danger { color:var(--error); }
+
+    /* ── HERO ── */
+    .hero {
+      flex:1; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; text-align:center;
+      padding:60px 24px 80px; gap:0;
+      width:100%; max-width:600px;
+    }
+    .hero-icon {
+      font-size:3.5rem; margin-bottom:20px;
+      animation:floatIcon 3s ease-in-out infinite;
+    }
+    @keyframes floatIcon {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .hero-title {
+      font-size:clamp(2.6rem, 9vw, 4.5rem);
+      font-weight:900; letter-spacing:2px; line-height:1.05;
+      background:linear-gradient(120deg, var(--accent) 25%, var(--accent2));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      margin-bottom:12px;
+    }
+    .hero-sub {
+      font-size:clamp(.9rem, 3vw, 1.1rem);
+      color:var(--text2); font-weight:500; letter-spacing:.5px;
+      margin-bottom:48px;
+    }
+
+    /* ── CTA BUTTONS ── */
+    .cta-row {
+      display:flex; flex-direction:column; gap:14px; width:100%; max-width:340px;
+      animation:fadeUp .5s ease both;
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .cta-btn {
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      padding:18px 28px; border-radius:14px; font-size:1.05rem; font-weight:800;
+      cursor:pointer; border:none; transition:all .2s; text-decoration:none;
+      letter-spacing:.3px;
+    }
+    .cta-btn-primary {
+      background:linear-gradient(120deg, var(--accent), var(--accent2));
+      color:#fff; box-shadow:0 4px 20px rgba(37,99,235,.35);
+    }
+    .cta-btn-primary:hover { filter:brightness(1.08); transform:translateY(-2px); box-shadow:0 8px 28px rgba(37,99,235,.45); }
+    .cta-btn-secondary {
+      background:var(--surface); color:var(--text);
+      border:2px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,.06);
+    }
+    .cta-btn-secondary:hover { border-color:var(--accent); color:var(--accent); transform:translateY(-2px); box-shadow:0 6px 20px rgba(37,99,235,.1); }
+    .cta-icon { font-size:1.3rem; }
+
+    /* ── MODAL OVERLAY ── */
+    .modal-overlay {
+      display:none; position:fixed; inset:0; z-index:500;
+      background:rgba(0,0,0,.5); backdrop-filter:blur(4px);
+      align-items:center; justify-content:center;
+      animation:modalFadeIn .2s ease;
+    }
+    .modal-overlay.open { display:flex; }
+    @keyframes modalFadeIn { from{opacity:0} to{opacity:1} }
+
+    .modal-card {
+      background:var(--surface); border-radius:20px;
+      width:92%; max-width:420px;
+      padding:32px 28px 28px;
+      box-shadow:0 20px 60px rgba(0,0,0,.28);
+      animation:modalSlideUp .25s ease;
+      text-align:center;
+    }
+    @keyframes modalSlideUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+    .modal-icon { font-size:2.4rem; margin-bottom:12px; }
+    .modal-title { font-size:1.25rem; font-weight:900; color:var(--text); margin-bottom:6px; }
+    .modal-sub { font-size:.85rem; color:var(--text2); margin-bottom:28px; line-height:1.5; }
+
+    /* Difficulty grid */
+    .diff-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; }
+    .diff-btn {
+      padding:16px 10px; border-radius:12px; border:2px solid transparent;
+      font-size:.9rem; font-weight:800; cursor:pointer; transition:all .18s;
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+    }
+    .diff-btn .diff-label { font-size:.78rem; font-weight:700; opacity:.75; }
+    .diff-easy   { background:#dcfce7; color:#15803d; border-color:#bbf7d0; }
+    .diff-easy:hover { background:#bbf7d0; border-color:#4ade80; transform:scale(1.02); }
+    .diff-medium { background:#fef9c3; color:#a16207; border-color:#fde68a; }
+    .diff-medium:hover { background:#fde68a; border-color:#fbbf24; transform:scale(1.02); }
+    .diff-hard   { background:#ffedd5; color:#c2410c; border-color:#fed7aa; }
+    .diff-hard:hover { background:#fed7aa; border-color:#fb923c; transform:scale(1.02); }
+    .diff-expert { background:#ede9fe; color:#6d28d9; border-color:#ddd6fe; }
+    .diff-expert:hover { background:#ddd6fe; border-color:#a78bfa; transform:scale(1.02); }
+
+    .modal-close-btn {
+      background:var(--surface2); border:1px solid var(--border);
+      color:var(--text2); border-radius:8px; padding:9px 18px;
+      font-size:.82rem; font-weight:700; cursor:pointer; transition:all .15s;
+      width:100%;
+    }
+    .modal-close-btn:hover { border-color:var(--text); color:var(--text); }
+
+    /* ── SPINNER ── */
+    .spinner { width:22px; height:22px; border:2.5px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* ── MOBILE ── */
+    @media (max-width: 640px) {
+      .nav-links { display:none; }
+      .nav-menu-btn { display:flex; }
+      .nav-avatar { display:none; }
+      .hero { padding:40px 20px 60px; }
+      .cta-row { max-width:100%; }
+    }
+    @media (min-width: 641px) {
+      .nav-menu-btn { display:none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="main.html" class="nav-logo">Sudoku Social</a>
+  <div class="nav-right">
+    <div class="nav-links">
+      <a href="main.html" class="nav-btn active">🏠 Home</a>
+      <a href="game.html#play" class="nav-btn">🎮 Play</a>
+      <a href="explore.html" class="nav-btn">🔍 Explore</a>
+      <a href="create.html" class="nav-btn">✏️ Create</a>
+      <a href="profile.html" class="nav-btn">👤 Profile</a>
+      <button class="nav-btn danger" onclick="handleSignOut()">Sign Out</button>
+    </div>
+    <div class="nav-avatar" id="navAvatarEl">…</div>
+    <button class="nav-menu-btn" id="navMenuBtn" aria-label="Menu">☰</button>
+  </div>
+</nav>
+
+<div class="nav-menu-dropdown" id="navMenuDropdown">
+  <a href="game.html#play" class="nav-menu-item">🎮 Play</a>
+  <a href="explore.html" class="nav-menu-item">🔍 Explore</a>
+  <a href="create.html" class="nav-menu-item">✏️ Create</a>
+  <a href="profile.html" class="nav-menu-item">👤 Profile</a>
+  <button class="nav-menu-item danger" type="button" onclick="handleSignOut()">Sign Out</button>
+</div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-icon">🏠</div>
+  <h1 class="hero-title">Sudoku Social</h1>
+  <p class="hero-sub">Challenge your mind</p>
+
+  <div class="cta-row">
+    <button class="cta-btn cta-btn-primary" onclick="openNewSudokuModal()">
+      <span class="cta-icon">✨</span> New Sudoku
+    </button>
+    <button class="cta-btn cta-btn-secondary" onclick="continueSudoku()">
+      <span class="cta-icon">▶️</span> Continue Sudoku
+    </button>
+  </div>
+</section>
+
+<!-- New Sudoku difficulty modal -->
+<div class="modal-overlay" id="diffModal" onclick="if(event.target===this)closeDiffModal()">
+  <div class="modal-card">
+    <div class="modal-icon">🎯</div>
+    <div class="modal-title">Choose Difficulty</div>
+    <div class="modal-sub">Pick a challenge level and we'll find an unsolved puzzle for you.</div>
+    <div class="diff-grid">
+      <button class="diff-btn diff-easy" onclick="startNewWithDifficulty('Easy')">
+        🌿 Easy
+        <span class="diff-label">Plenty of clues</span>
+      </button>
+      <button class="diff-btn diff-medium" onclick="startNewWithDifficulty('Medium')">
+        ☀️ Medium
+        <span class="diff-label">A real challenge</span>
+      </button>
+      <button class="diff-btn diff-hard" onclick="startNewWithDifficulty('Hard')">
+        🔥 Hard
+        <span class="diff-label">Test your skills</span>
+      </button>
+      <button class="diff-btn diff-expert" onclick="startNewWithDifficulty('Expert')">
+        💜 Expert
+        <span class="diff-label">Master level</span>
+      </button>
+    </div>
+    <button class="modal-close-btn" onclick="closeDiffModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- No puzzle in progress modal -->
+<div class="modal-overlay" id="noPuzzleModal" onclick="if(event.target===this)closeNoPuzzleModal()">
+  <div class="modal-card">
+    <div class="modal-icon">😅</div>
+    <div class="modal-title">No puzzle in progress!</div>
+    <div class="modal-sub">You haven't started a Sudoku yet. Start a New Sudoku to begin playing!</div>
+    <button class="cta-btn cta-btn-primary" style="width:100%;margin-bottom:10px;" onclick="closeNoPuzzleModal();openNewSudokuModal()">
+      <span>✨</span> Start a New Sudoku!
+    </button>
+    <button class="modal-close-btn" onclick="closeNoPuzzleModal()">Maybe later</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
+import { firebaseConfig } from './firebase-config.js';
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    window.location.replace('index.html');
+    return;
+  }
+  // Set avatar initials
+  const initial = (user.displayName || user.email || '?')[0].toUpperCase();
+  const el = document.getElementById('navAvatarEl');
+  if (el) el.textContent = initial;
+});
+
+window.handleSignOut = async () => {
+  await signOut(auth);
+  window.location.href = 'index.html';
+};
+
+// ── Mobile hamburger ──
+const menuBtn  = document.getElementById('navMenuBtn');
+const dropdown = document.getElementById('navMenuDropdown');
+if (menuBtn && dropdown) {
+  menuBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    dropdown.classList.toggle('open');
+  });
+  document.addEventListener('click', e => {
+    if (!dropdown.contains(e.target) && e.target !== menuBtn) {
+      dropdown.classList.remove('open');
+    }
+  });
+}
+
+// ── Difficulty modal ──
+window.openNewSudokuModal = () => {
+  document.getElementById('diffModal').classList.add('open');
+};
+window.closeDiffModal = () => {
+  document.getElementById('diffModal').classList.remove('open');
+};
+
+// ── Continue ──
+window.continueSudoku = () => {
+  const saved = localStorage.getItem('lastPuzzle');
+  if (!saved) {
+    document.getElementById('noPuzzleModal').classList.add('open');
+    return;
+  }
+  // Navigate to game, which will load the saved state
+  window.location.href = 'game.html#play';
+};
+
+window.closeNoPuzzleModal = () => {
+  document.getElementById('noPuzzleModal').classList.remove('open');
+};
+
+// ── Start new with difficulty ──
+window.startNewWithDifficulty = (diff) => {
+  localStorage.setItem('sudoku_newgame_difficulty', diff);
+  window.location.href = 'game.html#play';
+};
+</script>
+</body>
+</html>
