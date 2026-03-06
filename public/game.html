@@ -970,7 +970,7 @@ let selected=null,multiSel=new Set(),inputMode='digit',activeColor=PALETTE[0];
 let showConflicts=false,showMistakes=false,undoStack=[],redoStack=[];
 let timerInterval=null,seconds=0,gameWon=false,mistakeCount=0,isDragging=false,timerPaused=false;
 let currentDifficulty='medium';
-let currentPuzzleAuthor='AI',currentPuzzleAuthorUid=null,currentPuzzleIsAI=true,currentPuzzleName='',currentPuzzleId='',currentPuzzleDescription='',currentPuzzleBackgroundImage='',communityPuzzles=[];
+let currentPuzzleAuthor='App',currentPuzzleAuthorUid=null,currentPuzzleIsAI=true,currentPuzzleName='',currentPuzzleId='',currentPuzzleDescription='',currentPuzzleBackgroundImage='',communityPuzzles=[];
 let preGameContinueHandler=null;
 let currentPuzzleRatingAvg=null,currentPuzzleRatingCount=0;
 let selectedWinRating=0,currentUserExistingRating=null;
@@ -1047,7 +1047,7 @@ function showPreGameOverlay(buttonLabel,onContinue){
   if(!titleEl||!metaEl||!rulesEl||!btn||!overlay) return;
   titleEl.textContent=currentPuzzleName||'Sudoku';
   const diff=(currentDifficulty||'medium');
-  metaEl.textContent=`Author: ${currentPuzzleAuthor||'AI'} · Difficulty: ${diff.charAt(0).toUpperCase()+diff.slice(1)}`;
+  metaEl.textContent=`Author: ${currentPuzzleAuthor||'App'} · Difficulty: ${diff.charAt(0).toUpperCase()+diff.slice(1)}`;
   rulesEl.textContent=(currentPuzzleDescription&&String(currentPuzzleDescription).trim())?currentPuzzleDescription:getDefaultRulesText();
   btn.textContent=buttonLabel;
   preGameContinueHandler=typeof onContinue==='function'?onContinue:null;
@@ -1855,7 +1855,7 @@ window.startNewGame=function(showIntro=false){
   document.getElementById('loading').classList.add('show');
   setTimeout(()=>{
     gameWon=false;mistakeCount=0;undoStack=[];redoStack=[];selected=null;multiSel=new Set();
-    currentDifficulty='medium';currentPuzzleName='';currentPuzzleId='';currentPuzzleAuthor='AI';currentPuzzleIsAI=true;currentPuzzleDescription='';currentPuzzleBackgroundImage='';
+    currentDifficulty='medium';currentPuzzleName='';currentPuzzleId='';currentPuzzleAuthor='App';currentPuzzleIsAI=true;currentPuzzleDescription='';currentPuzzleBackgroundImage='';
     currentPuzzleRatingAvg=null;currentPuzzleRatingCount=0;
     gameParsedConstraints=null;
     solution=generateSolution();puzzle=createPuzzle(solution,currentDifficulty);board=puzzle.map(r=>[...r]);
