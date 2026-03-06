@@ -31,6 +31,7 @@
     .nav-btn { padding:5px 12px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:.75rem; font-weight:600; cursor:pointer; transition:all .15s; text-decoration:none; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
     .nav-btn:hover { border-color:var(--accent); color:var(--accent); }
 
+    .nav-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; color:#fff; cursor:pointer; flex-shrink:0; }
     .nav-menu-btn { display:none; padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:1rem; cursor:pointer; align-items:center; justify-content:center; }
     .nav-menu-btn:hover { border-color:var(--accent); color:var(--accent); }
 
@@ -194,7 +195,6 @@
 <nav class="navbar">
   <a href="game.html" class="nav-logo">Sudoku Social</a>
   <div class="nav-right">
-    <span class="nav-user" id="navUser"></span>
     <div class="nav-links">
       <a href="main.html" class="nav-btn">🏠 Home</a>
       <a href="game.html#play" class="nav-btn">🎮 Play</a>
@@ -203,6 +203,7 @@
       <a href="profile.html" class="nav-btn" id="historyLink">👤 Profile</a>
       <button class="nav-btn" id="signOutBtn" onclick="handleSignOut()" style="display:none">Sign Out</button>
     </div>
+    <div class="nav-avatar" id="navAvatarEl">…</div>
     <button class="nav-menu-btn" id="navMenuBtn" aria-label="Menu">☰</button>
   </div>
 </nav>
@@ -279,6 +280,8 @@
             <button class="tool-btn" id="tool-between"    onclick="setLineTool('between')">⟷ Between</button>
             <button class="tool-btn" id="tool-xv-x"      onclick="setLineTool('xv-x')">✕ XV: X (=10)</button>
             <button class="tool-btn" id="tool-xv-v"      onclick="setLineTool('xv-v')">∨ XV: V (=5)</button>
+            <button class="tool-btn" id="tool-kropki-black" onclick="setLineTool('kropki-black')">⚫ Kropki (2:1)</button>
+            <button class="tool-btn" id="tool-kropki-white" onclick="setLineTool('kropki-white')">⚪ Kropki (±1)</button>
             <button class="tool-btn wide" id="tool-killer" onclick="setRegionTool('killer')">🔢 Killer Cage</button>
             <button class="tool-btn wide" id="tool-extra"  onclick="setRegionTool('extra')">🔷 Extra Region</button>
           </div>
@@ -410,7 +413,10 @@ let currentUser = null;
 onAuthStateChanged(auth, async user => {
   if(user){
     currentUser=user; sessionStorage.removeItem('sudokuGuest');
-    document.getElementById('navUser').textContent='👤 '+(user.displayName||user.email);
+    const av=document.getElementById('navAvatarEl');
+    const navName=user.displayName||user.email||'U';
+    av.textContent=navName[0].toUpperCase();
+    av.onclick=()=>{ window.location.href='profile.html'; };
     document.getElementById('signOutBtn').style.display='';
     // Sync displayName & email to Firestore so other users can see it on profile pages
     try{
@@ -420,7 +426,8 @@ onAuthStateChanged(auth, async user => {
       if(Object.keys(syncData).length) await setDoc(doc(db,'users',user.uid), syncData, { merge: true });
     }catch(e){}
   } else if(isGuest){
-    document.getElementById('navUser').innerHTML='<span class="guest-badge">Guest</span>';
+    const av=document.getElementById('navAvatarEl');
+    av.textContent='?'; av.title='Guest';
     document.getElementById('historyLink').style.display='none';
     const histMenu=document.getElementById('historyMenuItem');
     if(histMenu) histMenu.style.display='none';
@@ -500,7 +507,7 @@ function freshConstraints(){
   return {
     thermometers:[], arrows:[], renbans:[], whispers:[],
     palindromes:[], betweens:[], killerCages:[], extraRegions:[],
-    oddCells:[], evenCells:[], xvs:[],
+    oddCells:[], evenCells:[], xvs:[], kropkis:[],
     globals:{antiknight:false,antiking:false,nonconsecutive:false,diagonalpos:false,diagonalneg:false,disjoint:false}
   };
 }
@@ -725,6 +732,26 @@ function hasConflict(g,r,c){
     }
   }
 
+  // Kropki dots — black: one is double the other; white: differ by 1
+  if((C.kropkis||[]).length){
+    for(const kr of C.kropkis){
+      if(kr.cells.includes(k)){
+        const other=kr.cells[0]===k?kr.cells[1]:kr.cells[0];
+        const orc=keyToRC(other);
+        if(orc){
+          const ov=g[orc[0]][orc[1]];
+          if(ov){
+            if(kr.type==='black'){
+              if(!(n===ov*2||ov===n*2)) return true;
+            } else {
+              if(Math.abs(n-ov)!==1) return true;
+            }
+          }
+        }
+      }
+    }
+  }
+
   return false;
 }
 function isValid(g,r,c,n){ for(let i=0;i<9;i++){if(i!==c&&g[r][i]===n)return false;if(i!==r&&g[i][c]===n)return false;} const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3; for(let rr=br;rr<br+3;rr++) for(let cc=bc;cc<bc+3;cc++) if((rr!==r||cc!==c)&&g[rr][cc]===n)return false; return true; }
@@ -736,7 +763,7 @@ function flattenPuzzle(arr){ return arr.flat().join(''); }
 function unflattenPuzzle(str){ const a=[]; for(let i=0;i<9;i++){const row=[];for(let j=0;j<9;j++)row.push(parseInt(str[i*9+j])||0);a.push(row);}return a; }
 function isFullGrid(g){ return g.every(r=>r.every(v=>v>=1&&v<=9)); }
 function isSolutionValid(puz,sol){ for(let r=0;r<9;r++) for(let c=0;c<9;c++){if(puz[r][c]&&puz[r][c]!==sol[r][c])return false;if(hasConflict(sol,r,c))return false;}return true; }
-function hasVariantConstraints(){ return C.thermometers.length||C.arrows.length||C.killerCages.length||C.renbans.length||C.palindromes.length||C.whispers.length||C.betweens.length||C.oddCells.length||C.evenCells.length||(C.extraRegions||[]).length||(C.xvs||[]).length||C.globals.antiknight||C.globals.antiking||C.globals.nonconsecutive||C.globals.diagonalpos||C.globals.diagonalneg||C.globals.disjoint; }
+function hasVariantConstraints(){ return C.thermometers.length||C.arrows.length||C.killerCages.length||C.renbans.length||C.palindromes.length||C.whispers.length||C.betweens.length||C.oddCells.length||C.evenCells.length||(C.extraRegions||[]).length||(C.xvs||[]).length||(C.kropkis||[]).length||C.globals.antiknight||C.globals.antiking||C.globals.nonconsecutive||C.globals.diagonalpos||C.globals.diagonalneg||C.globals.disjoint; }
 
 // ══════════════════════════════════════════
 // RENDER BOARD
@@ -772,6 +799,7 @@ function countConstraintItems(cons){
     +(cons.oddCells?.length||0)
     +(cons.evenCells?.length||0)
     +(cons.xvs?.length||0)
+    +(cons.kropkis?.length||0)
     +(cons.globals?Object.values(cons.globals).filter(Boolean).length:0);
 }
 
@@ -1063,6 +1091,26 @@ function commitPath(){
       }
     }
   }
+  else if(lineTool==='kropki-black'||lineTool==='kropki-white'){
+    if(cells.length>=2){
+      const k1=cells[0], k2=cells[cells.length===2?1:1];
+      const rc1=keyToRC(k1), rc2=keyToRC(k2);
+      if(rc1&&rc2){
+        const dr=Math.abs(rc1[0]-rc2[0]), dc=Math.abs(rc1[1]-rc2[1]);
+        if((dr===1&&dc===0)||(dr===0&&dc===1)){
+          const type=lineTool==='kropki-black'?'black':'white';
+          if(!C.kropkis) C.kropkis=[];
+          const existIdx=C.kropkis.findIndex(x=>(x.cells[0]===k1&&x.cells[1]===k2)||(x.cells[0]===k2&&x.cells[1]===k1));
+          if(existIdx>=0){
+            if(C.kropkis[existIdx].type===type) C.kropkis.splice(existIdx,1);
+            else C.kropkis[existIdx].type=type;
+          } else {
+            C.kropkis.push({cells:[k1,k2],type});
+          }
+        }
+      }
+    }
+  }
 }
 
 window.finishRegion=function(){
@@ -1083,6 +1131,7 @@ function deleteLinesAt(k){
   C.palindromes=C.palindromes.filter(l=>!l.cells.includes(k));
   C.betweens=C.betweens.filter(l=>!l.cells.includes(k));
   if(C.xvs) C.xvs=C.xvs.filter(x=>!x.cells.includes(k));
+  if(C.kropkis) C.kropkis=C.kropkis.filter(x=>!x.cells.includes(k));
 }
 function deleteRegionsAt(k){
   C.killerCages=C.killerCages.filter(c=>!c.cells.includes(k));
@@ -1293,6 +1342,16 @@ function renderConstraints(){
     t.textContent=xv.type; svg.appendChild(t);
   });
 
+  // Kropki dots
+  (C.kropkis||[]).forEach(kr=>{
+    const rc1=keyToRC(kr.cells[0]), rc2=keyToRC(kr.cells[1]);
+    if(!rc1||!rc2) return;
+    const mx=((rc1[1]+rc2[1])/2)*cw+cw/2;
+    const my=((rc1[0]+rc2[0])/2)*ch+ch/2;
+    const r=cw*.16;
+    svg.appendChild(svgEl('circle',{cx:mx,cy:my,r,fill:kr.type==='black'?'#111827':'#ffffff',stroke:'#374151',strokeWidth:1.5}));
+  });
+
   // Drawing preview
   if(drawPath.length>=1&&lineTool&&lineTool!=='delline'){
     const colors={thermo:'#9ca3af',arrow:'#aaaaaa',renban:'#7c3aed',whisper:'#22c55e',palindrome:'#f59e0b',between:'#0ea5e9'};
@@ -1363,6 +1422,7 @@ function updateBadges(){
   if(C.thermometers.length) items.push(`🌡️ Thermo ×${C.thermometers.length}`);
   if(C.arrows.length) items.push(`➡️ Arrow ×${C.arrows.length}`);
   if((C.xvs||[]).length) items.push(`✕∨ XV ×${C.xvs.length}`);
+  if((C.kropkis||[]).length) items.push(`⚫ Kropki ×${C.kropkis.length}`);
   if(C.killerCages.length) items.push(`🔢 Killer ×${C.killerCages.length}`);
   if(C.renbans.length) items.push(`〰️ Renban ×${C.renbans.length}`);
   if(C.whispers.length) items.push(`🤫 Whisper ×${C.whispers.length}`);
@@ -1501,6 +1561,22 @@ function thermoViolations(g) {
   return violations;
 }
 
+function kropkiViolations(g) {
+  const violations = [];
+  for(const kr of (C.kropkis||[])) {
+    const rc1=keyToRC(kr.cells[0]), rc2=keyToRC(kr.cells[1]);
+    if(!rc1||!rc2) continue;
+    const v1=g[rc1[0]][rc1[1]], v2=g[rc2[0]][rc2[1]];
+    if(!v1||!v2) continue;
+    if(kr.type==='black'){
+      if(!(v1===v2*2||v2===v1*2)) violations.push({kropki:kr, type:'black', cells:kr.cells, v1, v2});
+    } else {
+      if(Math.abs(v1-v2)!==1) violations.push({kropki:kr, type:'white', cells:kr.cells, v1, v2});
+    }
+  }
+  return violations;
+}
+
 // ── Main analyze function ──────────────────────────────────────
 window.analyzeBoard=function(){
   const html=[]; let hasErrors=false;
@@ -1578,6 +1654,18 @@ window.analyzeBoard=function(){
     const v=thermoViolations(puzzle);
     if(v.length){ hasErrors=true; v.forEach(viol=>html.push(`<div class="analysis-item error">🌡️ Thermometer not strictly increasing at ${viol.cell}</div>`)); }
     else html.push('<div class="analysis-item success">🌡️ Thermometers: OK</div>');
+  }
+
+  // ── Kropki dots ──
+  if((C.kropkis||[]).length){
+    const v=kropkiViolations(puzzle);
+    if(v.length){
+      hasErrors=true;
+      v.forEach(viol=>{
+        const rule=viol.type==='black'?'2:1 ratio':'±1 difference';
+        html.push(`<div class="analysis-item error">${viol.type==='black'?'⚫':'⚪'} Kropki ${viol.type}: ${viol.cells[0]} (${viol.v1}) and ${viol.cells[1]} (${viol.v2}) — need ${rule}</div>`);
+      });
+    } else html.push('<div class="analysis-item success">⚫⚪ Kropki dots: OK</div>');
   }
 
   // ── Summary ──
@@ -1671,6 +1759,10 @@ function getConstraintViolations(){
   oddEvenViolations(puzzle).forEach(([r,c,type])=>msgs.push(`${type==='odd'?'Odd':'Even'} cell: R${r+1}C${c+1} = ${puzzle[r][c]}`));
   killerCageViolations(puzzle).forEach(v=>{ if(v.type==='repeat') msgs.push(`Killer cage: repeated digit ${v.val}`); if(v.type==='sum') msgs.push(`Killer cage: sums to ${v.total}, expected ${v.target}`); });
   thermoViolations(puzzle).forEach(v=>msgs.push(`Thermometer not increasing at ${v.cell}`));
+  kropkiViolations(puzzle).forEach(v=>{
+    const rule=v.type==='black'?'2:1 ratio':'±1 difference';
+    msgs.push(`Kropki ${v.type}: ${v.cells[0]}(${v.v1}) & ${v.cells[1]}(${v.v2}) — need ${rule}`);
+  });
   return msgs;
 }
 
@@ -1772,6 +1864,15 @@ function renderSolConstraints(){
     svg.appendChild(svgEl('circle',{cx:mx,cy:my,r:cw*.22,fill:'white',stroke:'none'}));
     const t=svgEl('text',{x:mx,y:my,fill:'#111827','font-size':fs,'font-weight':'900','font-family':'Segoe UI,system-ui,sans-serif','text-anchor':'middle','dominant-baseline':'central','letter-spacing':'-1'});
     t.textContent=xv.type; svg.appendChild(t);
+  });
+  // Kropki dots
+  (C.kropkis||[]).forEach(kr=>{
+    const rc1=keyToRC(kr.cells[0]), rc2=keyToRC(kr.cells[1]);
+    if(!rc1||!rc2) return;
+    const mx=((rc1[1]+rc2[1])/2)*cw+cw/2;
+    const my=((rc1[0]+rc2[0])/2)*ch+ch/2;
+    const r=cw*.16;
+    svg.appendChild(svgEl('circle',{cx:mx,cy:my,r,fill:kr.type==='black'?'#111827':'#ffffff',stroke:'#374151',strokeWidth:1.5}));
   });
 }
 function solInput(n){ if(!solSel) return; const[r,c]=solSel; if(puzzle[r][c]) return; solBoard[r][c]=n; renderSolGrid(); }
@@ -1881,6 +1982,19 @@ function importFPuzzlesData(data){
 
   // Extra regions
   (data.extraregion||[]).forEach(r=>{ if(r.cells&&r.cells.length>0) C.extraRegions.push({cells:r.cells}); });
+
+  // XV constraints (f-puzzles stores as xv array with value 'X' or 'V')
+  (data.xv||[]).forEach(xv=>{
+    if(xv.cells&&xv.cells.length===2&&xv.value) C.xvs.push({cells:xv.cells, type:xv.value.toUpperCase()});
+  });
+
+  // Kropki dots (f-puzzles: difference = white, ratio = black)
+  (data.difference||[]).forEach(d=>{
+    if(d.cells&&d.cells.length===2) C.kropkis.push({cells:d.cells, type:'white'});
+  });
+  (data.ratio||[]).forEach(d=>{
+    if(d.cells&&d.cells.length===2) C.kropkis.push({cells:d.cells, type:'black'});
+  });
 }
 
 function parsePuzzleUrl(raw){

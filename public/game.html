@@ -1122,7 +1122,9 @@ function createPuzzle(sol,difficulty){const targets={easy:38,medium:30,hard:25,e
 function isGiven(r,c){return puzzle[r][c]!==0;}
 function key(r,c){return r+','+c;}
 function parseKey(k){const p=k.split(',');return[+p[0],+p[1]];}
-function hasConflict(r,c){const n=board[r][c];if(!n)return false;for(let i=0;i<9;i++){if(i!==c&&board[r][i]===n)return true;if(i!==r&&board[i][c]===n)return true;}const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let rr=br;rr<br+3;rr++)for(let cc=bc;cc<bc+3;cc++)if((rr!==r||cc!==c)&&board[rr][cc]===n)return true;return false;}
+function hasConflict(r,c){const n=board[r][c];if(!n)return false;for(let i=0;i<9;i++){if(i!==c&&board[r][i]===n)return true;if(i!==r&&board[i][c]===n)return true;}const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let rr=br;rr<br+3;rr++)for(let cc=bc;cc<bc+3;cc++)if((rr!==r||cc!==c)&&board[rr][cc]===n)return true;if(gameParsedConstraints){const k2=`R${r+1}C${c+1}`;if(hasKropkiConflict(k2,n))return true;if(hasXVConflict(k2,n))return true;}return false;}
+function hasKropkiConflict(cellKey,val){const GC=gameParsedConstraints;if(!GC||!GC.kropkis||!GC.kropkis.length)return false;for(const kr of GC.kropkis){const idx=kr.cells.indexOf(cellKey);if(idx<0)continue;const otherKey=kr.cells[1-idx];const orc=keyToRC(otherKey);if(!orc)continue;const ov=board[orc[0]][orc[1]];if(!ov)continue;if(kr.type==='black'){if(!(val===ov*2||ov===val*2))return true;}else{if(Math.abs(val-ov)!==1)return true;}}return false;}
+function hasXVConflict(cellKey,val){const GC=gameParsedConstraints;if(!GC||!GC.xvs||!GC.xvs.length)return false;for(const xv of GC.xvs){const idx=xv.cells.indexOf(cellKey);if(idx<0)continue;const otherKey=xv.cells[1-idx];const orc=keyToRC(otherKey);if(!orc)continue;const ov=board[orc[0]][orc[1]];if(!ov)continue;const sum=val+ov;if(xv.type==='X'&&sum!==10)return true;if(xv.type==='V'&&sum!==5)return true;}return false;}
 function noteConflicts(r,c,n){for(let i=0;i<9;i++){if(board[r][i]===n)return true;if(board[i][c]===n)return true;}const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let rr=br;rr<br+3;rr++)for(let cc=bc;cc<bc+3;cc++)if(board[rr][cc]===n)return true;return false;}
 function isMistake(r,c){return board[r][c]!==0&&!isGiven(r,c)&&board[r][c]!==solution[r][c];}
 
@@ -1470,6 +1472,28 @@ function renderGameConstraints(){
     [l.cells[0],l.cells[l.cells.length-1]].forEach(k=>{ const rc=keyToRC(k); if(!rc) return; svg.appendChild(svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.27,fill:'white',stroke:'#0ea5e9',strokeWidth:2})); });
   });
 
+  // XV labels
+  (GC.xvs||[]).forEach(xv=>{
+    const rc1=keyToRC(xv.cells[0]), rc2=keyToRC(xv.cells[1]);
+    if(!rc1||!rc2) return;
+    const mx=((rc1[1]+rc2[1])/2)*cw+cw/2;
+    const my=((rc1[0]+rc2[0])/2)*ch+ch/2;
+    const fs=Math.max(10,cw*.38);
+    svg.appendChild(svgEl('circle',{cx:mx,cy:my,r:cw*.22,fill:'white',stroke:'none'}));
+    const t=svgEl('text',{x:mx,y:my,fill:'#111827','font-size':fs,'font-weight':'900','font-family':'Segoe UI,system-ui,sans-serif','text-anchor':'middle','dominant-baseline':'central','letter-spacing':'-1'});
+    t.textContent=xv.type; svg.appendChild(t);
+  });
+
+  // Kropki dots
+  (GC.kropkis||[]).forEach(kr=>{
+    const rc1=keyToRC(kr.cells[0]), rc2=keyToRC(kr.cells[1]);
+    if(!rc1||!rc2) return;
+    const mx=((rc1[1]+rc2[1])/2)*cw+cw/2;
+    const my=((rc1[0]+rc2[0])/2)*ch+ch/2;
+    const r=cw*.16;
+    svg.appendChild(svgEl('circle',{cx:mx,cy:my,r,fill:kr.type==='black'?'#111827':'#ffffff',stroke:'#374151',strokeWidth:1.5}));
+  });
+
   // Chips below board
   const chipsEl=document.getElementById('constraintChips');
   if(chipsEl){
@@ -1481,6 +1505,8 @@ function renderGameConstraints(){
     if((GC.whispers||[]).length) items.push(`🤫 Whisper ×${GC.whispers.length}`);
     if((GC.palindromes||[]).length) items.push(`↔️ Palindrome ×${GC.palindromes.length}`);
     if((GC.betweens||[]).length) items.push(`⟷ Between ×${GC.betweens.length}`);
+    if((GC.xvs||[]).length) items.push(`✕∨ XV ×${GC.xvs.length}`);
+    if((GC.kropkis||[]).length) items.push(`⚫ Kropki ×${GC.kropkis.length}`);
     if((GC.extraRegions||[]).length) items.push(`🔷 Extra ×${GC.extraRegions.length}`);
     const glabels={antiknight:'♞ Anti-knight',antiking:'♚ Anti-king',nonconsecutive:'≠± Non-consec.',diagonalpos:'╱ Diag+',diagonalneg:'╲ Diag−',disjoint:'⊞ Disjoint'};
     Object.entries(GC.globals||{}).forEach(([k,v])=>{ if(v) items.push(glabels[k]||k); });
@@ -1982,7 +2008,7 @@ window.performSearch=async function(){
     }catch(e){console.log('Could not fetch Firestore puzzles:',e);}
     let results=allPuzzles.filter(p=>{
       if(q.trim()){const ql=q.toLowerCase();if(!p.name.toLowerCase().includes(ql)&&!p.author.toLowerCase().includes(ql))return false;}
-      if(authorFilter){const isAI=p.author==='AI'||p.isAI;if(authorFilter==='AI'&&!isAI)return false;if(authorFilter==='user'&&isAI)return false;}
+      if(authorFilter){const isApp=p.author==='App'||p.isAI;if(authorFilter==='App'&&!isApp)return false;if(authorFilter==='user'&&isApp)return false;}
       if(difficultyFilter&&!difficultyFilter.includes(p.difficulty))return false;
       const avg=(typeof p.ratingAvg==='number'&&Number.isFinite(p.ratingAvg))?p.ratingAvg:null;
       if(ratingFilter==='rated'&&avg==null)return false;
