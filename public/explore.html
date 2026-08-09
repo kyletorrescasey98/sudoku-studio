@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <script defer src="./vendor/offline-banner.js"></script>
   <title>Explore — Sudoku Social</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -79,7 +80,7 @@
       padding:0 20px;
     }
     .hero-label {
-      font-size:.68rem; font-weight:800; letter-spacing:3px;
+      font-size:1.05rem; font-weight:800; letter-spacing:1.5px;
       text-transform:uppercase; color:var(--accent);
       margin-bottom:10px; display:flex; align-items:center; gap:6px;
     }
@@ -157,10 +158,8 @@
     }
     .mini-grid-wrap { position:relative; }
     .mini-grid {
-      display:grid; grid-template-rows:repeat(9,1fr);
-      border:2.5px solid #374151; border-radius:8px; overflow:hidden;
-      width:220px; height:220px; background:#fff;
-      box-shadow:0 4px 16px rgba(0,0,0,.1);
+      display:flex; align-items:center; justify-content:center;
+      width:220px; height:220px;
     }
     .mg-row { display:grid; grid-template-columns:repeat(9,1fr); }
     .mg-cell {
@@ -524,10 +523,8 @@
       border-radius:20px 20px 0 0;
     }
     .modal-grid-wrap {
-      display:grid; grid-template-rows:repeat(9,1fr);
-      border:2.5px solid #374151; border-radius:8px; overflow:hidden;
-      width:280px; height:280px; background:#fff;
-      box-shadow:0 4px 20px rgba(0,0,0,.1);
+      display:flex; align-items:center; justify-content:center;
+      width:280px; height:280px;
     }
     .modal-body { padding:20px 24px 24px; display:flex; flex-direction:column; gap:10px; }
     .modal-title { font-size:1.3rem; font-weight:900; color:var(--text); }
@@ -577,6 +574,45 @@
       .card-preview { height:130px; }
       .modal-grid-wrap { width:220px; height:220px; }
     }
+
+    /* ── BOTTOM TAB BAR (mobile) ── */
+    @media (max-width:720px) {
+      .bottom-tab-bar {
+        display:flex; align-items:flex-end; justify-content:space-around;
+        background:#fff; border-top:1px solid #e5e7eb;
+        padding:6px 8px calc(10px + env(safe-area-inset-bottom));
+        position:fixed; bottom:0; left:0; right:0; z-index:600;
+        box-shadow:0 -2px 12px rgba(0,0,0,.06);
+      }
+      body { padding-bottom:calc(76px + env(safe-area-inset-bottom)) !important; }
+      .tab-item {
+        display:flex; flex-direction:column; align-items:center; gap:3px;
+        cursor:pointer; -webkit-tap-highlight-color:transparent;
+        min-width:56px; padding:4px 0; background:none; border:none;
+        font-family:inherit; text-decoration:none;
+      }
+      .tab-item:active { transform:scale(.92); }
+      .tab-icon { width:26px; height:26px; display:flex; align-items:center; justify-content:center; position:relative; }
+      .tab-icon svg { width:24px; height:24px; stroke:#9ca3af; stroke-width:1.8; fill:none; }
+      .tab-label { font-size:10px; font-weight:500; color:#9ca3af; letter-spacing:.2px; }
+      .tab-item.active .tab-icon svg { stroke:#2563eb; fill:#2563eb; fill-opacity:.12; }
+      .tab-item.active .tab-label { color:#2563eb; font-weight:600; }
+      .tab-item.active .tab-icon::after {
+        content:''; position:absolute; bottom:-5px; left:50%; transform:translateX(-50%);
+        width:4px; height:4px; border-radius:50%; background:#2563eb;
+      }
+      .tab-item.center-tab { position:relative; top:-14px; margin:0 4px; }
+      .center-btn {
+        width:52px; height:52px; border-radius:50%;
+        background:linear-gradient(135deg,#2563eb,#7c3aed);
+        display:flex; align-items:center; justify-content:center;
+        box-shadow:0 4px 16px rgba(37,99,235,.35);
+      }
+      .tab-item.center-tab:active .center-btn { transform:scale(.92); box-shadow:0 2px 8px rgba(37,99,235,.25); }
+      .center-btn svg { width:26px; height:26px; stroke:#fff; stroke-width:2; fill:none; }
+      .tab-item.center-tab .tab-label { margin-top:4px; }
+    }
+    @media (min-width:721px) { .bottom-tab-bar { display:none; } }
   </style>
 </head>
 <body>
@@ -774,14 +810,16 @@
 </div>
 
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
-import { getFirestore, collection, getDocs, getDoc, doc, setDoc, addDoc, query, where, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { initializeApp } from './vendor/firebase/12.9.0/firebase-app.js';
+import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut } from './vendor/firebase/12.9.0/firebase-auth.js';
+import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, getDocs, getDoc, doc, setDoc, addDoc, query, where, orderBy, serverTimestamp } from './vendor/firebase/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
+const auth = initializeAuth(app, { persistence: browserLocalPersistence });
+const db   = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
+});
 
 const isGuest = new URLSearchParams(location.search).has('guest') || sessionStorage.getItem('sudokuGuest') === '1';
 if (isGuest) sessionStorage.setItem('sudokuGuest', '1');
@@ -802,9 +840,9 @@ const DEFAULT_PUZZLES=[
   {id:"ai-e8",name:"Golden Vortex",puzzle:"830600705071020083420300010000093008596700100000005290063007841050800900008906050",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
   {id:"ai-e9",name:"Breezy Riddle",puzzle:"100040009700006201900002530000000903045009020800720456080457002030098100590301780",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
   {id:"ai-e10",name:"Radiant Orbit",puzzle:"704058093000092400390000850040000708109000540068007030006830070010009080832700964",difficulty:"Easy",clueCount:38,author:"App",isAI:true},
-  {id:"ai-m1",name:"Solar Jungle",puzzle:"040005980080600070000010035000060590000089047000154008908006000057031800010000000",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
+  {id:"ai-m1",name:"Solar Jungle",puzzle:"408300050000040200071056040000000300003009000026000001039612008040000100007085902",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
   {id:"ai-m2",name:"Obsidian Pinnacle",puzzle:"860020037235080000000005080000208900004019700100500000000002070620030005003007290",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
-  {id:"ai-m3",name:"Obsidian Vortex",puzzle:"400320580100000002082900000000000058030200700007860003008590400760182000050006000",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
+  {id:"ai-m3",name:"Obsidian Vortex",puzzle:"026071300300009020978050000000000000000300260031025900192700006000040189080000000",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
   {id:"ai-m4",name:"Breezy Vortex",puzzle:"000160900906002003001009407004930001600010000000600000490000020352000010100240790",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
   {id:"ai-m5",name:"Neon Riddle",puzzle:"002004008608002709000700020007435000106807940800090000001000400060000201003060500",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
   {id:"ai-m6",name:"Blazing Vortex",puzzle:"301670905590210040000030000900020004700000000020345098210450009000000007009000500",difficulty:"Medium",clueCount:30,author:"App",isAI:true},
@@ -821,13 +859,13 @@ const DEFAULT_PUZZLES=[
   {id:"ai-h7",name:"Phantom Jungle",puzzle:"930006000107209050500000800600000030000600000003050090040000270310007000060900004",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
   {id:"ai-h8",name:"Ancient Frontier",puzzle:"204000010500000007080009000000980000060000800100040560006000003010203600000018029",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
   {id:"ai-h9",name:"Solar Jewel",puzzle:"000003597203000406000006000030000020005309080000007000007018009080000002060030050",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
-  {id:"ai-h10",name:"Obsidian Wanderer",puzzle:"000030000701052000600000079000090500509060000047003000000000043000605080020001750",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
+  {id:"ai-h10",name:"Obsidian Wanderer",puzzle:"000056000200009007050700010092000600846000001000000040000570902031000000009830000",difficulty:"Hard",clueCount:25,author:"App",isAI:true},
   {id:"ai-x1",name:"Emerald Jungle",puzzle:"204060050000900082700000030007200004900070000400600015603420000000010000000000028",difficulty:"Expert",clueCount:25,author:"App",isAI:true},
-  {id:"ai-x2",name:"Frozen Riddle",puzzle:"007040000010005040000830000020000300009000001700200800000090210500061084040070003",difficulty:"Expert",clueCount:25,author:"App",isAI:true},
-  {id:"ai-x3",name:"Dazzling Flame",puzzle:"035709020029030000000008600000000008350000004000007130143800000000090000700100000",difficulty:"Expert",clueCount:24,author:"App",isAI:true},
-  {id:"ai-x4",name:"Neon Eclipse",puzzle:"250000000007062000000890060094000001500030000000000920000008100100000004600024007",difficulty:"Expert",clueCount:23,author:"App",isAI:true},
+  {id:"ai-x2",name:"Frozen Riddle",puzzle:"000100084380026000900000000806007009040001000000450600508000061003000020001090000",difficulty:"Expert",clueCount:25,author:"App",isAI:true},
+  {id:"ai-x3",name:"Dazzling Flame",puzzle:"000083007000290001090070060400300000030000120800001000001704005000000700086050000",difficulty:"Expert",clueCount:24,author:"App",isAI:true},
+  {id:"ai-x4",name:"Neon Eclipse",puzzle:"000000050790006000006000090900050601000000000240000708007100200000079180020400000",difficulty:"Expert",clueCount:23,author:"App",isAI:true},
   {id:"ai-x5",name:"Whirling Wanderer",puzzle:"000500000000006002010000805020000003004010080605049010700000000030004071000003049",difficulty:"Expert",clueCount:24,author:"App",isAI:true},
-  {id:"ai-x6",name:"Dusty Riddle",puzzle:"030200600010030000006070004500007200300000809020005003105000000040006020680003010",difficulty:"Expert",clueCount:26,author:"App",isAI:true},
+  {id:"ai-x6",name:"Dusty Riddle",puzzle:"600040001400060007000100005000072000000900270100500000000080509250000084978006000",difficulty:"Expert",clueCount:26,author:"App",isAI:true},
   {id:"ai-x7",name:"Frozen Inferno",puzzle:"001000900000014860000020050020000000087000046094200070700308000000100423000000600",difficulty:"Expert",clueCount:25,author:"App",isAI:true},
   {id:"ai-x8",name:"Kinetic Jewel",puzzle:"091000080600000702003060400000002600020040008009006014100007005000000000008000049",difficulty:"Expert",clueCount:25,author:"App",isAI:true},
   {id:"ai-x9",name:"Emerald Enigma",puzzle:"000004090003000040008970000800100900090025810000040605600702000000000007020006031",difficulty:"Expert",clueCount:26,author:"App",isAI:true},
@@ -848,8 +886,7 @@ function openPuzzleModal(p){
   const modal = document.getElementById('puzzleModal');
   // Grid
   const gridEl = document.getElementById('modalGrid');
-  gridEl.innerHTML = '';
-  renderMiniGrid(gridEl, p.puzzle||'', 280, 11);
+  renderPuzzlePreview(gridEl, p, 280);
   // Title & author
   document.getElementById('modalTitle').textContent = p.name || 'Untitled';
   document.getElementById('modalAuthor').innerHTML = `by <strong>${esc(p.author||'Unknown')}</strong>`;
@@ -913,6 +950,7 @@ window.openUserProfile = async function(uid){
 
 // ── AUTH ──────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
+  if (user && !user.emailVerified) { window.location.href='index.html'; return; }
   if (user) {
     currentUser = user;
     sessionStorage.removeItem('sudokuGuest');
@@ -939,7 +977,12 @@ onAuthStateChanged(auth, async user => {
   buildPage();
 });
 
-window.handleSignOut = async () => { await signOut(auth); sessionStorage.removeItem('sudokuGuest'); window.location.href = 'index.html'; };
+window.handleSignOut = async () => {
+  localStorage.removeItem('lastPuzzle_' + (currentUser ? currentUser.uid : 'guest'));
+  await signOut(auth);
+  sessionStorage.removeItem('sudokuGuest');
+  window.location.href = 'index.html';
+};
 
 // ── NAV MENU ──────────────────────────────────────────
 function initNavMenu(){
@@ -1031,8 +1074,7 @@ function buildPOTD(){
   document.querySelector('.hero-btn').onclick = () => launchPuzzle(p);
   // hero grid
   const heroGrid = document.getElementById('heroGrid');
-  heroGrid.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:2.5px solid #374151;border-radius:8px;overflow:hidden;width:220px;height:220px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.1);';
-  renderMiniGrid(heroGrid, p.puzzle||'', 220, 8.5);
+  renderPuzzlePreview(heroGrid, p, 220);
   document.querySelector('.hero').style.display = '';
 }
 
@@ -1058,25 +1100,148 @@ async function trackPuzzleView(puzzleId){
   }catch(e){ console.error('trackView:',e); }
 }
 
-// ── MINI GRID RENDERER ─────────────────────────────────
-function renderMiniGrid(el, clueStr, size=80, fontSize=4.5){
-  el.innerHTML = '';
-  el.style.width = size+'px'; el.style.height = size+'px';
-  const digits = (clueStr||'').replace(/\D/g,'').padEnd(81,'0');
+// ── SVG / CONSTRAINT HELPERS ──────────────────────────────────────────────
+function _keyRC(k){ const m=(k||'').match(/R(\d+)C(\d+)/); return m?[+m[1]-1,+m[2]-1]:null; }
+function _svgEl(tag,attrs){
+  const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const[k,v] of Object.entries(attrs)){
+    const a=k.replace(/([A-Z])/g,ch=>'-'+ch.toLowerCase());
+    el.setAttribute(a,String(v));
+  }
+  return el;
+}
+function _drawCage(svg,cells,stroke,fill,fillOp,cw,ch,dashed,label){
+  if(!cells||!cells.length) return;
+  const cellSet=new Set(cells);
+  if(fill!=='none') cells.forEach(k=>{ const rc=_keyRC(k); if(!rc) return; const[r,c]=rc; svg.appendChild(_svgEl('rect',{x:c*cw+2,y:r*ch+2,width:cw-4,height:ch-4,fill,fillOpacity:fillOp,rx:3})); });
+  const pad=3;
+  cells.forEach(k=>{
+    const rc=_keyRC(k); if(!rc) return; const[r,c]=rc;
+    const x0=c*cw+pad,y0=r*ch+pad,x1=x0+cw-pad*2,y1=y0+ch-pad*2;
+    [{x1:x0,y1:y0,x2:x1,y2:y0,nr:r-1,nc:c},{x1:x0,y1:y1,x2:x1,y2:y1,nr:r+1,nc:c},{x1:x0,y1:y0,x2:x0,y2:y1,nr:r,nc:c-1},{x1:x1,y1:y0,x2:x1,y2:y1,nr:r,nc:c+1}].forEach(e=>{
+      if(!cellSet.has(`R${e.nr+1}C${e.nc+1}`)){
+        const ln=_svgEl('line',{x1:e.x1,y1:e.y1,x2:e.x2,y2:e.y2,stroke,strokeWidth:1.2});
+        if(dashed) ln.setAttribute('stroke-dasharray','3 2');
+        svg.appendChild(ln);
+      }
+    });
+  });
+  if(label){ const rc=_keyRC(cells[0]); if(!rc) return; const[fr,fc]=rc; const t=_svgEl('text',{x:fc*cw+pad+2,y:fr*ch+pad+8,fill:stroke,fontSize:Math.max(5,cw*.2),fontWeight:'700',fontFamily:'Segoe UI,system-ui,sans-serif'}); t.textContent=label; svg.appendChild(t); }
+}
+
+// ── RICH PREVIEW RENDERER (grid + constraints + background) ──────────────
+function renderPuzzlePreview(container, p, size){
+  container.innerHTML='';
+  const digits=(p.puzzle||'').replace(/\D/g,'').padEnd(81,'0');
+  const borderPx=size>100?2.5:1.5;
+  const innerSize=size-borderPx*2;
+  const cw=innerSize/9, ch=innerSize/9;
+  let C=null;
+  try{ C=p.constraints?(typeof p.constraints==='string'?JSON.parse(p.constraints):p.constraints):null; }catch(e){}
+
+  const wrap=document.createElement('div');
+  wrap.style.cssText=`position:relative;width:${size}px;height:${size}px;border:${size>100?'2.5':'1.5'}px solid #374151;border-radius:${size>200?'8':size>100?'6':'4'}px;overflow:hidden;flex-shrink:0;box-shadow:${size>100?'0 4px 16px rgba(0,0,0,.10)':'none'};`;
+  if(p.backgroundImage){
+    wrap.style.backgroundImage=`linear-gradient(rgba(255,255,255,.78),rgba(255,255,255,.78)),url("${p.backgroundImage.replace(/"/g,'%22')}")`;
+    wrap.style.backgroundSize='cover';
+    wrap.style.backgroundPosition='center';
+    wrap.style.backgroundRepeat='no-repeat';
+  } else {
+    wrap.style.background='#fff';
+  }
+
+  // 9×9 grid
+  const gridDiv=document.createElement('div');
+  gridDiv.style.cssText='position:absolute;inset:0;display:grid;grid-template-rows:repeat(9,1fr);';
   for(let r=0;r<9;r++){
-    const row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:repeat(9,1fr);';
+    const row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:repeat(9,1fr);';
     for(let c=0;c<9;c++){
-      const cell = document.createElement('div');
-      const bR = (c===2||c===5)?'2px solid #6b7280':'0.5px solid #e5e7eb';
-      const bB = (r===2||r===5)?'2px solid #6b7280':'0.5px solid #e5e7eb';
-      const n = parseInt(digits[r*9+c]);
-      cell.style.cssText=`display:flex;align-items:center;justify-content:center;border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:${fontSize}px;font-weight:700;font-family:'DM Mono',monospace;color:${n?'#1f2937':'transparent'};background:${n?'#f8f9fa':'#fff'};`;
-      if(n) cell.textContent = n;
+      const cell=document.createElement('div');
+      const n=parseInt(digits[r*9+c]);
+      const bR=(c===2||c===5)?'1px solid #6b7280':'0.5px solid #e5e7eb';
+      const bB=(r===2||r===5)?'1px solid #6b7280':'0.5px solid #e5e7eb';
+      const fs=size>200?11:size>100?6:4.5;
+      cell.style.cssText=`display:flex;align-items:center;justify-content:center;border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:${fs}px;font-weight:700;color:#1f2937;background:${n?(p.backgroundImage?'rgba(248,249,250,0.82)':'#f8f9fa'):'transparent'};`;
+      if(n) cell.textContent=n;
       row.appendChild(cell);
     }
-    el.appendChild(row);
+    gridDiv.appendChild(row);
   }
+  wrap.appendChild(gridDiv);
+
+  // SVG constraint overlay
+  if(C){
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('viewBox',`0 0 ${innerSize} ${innerSize}`);
+    svg.setAttribute('width',innerSize); svg.setAttribute('height',innerSize);
+    svg.style.cssText='position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:10;';
+
+    const gl=C.globals||{};
+    if(gl.diagonalpos) svg.appendChild(_svgEl('line',{x1:0,y1:innerSize,x2:innerSize,y2:0,stroke:'#6366f1',strokeWidth:1,opacity:.4,strokeDasharray:'4 2'}));
+    if(gl.diagonalneg) svg.appendChild(_svgEl('line',{x1:0,y1:0,x2:innerSize,y2:innerSize,stroke:'#6366f1',strokeWidth:1,opacity:.4,strokeDasharray:'4 2'}));
+
+    (C.extraRegions||[]).forEach(rgn=>_drawCage(svg,rgn.cells,'#f59e0b','#fef3c7',.25,cw,ch,false,''));
+    (C.killerCages||[]).forEach(cage=>_drawCage(svg,cage.cells,'#374151','none',0,cw,ch,true,cage.value));
+
+    (C.oddCells||[]).forEach(k=>{ const rc=_keyRC(k); if(!rc) return; svg.appendChild(_svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.3,fill:'none',stroke:'#9ca3af',strokeWidth:.8,opacity:.6})); });
+    (C.evenCells||[]).forEach(k=>{ const rc=_keyRC(k); if(!rc) return; svg.appendChild(_svgEl('rect',{x:rc[1]*cw+cw*.15,y:rc[0]*ch+ch*.15,width:cw*.7,height:ch*.7,fill:'none',stroke:'#9ca3af',strokeWidth:.8,rx:1.5,opacity:.6})); });
+
+    (C.thermometers||[]).forEach(t=>{
+      if(!t.cells||t.cells.length<1) return;
+      if(t.cells.length>=2){
+        const pts=t.cells.map(k=>{ const rc=_keyRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
+        svg.appendChild(_svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#d4d4d4',strokeWidth:cw*.27,strokeLinecap:'round',strokeLinejoin:'round'}));
+      }
+      const rc=_keyRC(t.cells[0]); if(!rc) return;
+      svg.appendChild(_svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.32,fill:'#d4d4d4',stroke:'#bbbbbb',strokeWidth:1.2}));
+    });
+
+    (C.arrows||[]).forEach(a=>{
+      const line=a.lines&&a.lines[0]; if(!line||line.length<2) return;
+      const brc=_keyRC((a.bulb&&a.bulb[0])||line[0]); if(!brc) return;
+      const bx=brc[1]*cw+cw/2, by=brc[0]*ch+ch/2, br=cw*.32;
+      const centers=line.map(k=>{ const rc=_keyRC(k); return rc?[rc[1]*cw+cw/2,rc[0]*ch+ch/2]:null; }).filter(Boolean);
+      if(centers.length>=2){
+        svg.appendChild(_svgEl('polyline',{points:centers.map(([x,y])=>`${x},${y}`).join(' '),fill:'none',stroke:'#aaaaaa',strokeWidth:1.4,strokeLinecap:'round',strokeLinejoin:'round'}));
+        const[lx,ly]=centers[centers.length-1],[px,py]=centers[centers.length-2];
+        const ang=Math.atan2(ly-py,lx-px),hl=cw*.21;
+        svg.appendChild(_svgEl('polyline',{points:`${lx-hl*Math.cos(ang-Math.PI/5)},${ly-hl*Math.sin(ang-Math.PI/5)} ${lx},${ly} ${lx-hl*Math.cos(ang+Math.PI/5)},${ly-hl*Math.sin(ang+Math.PI/5)}`,fill:'none',stroke:'#aaaaaa',strokeWidth:1.4,strokeLinecap:'round',strokeLinejoin:'round'}));
+      }
+      svg.appendChild(_svgEl('circle',{cx:bx,cy:by,r:br,fill:'white',stroke:'#aaaaaa',strokeWidth:1.4}));
+    });
+
+    const dl=(cells,color,width)=>{ if(!cells||cells.length<2) return; const pts=cells.map(k=>{ const rc=_keyRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean); svg.appendChild(_svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:color,strokeWidth:width,strokeLinecap:'round',strokeLinejoin:'round',opacity:.85})); };
+    (C.renbans||[]).forEach(l=>dl(l.cells,'#7c3aed',cw*.16));
+    (C.whispers||[]).forEach(l=>dl(l.cells,'#22c55e',cw*.16));
+    (C.palindromes||[]).forEach(l=>dl(l.cells,'#f59e0b',cw*.16));
+    (C.betweens||[]).forEach(l=>{
+      dl(l.cells,'#0ea5e9',cw*.12);
+      [l.cells[0],l.cells[l.cells.length-1]].forEach(k=>{ const rc=_keyRC(k); if(!rc) return; svg.appendChild(_svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.25,fill:'white',stroke:'#0ea5e9',strokeWidth:1.5})); });
+    });
+
+    (C.xvs||[]).forEach(xv=>{
+      const rc1=_keyRC(xv.cells[0]),rc2=_keyRC(xv.cells[1]); if(!rc1||!rc2) return;
+      const mx=((rc1[1]+rc2[1])/2)*cw+cw/2, my=((rc1[0]+rc2[0])/2)*ch+ch/2;
+      svg.appendChild(_svgEl('circle',{cx:mx,cy:my,r:cw*.21,fill:'white',stroke:'none'}));
+      const t=_svgEl('text',{x:mx,y:my,fill:'#111827',fontSize:Math.max(7,cw*.36),fontWeight:'900',fontFamily:'Segoe UI,system-ui,sans-serif',textAnchor:'middle',dominantBaseline:'central'});
+      t.textContent=xv.type; svg.appendChild(t);
+    });
+
+    (C.kropkis||[]).forEach(kr=>{
+      const rc1=_keyRC(kr.cells[0]),rc2=_keyRC(kr.cells[1]); if(!rc1||!rc2) return;
+      const mx=((rc1[1]+rc2[1])/2)*cw+cw/2, my=((rc1[0]+rc2[0])/2)*ch+ch/2;
+      svg.appendChild(_svgEl('circle',{cx:mx,cy:my,r:cw*.14,fill:kr.type==='black'?'#111827':'#ffffff',stroke:'#374151',strokeWidth:1.2}));
+    });
+
+    wrap.appendChild(svg);
+  }
+
+  container.appendChild(wrap);
+}
+
+function renderMiniGrid(el, clueStr, size=80){
+  renderPuzzlePreview(el, {puzzle:clueStr}, size);
 }
 
 // ── PUZZLE CARD ────────────────────────────────────────
@@ -1094,8 +1259,7 @@ function makePuzzleCard(p, rank){
     preview.appendChild(rb);
   }
   const gridEl = document.createElement('div');
-  gridEl.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:130px;height:130px;background:#fff;';
-  renderMiniGrid(gridEl, p.puzzle||'', 130, 6);
+  renderPuzzlePreview(gridEl, p, 130);
   preview.appendChild(gridEl);
 
   const diff = p.difficulty||'';
@@ -1118,12 +1282,21 @@ function makePuzzleCard(p, rank){
   return card;
 }
 
+// ── VARIANT FILTER HELPER ─────────────────────────────
+function puzzleMatchesVariantFilter(p, filter){
+  if(filter==='all') return true;
+  const normalize = s => s.toLowerCase().replace(/[-\s]/g,'');
+  const variants = getPuzzleVariants(p);
+  const labels = variants.map(v => normalize(v.label));
+  return labels.includes(normalize(filter));
+}
+
 // ── BUILD TRENDING (by weekly clicks + rating weight) ──
 async function buildTrending(filter='all'){
   const row = document.getElementById('trendingRow');
   row.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:.82rem;">Loading trending...</div>';
   
-  let puzzles = filter==='all' ? allPuzzles : allPuzzles.filter(p => (p.difficulty||'').toLowerCase()===filter);
+  let puzzles = allPuzzles.filter(p => puzzleMatchesVariantFilter(p, filter));
   if(!puzzles.length){ row.innerHTML='<div style="padding:20px;color:var(--text3);font-size:.82rem;">No puzzles yet</div>'; return; }
   
   try{
@@ -1183,7 +1356,7 @@ async function buildTrending(filter='all'){
 function buildRated(filter='all'){
   const row = document.getElementById('ratedRow');
   row.innerHTML = '';
-  let puzzles = filter==='all' ? allPuzzles : allPuzzles.filter(p => (p.difficulty||'').toLowerCase()===filter);
+  let puzzles = allPuzzles.filter(p => puzzleMatchesVariantFilter(p, filter));
   const sorted = [...puzzles]
     .filter(p=>typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg))
     .sort((a,b)=>b.ratingAvg-a.ratingAvg).slice(0,8);
@@ -1252,8 +1425,7 @@ function buildNewFeed(){
     g.className = 'feed-grid';
     g.style.cssText='flex-shrink:0;';
     const gridEl = document.createElement('div');
-    gridEl.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:70px;height:70px;background:#fff;';
-    renderMiniGrid(gridEl, p.puzzle||'', 70, 3.5);
+    renderPuzzlePreview(gridEl, p, 70);
     g.appendChild(gridEl);
     item.innerHTML=`
       <div class="feed-info">
@@ -1328,11 +1500,11 @@ window.runSearch = function(){
   const query  = document.getElementById('searchMainInput').value.trim().toLowerCase();
   const author = document.getElementById('sfAuthor')?.value||'';
   const diff   = document.getElementById('sfDifficulty')?.value||'';
-  const variant= document.getElementById('sfVariant')?.value||''; // stored for future use
+  const variant= document.getElementById('sfVariant')?.value||'';
   const rating = document.getElementById('sfRating')?.value||'';
   const sort   = document.getElementById('sfSort')?.value||'relevance';
 
-  if(!query&&!author&&!diff&&!rating){ collapseSearch(); return; }
+  if(!query&&!author&&!diff&&!variant&&!rating){ collapseSearch(); return; }
 
   let results = allPuzzles.filter(p => {
     if(query){
@@ -1342,6 +1514,7 @@ window.runSearch = function(){
     if(author==='App'&&!p.isAI) return false;
     if(author==='community'&&p.isAI) return false;
     if(diff && (p.difficulty||'').toLowerCase()!==diff.toLowerCase()) return false;
+    if(variant && !puzzleMatchesVariantFilter(p, variant)) return false;
     const avg=(typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg))?p.ratingAvg:null;
     if(rating==='rated'&&avg==null) return false;
     if(rating==='4plus'&&(avg==null||avg<4)) return false;
@@ -1387,8 +1560,7 @@ function makeSearchResultCard(p){
   card.onclick=()=>openPuzzleModal(p);
   const preview=document.createElement('div'); preview.className='card-preview';
   const gridEl=document.createElement('div');
-  gridEl.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:130px;height:130px;background:#fff;';
-  renderMiniGrid(gridEl,p.puzzle||'',130,6);
+  renderPuzzlePreview(gridEl,p,130);
   preview.appendChild(gridEl);
   const diff=p.difficulty||'';
   const rating=(typeof p.ratingAvg==='number'&&isFinite(p.ratingAvg))?`★ ${p.ratingAvg.toFixed(1)}`:'Unrated';
@@ -1417,5 +1589,15 @@ function makeSearchResultCard(p){
   });
 });
 </script>
+
+<!-- Bottom Tab Bar -->
+<nav class="bottom-tab-bar">
+  <a class="tab-item" href="main.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><span class="tab-label">Home</span></a>
+  <a class="tab-item active" href="explore.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><span class="tab-label">Explore</span></a>
+  <a class="tab-item center-tab" href="game.html#play"><div class="center-btn"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div><span class="tab-label">Play</span></a>
+  <a class="tab-item" href="create.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div><span class="tab-label">Create</span></a>
+  <a class="tab-item" href="profile.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="tab-label">Profile</span></a>
+</nav>
+
 </body>
 </html>

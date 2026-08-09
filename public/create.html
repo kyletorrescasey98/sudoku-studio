@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script defer src="./vendor/offline-banner.js"></script>
   <title>Create Sudoku</title>
   <meta name="description" content="Create your own Sudoku puzzles and share them with others" />
   <meta property="og:title" content="Sudoku Studio - Create Puzzle" />
@@ -188,6 +189,45 @@
       .side-panel { flex-direction:row; flex-wrap:wrap; width:min(92vw,540px); }
       .panel-card { flex:1; min-width:150px; }
     }
+
+    /* ── BOTTOM TAB BAR (mobile) ── */
+    @media (max-width:720px) {
+      .bottom-tab-bar {
+        display:flex; align-items:flex-end; justify-content:space-around;
+        background:#fff; border-top:1px solid #e5e7eb;
+        padding:6px 8px calc(10px + env(safe-area-inset-bottom));
+        position:fixed; bottom:0; left:0; right:0; z-index:600;
+        box-shadow:0 -2px 12px rgba(0,0,0,.06);
+      }
+      body { padding-bottom:calc(76px + env(safe-area-inset-bottom)) !important; }
+      .tab-item {
+        display:flex; flex-direction:column; align-items:center; gap:3px;
+        cursor:pointer; -webkit-tap-highlight-color:transparent;
+        min-width:56px; padding:4px 0; background:none; border:none;
+        font-family:inherit; text-decoration:none;
+      }
+      .tab-item:active { transform:scale(.92); }
+      .tab-icon { width:26px; height:26px; display:flex; align-items:center; justify-content:center; position:relative; }
+      .tab-icon svg { width:24px; height:24px; stroke:#9ca3af; stroke-width:1.8; fill:none; }
+      .tab-label { font-size:10px; font-weight:500; color:#9ca3af; letter-spacing:.2px; }
+      .tab-item.active .tab-icon svg { stroke:#2563eb; fill:#2563eb; fill-opacity:.12; }
+      .tab-item.active .tab-label { color:#2563eb; font-weight:600; }
+      .tab-item.active .tab-icon::after {
+        content:''; position:absolute; bottom:-5px; left:50%; transform:translateX(-50%);
+        width:4px; height:4px; border-radius:50%; background:#2563eb;
+      }
+      .tab-item.center-tab { position:relative; top:-14px; margin:0 4px; }
+      .center-btn {
+        width:52px; height:52px; border-radius:50%;
+        background:linear-gradient(135deg,#2563eb,#7c3aed);
+        display:flex; align-items:center; justify-content:center;
+        box-shadow:0 4px 16px rgba(37,99,235,.35);
+      }
+      .tab-item.center-tab:active .center-btn { transform:scale(.92); box-shadow:0 2px 8px rgba(37,99,235,.25); }
+      .center-btn svg { width:26px; height:26px; stroke:#fff; stroke-width:2; fill:none; }
+      .tab-item.center-tab .tab-label { margin-top:4px; }
+    }
+    @media (min-width:721px) { .bottom-tab-bar { display:none; } }
   </style>
 </head>
 <body>
@@ -219,8 +259,8 @@
 
 <div class="page-content">
   <div class="top-bar">
-    <input type="text" id="sudokuName" placeholder="Puzzle name (optional)" maxlength="80" style="min-width:170px;" />
-    <input type="text" id="sudokuDescription" placeholder="Description / rules (optional)" maxlength="500" style="min-width:200px; flex:1;" />
+    <button class="btn-ghost meta-btn" id="sudokuNameBtn" onclick="openMetaModal('name')">✏️ Name</button>
+    <button class="btn-ghost meta-btn" id="sudokuDescBtn" onclick="openMetaModal('desc')">📝 Rules</button>
     <button class="btn-primary" onclick="saveSudoku()">💾 Save</button>
     <button class="btn-ghost" onclick="clearBoard()">🗑️ Clear</button>
     <button class="btn-ghost" onclick="window.location.href='game.html#play'">🎮 Play</button>
@@ -396,21 +436,44 @@
   </div>
 </div>
 
+<!-- EDIT NAME/DESCRIPTION MODAL -->
+<div id="metaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)closeMetaModal()">
+  <div style="background:#fff;border-radius:16px;padding:28px 28px 24px;max-width:480px;width:100%;box-shadow:0 8px 48px rgba(0,0,0,.25);position:relative;">
+    <button onclick="closeMetaModal()" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;line-height:1;padding:0 4px;">×</button>
+    <div id="metaModalTitle" style="font-size:1.05rem;font-weight:800;margin-bottom:14px;">Edit Name</div>
+    <div id="metaNameSection" style="display:none;margin-bottom:14px;">
+      <label style="font-size:.72rem;font-weight:700;color:#6b7280;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px;">Puzzle Name</label>
+      <input type="text" id="metaNameInput" maxlength="80" placeholder="e.g. My Cool Puzzle" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.9rem;outline:none;color:#111827;background:#f8f9fa;" />
+    </div>
+    <div id="metaDescSection" style="display:none;margin-bottom:14px;">
+      <label style="font-size:.72rem;font-weight:700;color:#6b7280;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px;">Description / Rules</label>
+      <textarea id="metaDescInput" maxlength="500" rows="3" placeholder="Describe the puzzle or its rules…" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.9rem;outline:none;color:#111827;background:#f8f9fa;resize:vertical;font-family:inherit;"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeMetaModal()" style="padding:8px 18px;border-radius:7px;border:1px solid #d1d5db;background:#f0f2f5;color:#374151;font-size:.84rem;font-weight:600;cursor:pointer;">Cancel</button>
+      <button onclick="saveMetaModal()" style="padding:8px 22px;border-radius:7px;border:none;background:#2563eb;color:#fff;font-size:.84rem;font-weight:700;cursor:pointer;">Done</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, serverTimestamp, doc, setDoc } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { initializeApp } from './vendor/firebase/12.9.0/firebase-app.js';
+import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut } from './vendor/firebase/12.9.0/firebase-auth.js';
+import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, addDoc, serverTimestamp, doc, setDoc } from './vendor/firebase/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const auth = initializeAuth(app, { persistence: browserLocalPersistence });
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
+});
 
 const isGuest = new URLSearchParams(location.search).has('guest') || sessionStorage.getItem('sudokuGuest')==='1';
 if(isGuest) sessionStorage.setItem('sudokuGuest','1');
 let currentUser = null;
 
 onAuthStateChanged(auth, async user => {
+  if(user && !user.emailVerified){ window.location.href='index.html'; return; }
   if(user){
     currentUser=user; sessionStorage.removeItem('sudokuGuest');
     const av=document.getElementById('navAvatarEl');
@@ -435,7 +498,12 @@ onAuthStateChanged(auth, async user => {
     window.location.href='index.html';
   }
 });
-window.handleSignOut=async()=>{ await signOut(auth); sessionStorage.removeItem('sudokuGuest'); window.location.href='index.html'; };
+window.handleSignOut=async()=>{
+  localStorage.removeItem('lastPuzzle_' + (currentUser ? currentUser.uid : 'guest'));
+  await signOut(auth);
+  sessionStorage.removeItem('sudokuGuest');
+  window.location.href='index.html';
+};
 
 // Mobile nav dropdown
 function initNavMenu(){
@@ -452,6 +520,95 @@ function initNavMenu(){
   });
 }
 initNavMenu();
+
+// ══════════════════════════════════════════
+// NAME / DESCRIPTION — buttons + modal
+// ══════════════════════════════════════════
+// Internal storage for puzzle name and description
+let _metaName='', _metaDesc='';
+let _metaEditing=null; // 'name' | 'desc' | null
+
+// Create proxy objects so all existing `document.getElementById('sudokuName').value`
+// references keep working seamlessly.
+const sudokuNameProxy = {
+  get value(){ return _metaName; },
+  set value(v){ _metaName=v; _updateMetaButtons(); },
+  addEventListener(){}  // no-op: draft listeners are wired through scheduleCreateDraftSave
+};
+const sudokuDescProxy = {
+  get value(){ return _metaDesc; },
+  set value(v){ _metaDesc=v; _updateMetaButtons(); },
+  addEventListener(){}
+};
+
+// Override getElementById for these two IDs so existing code works.
+const _origGetById = document.getElementById.bind(document);
+document.getElementById = function(id){
+  if(id==='sudokuName') return sudokuNameProxy;
+  if(id==='sudokuDescription') return sudokuDescProxy;
+  return _origGetById(id);
+};
+
+function _updateMetaButtons(){
+  const nameBtn=_origGetById('sudokuNameBtn');
+  const descBtn=_origGetById('sudokuDescBtn');
+  if(nameBtn){
+    nameBtn.textContent=_metaName?('✏️ '+_metaName):'✏️ Name';
+  }
+  if(descBtn){
+    descBtn.textContent=_metaDesc?('📝 '+_metaDesc):'📝 Rules';
+  }
+}
+
+window.openMetaModal=function(which){
+  _metaEditing=which;
+  const modal=_origGetById('metaModal');
+  const nameS=_origGetById('metaNameSection');
+  const descS=_origGetById('metaDescSection');
+  const title=_origGetById('metaModalTitle');
+  const nameI=_origGetById('metaNameInput');
+  const descI=_origGetById('metaDescInput');
+  if(which==='name'){
+    title.textContent='✏️ Edit Puzzle Name';
+    nameS.style.display='';
+    descS.style.display='none';
+    nameI.value=_metaName;
+  } else {
+    title.textContent='📝 Edit Description / Rules';
+    nameS.style.display='none';
+    descS.style.display='';
+    descI.value=_metaDesc;
+  }
+  modal.style.display='flex';
+  requestAnimationFrame(()=>{
+    if(which==='name') nameI.focus();
+    else descI.focus();
+  });
+};
+
+window.closeMetaModal=function(){
+  _metaEditing=null;
+  _origGetById('metaModal').style.display='none';
+};
+
+window.saveMetaModal=function(){
+  if(_metaEditing==='name'){
+    _metaName=_origGetById('metaNameInput').value.trim();
+  } else {
+    _metaDesc=_origGetById('metaDescInput').value.trim();
+  }
+  _updateMetaButtons();
+  window.closeMetaModal();
+  if(typeof scheduleCreateDraftSave==='function') scheduleCreateDraftSave();
+};
+
+// Allow Enter in name input to save, and Cmd/Ctrl+Enter in description textarea
+_origGetById('metaNameInput')?.addEventListener('keydown',function(e){
+  if(e.key==='Enter'){ e.preventDefault(); window.saveMetaModal(); }
+});
+_origGetById('metaDescInput')?.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); window.saveMetaModal(); }
+});
 
 // Import mode: 'url' | 'image'
 let importMode='url';
@@ -2007,9 +2164,9 @@ function parsePuzzleUrl(raw){
       if(!data) return{error:'Could not decompress f-puzzles data.'};
       return{data,title:data.title||'',description:data.ruleset||''};
     }
-    const spLong=raw.match(/(?:sudokupad\.app|crackingthecryptic\.web\.app|app\.crackingthecryptic\.com)(?:\/sudoku)?\/fpuz([A-Za-z0-9+/=\-_$]+)/);
+    const spLong=raw.match(/(?:sudokupad\.app|crackingthecryptic\.web\.app|app\.crackingthecryptic\.com)(?:\/sudoku)?\/fpuz([A-Za-z0-9+/=\-_$%]+)/);
     if(spLong){
-      const data=decodeFPuzzles(spLong[1]);
+      const data=decodeFPuzzles(decodeURIComponent(spLong[1]));
       if(!data) return{error:'Could not decompress SudokuPad data.'};
       return{data,title:data.title||'',description:data.ruleset||''};
     }
@@ -2341,6 +2498,7 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(document.getElementById('importModal').style.display!=='none') return;
+  if(_origGetById('metaModal').style.display!=='none') return;
   if(e.ctrlKey||e.metaKey||e.altKey) return;
 
   // Enter finishes region
@@ -2369,5 +2527,15 @@ initDraftFlow();
 // Re-render SVG on resize (board width changes)
 new ResizeObserver(()=>renderConstraints()).observe(document.getElementById('board'));
 </script>
+
+<!-- Bottom Tab Bar -->
+<nav class="bottom-tab-bar">
+  <a class="tab-item" href="main.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><span class="tab-label">Home</span></a>
+  <a class="tab-item" href="explore.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><span class="tab-label">Explore</span></a>
+  <a class="tab-item center-tab" href="game.html#play"><div class="center-btn"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div><span class="tab-label">Play</span></a>
+  <a class="tab-item active" href="create.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div><span class="tab-label">Create</span></a>
+  <a class="tab-item" href="profile.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="tab-label">Profile</span></a>
+</nav>
+
 </body>
 </html>

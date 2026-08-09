@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <script defer src="./vendor/offline-banner.js"></script>
   <title>Sudoku Studio</title>
   <meta name="description" content="Challenge your mind with Sudoku Studio" />
   <meta property="og:title" content="Sudoku Studio" />
@@ -24,16 +25,17 @@
       --accent:#2563eb; --accent2:#7c3aed; --text:#111827; --text2:#6b7280;
       --border:#d1d5db; --success:#16a34a;
     }
+    html, body { overflow:hidden; height:100%; }
     body {
       font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
       background:linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
       color:var(--text);
-      min-height:100vh;
+      height:100vh;
       display:flex;
       flex-direction:column;
       align-items:center;
       justify-content:center;
-      padding:24px;
+      padding:env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
     }
     .container {
       text-align:center;
@@ -252,25 +254,23 @@
     </div>
   </div>
 
-  <script src="firebase-config.js"></script>
-  <script>
-    // Check if user is logged in
+  <script type="module">
+    import { initializeApp } from './vendor/firebase/12.9.0/firebase-app.js';
+    import { initializeAuth, browserLocalPersistence, onAuthStateChanged } from './vendor/firebase/12.9.0/firebase-auth.js';
+    import { firebaseConfig } from './firebase-config.js';
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = initializeAuth(app, { persistence: browserLocalPersistence });
+
+    // Give a brief moment so the splash is visible, then redirect
     setTimeout(() => {
-      // Import Firebase (if needed)
-      if (typeof firebase !== 'undefined') {
-        firebase.auth().onAuthStateChanged((user) => {
-          if (user) {
-            // User is signed in, go to game
-            window.location.href = 'explore.html';
-          } else {
-            // No user, redirect to sign in
-            window.location.href = 'index.html';
-          }
-        });
-      } else {
-        // Firebase not loaded, just go to index
-        window.location.href = 'index.html';
-      }
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          window.location.href = 'explore.html';
+        } else {
+          window.location.href = 'index.html';
+        }
+      });
     }, 1500);
   </script>
 </body>

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <script defer src="./vendor/offline-banner.js"></script>
   <title>Home — Sudoku Social</title>
   <meta name="description" content="Sudoku Social — Challenge your mind with engaging Sudoku puzzles" />
   <meta property="og:title" content="Sudoku Social" />
@@ -24,18 +25,21 @@
       --accent:#2563eb; --accent2:#7c3aed; --text:#111827; --text2:#6b7280;
       --error:#dc2626; --success:#16a34a; --border:#d1d5db;
     }
+    html, body {
+      overflow:hidden; height:100%; /* prevent scroll on iOS */
+    }
     body {
       font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
       background:var(--bg); color:var(--text);
       min-height:100vh; display:flex; flex-direction:column;
-      align-items:center; overflow-x:hidden;
+      align-items:center;
     }
 
     /* ── NAVBAR ── */
     .navbar {
       width:100%; background:var(--surface);
       border-bottom:1px solid var(--border);
-      padding:0 20px; height:52px;
+      padding:env(safe-area-inset-top) 20px 0; height:calc(52px + env(safe-area-inset-top));
       display:flex; align-items:center; justify-content:space-between;
       gap:12px; flex-shrink:0; position:sticky; top:0; z-index:100;
     }
@@ -72,7 +76,7 @@
     }
     .nav-menu-btn:hover { border-color:var(--accent); color:var(--accent); }
     .nav-menu-dropdown {
-      display:none; position:fixed; top:52px; right:12px;
+      display:none; position:fixed; top:calc(52px + env(safe-area-inset-top)); right:12px;
       background:var(--surface); border:1px solid var(--border);
       border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.18);
       z-index:200; min-width:170px; overflow:hidden;
@@ -94,8 +98,9 @@
     .hero {
       flex:1; display:flex; flex-direction:column; align-items:center;
       justify-content:center; text-align:center;
-      padding:60px 24px 80px; gap:0;
+      padding:20px 24px 40px; gap:0;
       width:100%; max-width:600px;
+      overflow:hidden;
     }
     .hero-icon {
       font-size:3.5rem; margin-bottom:20px;
@@ -141,6 +146,10 @@
     }
     .cta-btn-secondary:hover { border-color:var(--accent); color:var(--accent); transform:translateY(-2px); box-shadow:0 6px 20px rgba(37,99,235,.1); }
     .cta-icon { font-size:1.3rem; }
+    .cta-btn.is-disabled { opacity:.45; cursor:not-allowed; pointer-events:none; box-shadow:none; }
+    .cta-btn.is-disabled:hover { transform:none; border-color:var(--border); color:var(--text); box-shadow:none; }
+    .cta-text { display:inline-flex; flex-direction:column; align-items:flex-start; line-height:1.15; }
+    .cta-meta { font-size:.72em; font-weight:600; opacity:.75; margin-top:2px; letter-spacing:0; }
 
     /* ── MODAL OVERLAY ── */
     .modal-overlay {
@@ -181,6 +190,18 @@
     .diff-hard:hover { background:#fed7aa; border-color:#fb923c; transform:scale(1.02); }
     .diff-expert { background:#ede9fe; color:#6d28d9; border-color:#ddd6fe; }
     .diff-expert:hover { background:#ddd6fe; border-color:#a78bfa; transform:scale(1.02); }
+    .diff-generate {
+      grid-column:1 / -1;
+      background:#f0f9ff; color:#0369a1; border-color:#bae6fd;
+    }
+    .diff-generate:hover { background:#bae6fd; border-color:#38bdf8; transform:scale(1.01); }
+    .diff-generate.busy { opacity:.6; cursor:progress; }
+    .guest-badge {
+      display:inline-flex; align-items:center; justify-content:center;
+      background:#e5e7eb; color:#374151;
+      border-radius:999px; padding:3px 10px;
+      font-size:.7rem; font-weight:700; letter-spacing:.4px;
+    }
 
     .modal-close-btn {
       background:var(--surface2); border:1px solid var(--border);
@@ -199,12 +220,54 @@
       .nav-links { display:none; }
       .nav-menu-btn { display:flex; }
       .nav-avatar { display:none; }
-      .hero { padding:40px 20px 60px; }
+      .hero { padding:10px 20px 30px; }
       .cta-row { max-width:100%; }
     }
     @media (min-width: 641px) {
       .nav-menu-btn { display:none; }
     }
+
+    /* ── BOTTOM TAB BAR (mobile) ── */
+    @media (max-width:720px) {
+      .bottom-tab-bar {
+        display:flex; align-items:flex-end; justify-content:space-around;
+        background:#fff; border-top:1px solid #e5e7eb;
+        padding:6px 8px calc(10px + env(safe-area-inset-bottom));
+        position:fixed; bottom:0; left:0; right:0; z-index:600;
+        box-shadow:0 -2px 12px rgba(0,0,0,.06);
+      }
+      html, body { overflow:auto !important; height:auto !important; }
+      body { padding-bottom:calc(76px + env(safe-area-inset-bottom)) !important; }
+      .hero { flex:none; padding-top:70px; padding-bottom:10px; margin-bottom:0; }
+      .hero-sub { margin-bottom:24px; }
+      .tab-item {
+        display:flex; flex-direction:column; align-items:center; gap:3px;
+        cursor:pointer; -webkit-tap-highlight-color:transparent;
+        min-width:56px; padding:4px 0; background:none; border:none;
+        font-family:inherit; text-decoration:none;
+      }
+      .tab-item:active { transform:scale(.92); }
+      .tab-icon { width:26px; height:26px; display:flex; align-items:center; justify-content:center; position:relative; }
+      .tab-icon svg { width:24px; height:24px; stroke:#9ca3af; stroke-width:1.8; fill:none; }
+      .tab-label { font-size:10px; font-weight:500; color:#9ca3af; letter-spacing:.2px; }
+      .tab-item.active .tab-icon svg { stroke:#2563eb; fill:#2563eb; fill-opacity:.12; }
+      .tab-item.active .tab-label { color:#2563eb; font-weight:600; }
+      .tab-item.active .tab-icon::after {
+        content:''; position:absolute; bottom:-5px; left:50%; transform:translateX(-50%);
+        width:4px; height:4px; border-radius:50%; background:#2563eb;
+      }
+      .tab-item.center-tab { position:relative; top:-14px; margin:0 4px; }
+      .center-btn {
+        width:52px; height:52px; border-radius:50%;
+        background:linear-gradient(135deg,#2563eb,#7c3aed);
+        display:flex; align-items:center; justify-content:center;
+        box-shadow:0 4px 16px rgba(37,99,235,.35);
+      }
+      .tab-item.center-tab:active .center-btn { transform:scale(.92); box-shadow:0 2px 8px rgba(37,99,235,.25); }
+      .center-btn svg { width:26px; height:26px; stroke:#fff; stroke-width:2; fill:none; }
+      .tab-item.center-tab .tab-label { margin-top:4px; }
+    }
+    @media (min-width:721px) { .bottom-tab-bar { display:none; } }
   </style>
 </head>
 <body>
@@ -243,8 +306,12 @@
     <button class="cta-btn cta-btn-primary" onclick="openNewSudokuModal()">
       <span class="cta-icon">✨</span> New Sudoku
     </button>
-    <button class="cta-btn cta-btn-secondary" onclick="continueSudoku()">
-      <span class="cta-icon">▶️</span> Continue Sudoku
+    <button id="continueBtn" class="cta-btn cta-btn-secondary is-disabled" onclick="continueSudoku()" disabled>
+      <span class="cta-icon">▶️</span>
+      <span class="cta-text">
+        <span id="continueLabel">No puzzle in progress</span>
+        <span id="continueMeta" class="cta-meta"></span>
+      </span>
     </button>
   </div>
 </section>
@@ -272,6 +339,10 @@
         💜 Expert
         <span class="diff-label">Master level</span>
       </button>
+      <button class="diff-btn diff-generate" id="generateBtn" onclick="generateOfflinePuzzle()">
+        🎲 Generate Puzzle
+        <span class="diff-label">Fresh puzzle, works offline</span>
+      </button>
     </div>
     <button class="modal-close-btn" onclick="closeDiffModal()">Cancel</button>
   </div>
@@ -291,26 +362,59 @@
 </div>
 
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
+import { initializeApp } from './vendor/firebase/12.9.0/firebase-app.js';
+import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut } from './vendor/firebase/12.9.0/firebase-auth.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const auth = initializeAuth(app, { persistence: browserLocalPersistence });
+
+let currentUser = null;
+const isGuest = new URLSearchParams(location.search).has('guest')
+             || sessionStorage.getItem('sudokuGuest') === '1';
+if (isGuest) sessionStorage.setItem('sudokuGuest', '1');
+
+// Returns the localStorage key scoped to the signed-in user so that
+// no two accounts on the same device can share puzzle state.
+function getLastPuzzleKey(){
+  if (currentUser) return 'lastPuzzle_' + currentUser.uid;
+  return 'lastPuzzle_guest';
+}
 
 onAuthStateChanged(auth, user => {
-  if (!user) {
+  if (user && !user.emailVerified) {
     window.location.replace('index.html');
     return;
   }
-  // Set avatar initials
-  const initial = (user.displayName || user.email || '?')[0].toUpperCase();
-  const el = document.getElementById('navAvatarEl');
-  if (el) el.textContent = initial;
+  if (user) {
+    currentUser = user;
+    sessionStorage.removeItem('sudokuGuest');
+    const initial = (user.displayName || user.email || '?')[0].toUpperCase();
+    const el = document.getElementById('navAvatarEl');
+    if (el) el.textContent = initial;
+  } else if (isGuest) {
+    const el = document.getElementById('navAvatarEl');
+    if (el) { el.textContent = '?'; el.title = 'Guest'; }
+    const nav = document.getElementById('navUser') || document.querySelector('.nav-user');
+    if (nav && !nav.querySelector('.guest-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'guest-badge';
+      badge.textContent = 'Guest';
+      badge.style.marginRight = '8px';
+      nav.prepend(badge);
+    }
+  } else {
+    window.location.replace('index.html');
+    return;
+  }
+  refreshContinueButton();
 });
 
 window.handleSignOut = async () => {
-  await signOut(auth);
+  const keyToRemove = getLastPuzzleKey();
+  if (currentUser) await signOut(auth);
+  localStorage.removeItem(keyToRemove);
+  sessionStorage.removeItem('sudokuGuest');
   window.location.href = 'index.html';
 };
 
@@ -338,13 +442,70 @@ window.closeDiffModal = () => {
 };
 
 // ── Continue ──
+// Returns the saved puzzle blob only if it represents actual user progress
+// (any non-clue cell filled) and isn't already solved. Null otherwise.
+function readInProgressPuzzle() {
+  try {
+    const raw = localStorage.getItem(getLastPuzzleKey());
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (!p || !p.puzzle || !p.board) return null;
+
+    let progressed = false, complete = true;
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const clue = p.puzzle[r][c], cell = p.board[r][c];
+        if (cell === 0) complete = false;
+        if (!clue && cell && cell !== clue) progressed = true;
+      }
+    }
+    if (p.solution && complete) {
+      const solved = p.board.every((row, r) => row.every((v, c) => v === p.solution[r][c]));
+      if (solved) return null;
+    }
+    return progressed ? p : null;
+  } catch { return null; }
+}
+
+function truncateName(name, max = 18) {
+  if (!name) return '';
+  return name.length > max ? name.slice(0, max).trimEnd() + '…' : name;
+}
+
+function titleCase(s) {
+  if (!s) return '';
+  return s[0].toUpperCase() + s.slice(1);
+}
+
+function refreshContinueButton() {
+  const btn   = document.getElementById('continueBtn');
+  const label = document.getElementById('continueLabel');
+  const meta  = document.getElementById('continueMeta');
+  if (!btn || !label || !meta) return;
+
+  const p = readInProgressPuzzle();
+  if (!p) {
+    btn.disabled = true;
+    btn.classList.add('is-disabled');
+    label.textContent = 'No puzzle in progress';
+    meta.textContent = '';
+    return;
+  }
+  const filled = p.board.flat().filter(v => v).length;
+  const pct = Math.round((filled / 81) * 100);
+  const title = truncateName(p.name) || titleCase(p.difficulty) || 'Sudoku';
+
+  btn.disabled = false;
+  btn.classList.remove('is-disabled');
+  label.textContent = 'Continue Sudoku';
+  meta.textContent = `${title} · ${pct}%`;
+}
+
 window.continueSudoku = () => {
-  const saved = localStorage.getItem('lastPuzzle');
-  if (!saved) {
+  if (!readInProgressPuzzle()) {
     document.getElementById('noPuzzleModal').classList.add('open');
     return;
   }
-  // Navigate to game, which will load the saved state
   window.location.href = 'game.html#play';
 };
 
@@ -357,6 +518,43 @@ window.startNewWithDifficulty = (diff) => {
   localStorage.setItem('sudoku_newgame_difficulty', diff);
   window.location.href = 'game.html#play';
 };
+
+// ── Generate a fresh puzzle locally (works offline) ──
+window.generateOfflinePuzzle = async () => {
+  const btn = document.getElementById('generateBtn');
+  if (btn?.classList.contains('busy')) return;
+  const diff = window.prompt('Difficulty? (Easy, Medium, Hard, Expert)', 'Medium');
+  if (!diff) return;
+  btn?.classList.add('busy');
+  try {
+    const { generatePuzzle } = await import('./vendor/puzzle-gen.js');
+    // Yield to the UI so the busy state renders before the CPU work.
+    await new Promise(r => setTimeout(r, 20));
+    const p = generatePuzzle(diff);
+    sessionStorage.setItem('generatedPuzzle', JSON.stringify(p));
+    window.location.href = 'game.html#generated';
+  } catch (e) {
+    console.error('generator failed', e);
+    alert('Could not generate a puzzle. Please try again.');
+    btn?.classList.remove('busy');
+  }
+};
+
+// Refresh Continue state when returning from the game screen (bfcache/tab switch).
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshContinueButton();
+});
+window.addEventListener('pageshow', () => refreshContinueButton());
 </script>
+
+<!-- Bottom Tab Bar -->
+<nav class="bottom-tab-bar">
+  <a class="tab-item active" href="main.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><span class="tab-label">Home</span></a>
+  <a class="tab-item" href="explore.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><span class="tab-label">Explore</span></a>
+  <a class="tab-item center-tab" href="game.html#play"><div class="center-btn"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div><span class="tab-label">Play</span></a>
+  <a class="tab-item" href="create.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div><span class="tab-label">Create</span></a>
+  <a class="tab-item" href="profile.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="tab-label">Profile</span></a>
+</nav>
+
 </body>
 </html>

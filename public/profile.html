@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script defer src="./vendor/offline-banner.js"></script>
   <title>Profile — Sudoku Social</title>
   <meta name="description" content="View your Sudoku profile, stats, solve history and created puzzles" />
   <meta property="og:title" content="Sudoku Social - Profile" />
@@ -50,7 +51,7 @@
     .avatar-modal-content { padding:24px; }
     .avatar-option-section { margin-bottom:32px; }
     .avatar-option-title { font-size:.9rem; font-weight:800; color:var(--text); margin-bottom:12px; text-transform:uppercase; letter-spacing:.5px; }
-    .avatar-options-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(60px,1fr)); gap:12px; }
+    .avatar-options-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(60px,1fr)); gap:12px; max-height:320px; overflow-y:auto; padding-right:4px; }
     .avatar-option { width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; border:3px solid transparent; transition:all .15s; font-size:1.8rem; }
     .avatar-option:hover { transform:scale(1.1); border-color:var(--accent); }
     .avatar-option.selected { border-color:var(--accent); box-shadow:0 0 0 2px rgba(37,99,235,.2); }
@@ -79,6 +80,8 @@
     .spinner { width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
     @keyframes spin { to{transform:rotate(360deg)} }
     @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes modalSlideUp { from{opacity:0;transform:translateY(24px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+    @keyframes modalFadeIn { from{opacity:0} to{opacity:1} }
 
     /* ── PROFILE HEADER ── */
     .profile-header { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:28px 28px 24px; display:flex; gap:22px; align-items:flex-start; animation:fadeUp .35s ease both; }
@@ -89,16 +92,35 @@
     .profile-avatar.pattern { background-size:cover; background-position:center; }
     .avatar-edit-btn { position:absolute; bottom:-2px; right:-2px; width:24px; height:24px; border-radius:50%; background:var(--accent); color:#fff; border:2px solid var(--surface); font-size:.7rem; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s; }
     .avatar-edit-btn:hover { background:var(--accent2); transform:scale(1.1); }
-    .profile-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+    .profile-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; overflow:hidden; width:100%; }
     .profile-name-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .profile-name { font-size:1.4rem; font-weight:900; color:var(--text); line-height:1.1; }
     .profile-username { font-size:.82rem; color:var(--text2); font-weight:600; }
     .profile-join { font-size:.72rem; color:var(--text2); display:flex; align-items:center; gap:5px; }
     .profile-stats-row { display:flex; gap:16px; margin-bottom:8px; }
-    .profile-stat { display:flex; flex-direction:column; align-items:center; }
+    .profile-stat { display:flex; flex-direction:column; align-items:center; cursor:pointer; padding:4px 8px; border-radius:8px; transition:background .15s; }
+    .profile-stat:hover { background:var(--surface2); }
     .profile-stat-num { font-size:1rem; font-weight:800; color:var(--text); }
     .profile-stat-label { font-size:.7rem; color:var(--text2); text-transform:uppercase; letter-spacing:.5px; }
-    .profile-bio-wrap { display:flex; align-items:center; gap:8px; }
+
+    /* ── FOLLOW LIST MODAL ── */
+    .follow-modal-overlay { display:none; position:fixed; inset:0; z-index:700; background:rgba(0,0,0,.5); backdrop-filter:blur(4px); align-items:center; justify-content:center; }
+    .follow-modal-overlay.open { display:flex; }
+    .follow-modal { background:var(--surface); border-radius:18px; width:92%; max-width:420px; max-height:75vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.28); animation:modalSlideUp .22s ease; }
+    .follow-modal-header { padding:18px 20px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    .follow-modal-title { font-size:1rem; font-weight:800; }
+    .follow-modal-close { background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text2); padding:4px 6px; border-radius:6px; transition:all .15s; line-height:1; }
+    .follow-modal-close:hover { background:var(--surface2); color:var(--text); }
+    .follow-modal-body { overflow-y:auto; padding:10px 12px; flex:1; }
+    .follow-user-row { display:flex; align-items:center; gap:12px; padding:10px 8px; border-radius:10px; cursor:pointer; transition:background .12s; text-decoration:none; color:var(--text); }
+    .follow-user-row:hover { background:var(--surface2); }
+    .follow-user-avatar { width:38px; height:38px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.1rem; font-weight:800; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; overflow:hidden; }
+    .follow-user-avatar img { width:100%; height:100%; object-fit:cover; }
+    .follow-user-name { font-size:.88rem; font-weight:700; }
+    .follow-user-handle { font-size:.72rem; color:var(--text2); }
+    .follow-modal-empty { text-align:center; padding:32px 16px; color:var(--text2); font-size:.88rem; }
+    .follow-modal-loading { text-align:center; padding:24px; color:var(--text2); font-size:.85rem; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .profile-bio-wrap { display:flex; align-items:center; gap:8px; width:100%; max-width:100%; overflow:hidden; }
     .profile-bio { font-size:.84rem; color:var(--text2); font-style:italic; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .profile-bio.empty { color:var(--surface3); }
     .bio-edit-input { flex:1; min-width:0; font-size:.84rem; padding:4px 8px; border:1px solid var(--border); border-radius:6px; color:var(--text); background:var(--surface2); outline:none; font-family:inherit; }
@@ -207,6 +229,16 @@
     .diff-medium { background:#fef9c3; color:#854d0e; }
     .diff-hard   { background:#fee2e2; color:#b91c1c; }
     .diff-expert { background:#ede9fe; color:#6d28d9; }
+    .hi-replay-badge { display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:999px; font-size:.62rem; font-weight:700; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; white-space:nowrap; }
+
+    /* ── PAGINATION ── */
+    .pagination { display:flex; align-items:center; justify-content:center; gap:4px; padding:18px 0 8px; flex-wrap:wrap; }
+    .pg-btn { min-width:34px; height:34px; padding:0 8px; border-radius:7px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:.82rem; font-weight:700; cursor:pointer; transition:all .15s; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; }
+    .pg-btn:hover:not(:disabled):not(.pg-current) { border-color:var(--accent); color:var(--accent); background:rgba(37,99,235,.06); }
+    .pg-btn.pg-current { background:var(--accent); color:#fff; border-color:var(--accent); cursor:default; }
+    .pg-btn:disabled { opacity:.4; cursor:not-allowed; }
+    .pg-btn.pg-nav { padding:0 12px; font-size:.78rem; }
+    .pg-dots { color:var(--text2); font-size:.88rem; font-weight:700; padding:0 4px; line-height:34px; user-select:none; }
 
     /* ── CREATED PUZZLES GRID ── */
     .created-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px; }
@@ -297,12 +329,55 @@
     @media (max-width:640px) {
       .nav-links { display:none; }
       .nav-menu-btn { display:inline-flex; }
-      .profile-header { flex-direction:column; align-items:center; text-align:center; }
+      .profile-header { flex-direction:column; align-items:center; text-align:center; overflow:hidden; }
+      .profile-info { width:100%; overflow:hidden; }
       .profile-name-row { justify-content:center; }
+      .profile-bio-wrap { justify-content:center; }
+      .profile-bio { white-space:normal; overflow:visible; text-overflow:unset; text-align:center; word-break:break-word; }
       .profile-actions { justify-content:center; }
+      .profile-stats-row { justify-content:center; }
       .stats-row { grid-template-columns:1fr; }
       .created-grid { grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); }
     }
+
+    /* ── BOTTOM TAB BAR (mobile) ── */
+    @media (max-width:720px) {
+      .bottom-tab-bar {
+        display:flex; align-items:flex-end; justify-content:space-around;
+        background:#fff; border-top:1px solid #e5e7eb;
+        padding:6px 8px calc(10px + env(safe-area-inset-bottom));
+        position:fixed; bottom:0; left:0; right:0; z-index:600;
+        box-shadow:0 -2px 12px rgba(0,0,0,.06);
+      }
+      body { padding-bottom:calc(76px + env(safe-area-inset-bottom)) !important; }
+      .tab-item {
+        display:flex; flex-direction:column; align-items:center; gap:3px;
+        cursor:pointer; -webkit-tap-highlight-color:transparent;
+        min-width:56px; padding:4px 0; background:none; border:none;
+        font-family:inherit; text-decoration:none;
+      }
+      .tab-item:active { transform:scale(.92); }
+      .tab-icon { width:26px; height:26px; display:flex; align-items:center; justify-content:center; position:relative; }
+      .tab-icon svg { width:24px; height:24px; stroke:#9ca3af; stroke-width:1.8; fill:none; }
+      .tab-label { font-size:10px; font-weight:500; color:#9ca3af; letter-spacing:.2px; }
+      .tab-item.active .tab-icon svg { stroke:#2563eb; fill:#2563eb; fill-opacity:.12; }
+      .tab-item.active .tab-label { color:#2563eb; font-weight:600; }
+      .tab-item.active .tab-icon::after {
+        content:''; position:absolute; bottom:-5px; left:50%; transform:translateX(-50%);
+        width:4px; height:4px; border-radius:50%; background:#2563eb;
+      }
+      .tab-item.center-tab { position:relative; top:-14px; margin:0 4px; }
+      .center-btn {
+        width:52px; height:52px; border-radius:50%;
+        background:linear-gradient(135deg,#2563eb,#7c3aed);
+        display:flex; align-items:center; justify-content:center;
+        box-shadow:0 4px 16px rgba(37,99,235,.35);
+      }
+      .tab-item.center-tab:active .center-btn { transform:scale(.92); box-shadow:0 2px 8px rgba(37,99,235,.25); }
+      .center-btn svg { width:26px; height:26px; stroke:#fff; stroke-width:2; fill:none; }
+      .tab-item.center-tab .tab-label { margin-top:4px; }
+    }
+    @media (min-width:721px) { .bottom-tab-bar { display:none; } }
   </style>
 </head>
 <body>
@@ -362,13 +437,24 @@
         <div id="nameErrorMsg" style="display:none;font-size:.75rem;color:var(--error);margin-top:2px;font-weight:600;"></div>
         <div class="profile-join" id="profileJoin">📅 Joined —</div>
         <div class="profile-stats-row" id="profileStatsRow">
-          <div class="profile-stat">
+          <div class="profile-stat" onclick="openFollowModal('followers')" title="View followers">
             <span class="profile-stat-num" id="followersCount">0</span>
             <span class="profile-stat-label">followers</span>
           </div>
-          <div class="profile-stat">
+          <div class="profile-stat" onclick="openFollowModal('following')" title="View following">
             <span class="profile-stat-num" id="followingCount">0</span>
             <span class="profile-stat-label">following</span>
+          </div>
+        </div>
+
+        <!-- Follow List Modal -->
+        <div class="follow-modal-overlay" id="followModalOverlay" onclick="if(event.target===this)closeFollowModal()">
+          <div class="follow-modal">
+            <div class="follow-modal-header">
+              <span class="follow-modal-title" id="followModalTitle">Followers</span>
+              <button class="follow-modal-close" onclick="closeFollowModal()">✕</button>
+            </div>
+            <div class="follow-modal-body" id="followModalBody"></div>
           </div>
         </div>
         <div class="profile-bio-wrap" id="bioWrap">
@@ -430,6 +516,7 @@
       <div class="tabs-section">
         <div class="tab-bar">
           <button class="tab-btn active" id="tabBtnHistory" onclick="switchTab('history')">📋 Solve History</button>
+          <button class="tab-btn" id="tabBtnUnsolved" onclick="switchTab('unsolved')">⏳ Unsolved</button>
           <button class="tab-btn" id="tabBtnCreated" onclick="switchTab('created')">✏️ Created Puzzles</button>
         </div>
         <div class="tab-pane active" id="paneHistory">
@@ -458,6 +545,29 @@
             </div>
           </div>
           <div class="history-list" id="historyList"></div>
+          <div class="pagination" id="historyPagination"></div>
+        </div>
+        <div class="tab-pane" id="paneUnsolved">
+          <div class="filter-bar">
+            <div class="filter-group">
+              <span class="filter-label">Difficulty:</span>
+              <button class="filter-chip active" id="ufDiff-all"   onclick="setUnsolvedFilter('diff','all')">All</button>
+              <button class="filter-chip"        id="ufDiff-easy"  onclick="setUnsolvedFilter('diff','easy')">Easy</button>
+              <button class="filter-chip"        id="ufDiff-medium" onclick="setUnsolvedFilter('diff','medium')">Medium</button>
+              <button class="filter-chip"        id="ufDiff-hard"  onclick="setUnsolvedFilter('diff','hard')">Hard</button>
+              <button class="filter-chip"        id="ufDiff-expert" onclick="setUnsolvedFilter('diff','expert')">Expert</button>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Variant:</span>
+              <button class="filter-chip active" id="ufVar-all"     onclick="setUnsolvedFilter('variant','all')">All</button>
+              <button class="filter-chip"        id="ufVar-classic" onclick="setUnsolvedFilter('variant','classic')">Classic</button>
+              <button class="filter-chip"        id="ufVar-killer"  onclick="setUnsolvedFilter('variant','killer')">Killer</button>
+              <button class="filter-chip"        id="ufVar-thermo"  onclick="setUnsolvedFilter('variant','thermo')">Thermo</button>
+              <button class="filter-chip"        id="ufVar-arrow"   onclick="setUnsolvedFilter('variant','arrow')">Arrow</button>
+            </div>
+          </div>
+          <div class="history-list" id="unsolvedList"></div>
+          <div class="pagination" id="unsolvedPagination"></div>
         </div>
         <div class="tab-pane" id="paneCreated">
           <div class="filter-bar">
@@ -479,6 +589,7 @@
             </div>
           </div>
           <div class="created-grid" id="createdGrid"></div>
+          <div class="pagination" id="createdPagination"></div>
         </div>
       </div>
 
@@ -545,14 +656,16 @@
 </div>
 
 <script type="module">
-import { initializeApp }        from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut, updateProfile } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
-import { getFirestore, collection, getDocs, getDoc, setDoc, doc, query, orderBy, where, deleteDoc, deleteField } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
+import { initializeApp }        from './vendor/firebase/12.9.0/firebase-app.js';
+import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut, updateProfile } from './vendor/firebase/12.9.0/firebase-auth.js';
+import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, getDocs, getDoc, setDoc, updateDoc, doc, query, orderBy, where, limit, deleteDoc, deleteField, getCountFromServer, increment } from './vendor/firebase/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
+const auth = initializeAuth(app, { persistence: browserLocalPersistence });
+const db   = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
+});
 
 // ── STATE ────────────────────────────────────────────
 let currentUser    = null;
@@ -560,11 +673,18 @@ let viewUid        = null;
 let isOwnProfile   = true;
 let allSolves      = [];
 let createdPuzzles = [];
+let allUnsolved    = [];
 let solveSort         = 'date';
 let solveFilterDiff   = 'all';
 let solveFilterVariant= 'all';
 let createdFilterDiff = 'all';
 let createdFilterVariant = 'all';
+let unsolvedFilterDiff    = 'all';
+let unsolvedFilterVariant = 'all';
+let solvePage    = 1;
+let unsolvedPage = 1;
+let createdPage  = 1;
+const ITEMS_PER_PAGE = 10;
 
 // ── APP PUZZLE CLUES (mirrors DEFAULT_PUZZLES in game.html) ──────────────
 const AI_PUZZLE_MAP = {
@@ -640,7 +760,9 @@ function fmtDate(ts){
 }
 function relDate(ts){
   const d=ts?.toDate?ts.toDate():new Date(ts||Date.now());
-  const diff=Math.floor((Date.now()-d)/86400000);
+  const today=new Date(); today.setHours(0,0,0,0);
+  const day=new Date(d); day.setHours(0,0,0,0);
+  const diff=Math.round((today-day)/86400000);
   if(diff===0) return 'Today';
   if(diff===1) return 'Yesterday';
   if(diff<7)   return diff+'d ago';
@@ -651,14 +773,40 @@ function escHtml(str){ const d=document.createElement('span'); d.textContent=str
 
 // ── AVATAR CUSTOMIZATION SYSTEM ─────────────────────────
 const EMOJI_AVATARS = [
-  '😀','😃','😄','😁','😊','🙂','😉','😍','🥰','😘','😗','😙','😚','🤗','🤔','🤭',
-  '🤫','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷',
-  '🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐','😕',
-  '😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱',
-  '😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩',
-  '🤡','👹','👺','👻','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿',
-  '😾','🙈','🙉','🙊','💋','💌','💘','💝','💖','💗','💓','💞','💕','💟','❣️','💔',
-  '❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍','💯','💢','💥','💫','💦','💨','🕳️'
+  // Faces & People
+  '😀','😃','😄','😁','😊','🙂','😉','😍','🥰','😘','🤗','🤔','😎','🤓','🧐','🥳',
+  '😏','😒','🙄','😬','🤨','😐','😑','😶','😌','😔','😴','🤤','🥺','😢','😭','😱',
+  '😤','😡','🤬','😈','👿','💀','☠️','🤡','👹','👺','👻','👽','👾','🤖','🎃',
+  '😺','😸','😻','😼','🙀','😿','🙈','🙉','🙊',
+  // Animals — land
+  '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵',
+  '🙊','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛',
+  '🦋','🐌','🐞','🐜','🦟','🦗','🕷️','🦂','🐢','🐍','🦎','🦖','🦕','🐊',
+  '🦏','🦛','🦒','🦓','🦙','🦘','🦥','🦦','🦨','🦡','🐿️','🦔','🐾',
+  // Animals — sea & water 🐡 = puffer fish
+  '🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐙','🦑','🦐','🦞','🦀','🦪','🐚',
+  '🐸','🦭','🦦','🦜','🐊','🐢',
+  // Birds & flying
+  '🦅','🦆','🦉','🦚','🦜','🦩','🦢','🕊️','🐓','🦃','🦤','🐦','🐧','🦋',
+  // Nature & plants
+  '🌵','🎄','🌲','🌳','🌴','🪴','🌿','☘️','🍀','🎍','🎋','🍃','🍂','🍁',
+  '🌾','🌺','🌻','🌸','🌼','💐','🌷','🌹','🥀','🌱','🌙','⭐','🌟','💫',
+  '✨','🌈','☀️','🌤️','⛅','🌦️','🌧️','⛈️','🌩️','❄️','🌊','🔥','💧','🌪️',
+  // Food & drink
+  '🍕','🍔','🌮','🌯','🍜','🍣','🍱','🍩','🍪','🎂','🍰','🧁','🍫','🍬',
+  '🍭','🍦','🧃','☕','🧋','🍺','🍻','🥂','🍷','🍸','🍹','🧉','🍾',
+  '🍎','🍊','🍋','🍇','🍓','🫐','🍑','🍒','🥭','🍍','🥥','🥑','🍆','🌽',
+  // Activities & sports
+  '⚽','🏀','🏈','⚾','🎾','🏐','🏉','🥏','🎱','🏓','🏸','🥊','🥋','🎯',
+  '🏹','🎣','🤿','🎽','🛹','🛷','🥌','⛷️','🏂','🪂','🏋️','🤸','🏊','🚴',
+  '🎮','🕹️','🎲','🧩','🎻','🎸','🎹','🥁','🎺','🎷','🎤','🎧','🎨','🖌️',
+  // Objects & symbols
+  '🚀','🛸','🌍','🌎','🌏','🗺️','⚡','💎','🔮','🧿','🪬','🧲','💡','🔭',
+  '🔬','⚗️','🧪','📚','✏️','🖊️','📱','💻','⌚','📷','🎩','👑','💍','🏆',
+  '🥇','🎖️','🏅','🎪','🎠','🎡','🎢','🃏','🀄',
+  // Hearts & symbols
+  '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓',
+  '💗','💖','💝','💘','💯','🔥','✌️','🤘','🤙','👋','🙌','👏','🤝','🫶',
 ];
 
 const PATTERN_AVATARS = [
@@ -836,34 +984,49 @@ function initNavMenu(){
 }
 initNavMenu();
 
-window.handleSignOut = async()=>{ await signOut(auth); window.location.href='index.html'; };
+window.handleSignOut = async()=>{
+  localStorage.removeItem('lastPuzzle_' + (currentUser ? currentUser.uid : 'guest'));
+  await signOut(auth);
+  window.location.href='index.html';
+};
 
 // ── AUTH ─────────────────────────────────────────────
 onAuthStateChanged(auth, async user=>{
   if(!user){ window.location.href='index.html'; return; }
+  if(!user.emailVerified){ window.location.href='index.html'; return; }
   currentUser=user;
   viewUid=targetUid||user.uid;
   isOwnProfile=(viewUid===user.uid);
 
   const av=document.getElementById('navAvatarEl');
   const navName=user.displayName||user.email||'U';
-  // Use default initials for nav avatar initially - will be updated when profile loads
   av.textContent=navName[0].toUpperCase();
   av.style.background=avatarGradient(navName);
   av.onclick=()=>{ window.location.href='profile.html'; };
 
-  // Sync current user's name & email to Firestore so other users can see it on profile pages
   try{
-    const syncData = {};
-    if(user.displayName) { syncData.displayName = user.displayName; syncData.displayNameLower = user.displayName.toLowerCase(); }
-    if(user.email) syncData.email = user.email;
-    if(Object.keys(syncData).length) await setDoc(doc(db,'users',user.uid), syncData, { merge: true });
-  }catch(e){}
+    // Sync current user's name & email to Firestore so other users can see it on profile pages
+    try{
+      const syncData = {};
+      if(user.displayName) { syncData.displayName = user.displayName; syncData.displayNameLower = user.displayName.toLowerCase(); }
+      if(user.email) syncData.email = user.email;
+      if(Object.keys(syncData).length) await setDoc(doc(db,'users',user.uid), syncData, { merge: true });
+    }catch(e){}
 
-  await loadProfile();
-  document.getElementById('loadingArea').style.display='none';
-  const ca=document.getElementById('contentArea');
-  ca.style.display='flex';
+    // Race loadProfile against a 12-second timeout (guards against Safari hanging on Firestore)
+    await Promise.race([
+      loadProfile(),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Profile load timeout')),12000))
+    ]);
+  }catch(e){
+    console.error('Profile load error:', e);
+    // Still render whatever partial data we have so the page isn't frozen
+    try{ renderAll(); }catch(_){}
+  }finally{
+    // Always hide the loading screen — no matter what went wrong
+    document.getElementById('loadingArea').style.display='none';
+    document.getElementById('contentArea').style.display='flex';
+  }
 });
 
 // Global variable to track our follow status
@@ -952,7 +1115,34 @@ async function loadProfile(){
     const q=query(collection(db,'puzzles'),where('authorUid','==',viewUid));
     const snap=await getDocs(q);
     createdPuzzles=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    // Backfill solveCount from solvers subcollection for puzzles missing it
+    await Promise.all(createdPuzzles.filter(p=>!p.solveCount).map(async p=>{
+      try{
+        const countSnap=await getCountFromServer(collection(db,'puzzles',p.id,'solvers'));
+        const cnt=countSnap.data().count;
+        p.solveCount=cnt;
+        if(cnt>0) updateDoc(doc(db,'puzzles',p.id),{solveCount:cnt}).catch(()=>{});
+      }catch(_){}
+    }));
   }catch(e){ createdPuzzles=[]; }
+
+  // Load in-progress (started but not completed) puzzles
+  try{
+    const completedIds=new Set(allSolves.filter(s=>s.puzzleId).map(s=>s.puzzleId));
+    const startedSnap=await getDocs(collection(db,'users',viewUid,'started'));
+    const startedDocs=startedSnap.docs.map(d=>({id:d.id,...d.data()})).filter(d=>!completedIds.has(d.id));
+    if(startedDocs.length){
+      // Batch-fetch puzzle details for each started puzzle
+      const puzzleSnaps=await Promise.all(startedDocs.map(d=>getDoc(doc(db,'puzzles',d.id))));
+      allUnsolved=startedDocs.map((d,i)=>{
+        const pData=puzzleSnaps[i].exists()?puzzleSnaps[i].data():null;
+        if(!pData) return null;
+        return {...pData, id:d.id, startedAt:d.startedAt, secondsSpent:d.seconds||0};
+      }).filter(Boolean);
+    } else {
+      allUnsolved=[];
+    }
+  }catch(e){ allUnsolved=[]; }
 
   // If profileDoc has no name, look it up from the solver record on any puzzle they solved
   if(!profileDoc.displayName && !profileDoc.name && !profileDoc.fullName && !profileDoc.username){
@@ -981,6 +1171,7 @@ function renderAll(){
     renderSetterStats();
     renderAchievements();
     renderSolveHistory();
+    renderUnsolvedHistory();
     renderCreatedPuzzles();
   }
 }
@@ -1233,20 +1424,73 @@ async function toggleFollow(){
 }
 
 function updateFollowCounts(){
-  // Count followers: only count entries that are explicitly true
   const followersCount = profileDoc.followers ? 
     Object.values(profileDoc.followers).filter(val => val === true).length : 0;
   document.getElementById('followersCount').textContent = followersCount;
-  
-  // Count following: only count entries that are explicitly true
   const followingCount = profileDoc.following ? 
     Object.values(profileDoc.following).filter(val => val === true).length : 0;
   document.getElementById('followingCount').textContent = followingCount;
-  
-  console.log('Updated follow counts - Followers:', followersCount, 'Following:', followingCount);
-  console.log('Raw followers data:', profileDoc.followers);
-  console.log('Raw following data:', profileDoc.following);
 }
+
+window.openFollowModal = async function openFollowModal(type){
+  const overlay = document.getElementById('followModalOverlay');
+  const title   = document.getElementById('followModalTitle');
+  const body    = document.getElementById('followModalBody');
+  title.textContent = type === 'followers' ? 'Followers' : 'Following';
+  body.innerHTML = '<div class="follow-modal-loading"><div class="spinner"></div> Loading…</div>';
+  overlay.classList.add('open');
+
+  // Get the UIDs that are true in the relevant map
+  const map = (type === 'followers' ? profileDoc.followers : profileDoc.following) || {};
+  const uids = Object.entries(map).filter(([,v]) => v === true).map(([uid]) => uid);
+
+  if(!uids.length){
+    body.innerHTML = `<div class="follow-modal-empty">No ${type} yet.</div>`;
+    return;
+  }
+
+  // Fetch each user's profile doc
+  const rowArr = new Array(uids.length).fill('');
+  await Promise.all(uids.map(async (uid, i) => {
+    try{
+      const snap = await getDoc(doc(db,'users',uid));
+      const data = snap.exists() ? snap.data() : {};
+      let name = data.displayName || data.name || data.fullName || data.username || data.email?.split('@')[0] || '';
+      // Last resort: pull name from a solve record (same fallback the profile page uses)
+      if(!name){
+        try{
+          const solvesSnap = await getDocs(query(collection(db,'users',uid,'solves'), orderBy('solvedAt','desc'), limit(1)));
+          if(!solvesSnap.empty){
+            const solveName = solvesSnap.docs[0].data().name;
+            if(solveName && solveName !== 'Anonymous') name = solveName;
+          }
+        }catch(_){}
+      }
+      if(!name) name = 'Unknown';
+      const handle = data.username ? '@'+data.username : '';
+      const av = avatarHTML(data.avatar, name);
+      rowArr[i] = `<a class="follow-user-row" href="profile.html?uid=${encodeURIComponent(uid)}">
+        <div class="follow-user-avatar">${av}</div>
+        <div><div class="follow-user-name">${esc(name)}</div><div class="follow-user-handle">${esc(handle)}</div></div>
+      </a>`;
+    }catch(e){}
+  }));
+
+  body.innerHTML = rowArr.join('') || `<div class="follow-modal-empty">No ${type} yet.</div>`;
+}
+
+window.closeFollowModal = function closeFollowModal(){
+  document.getElementById('followModalOverlay').classList.remove('open');
+}
+
+function avatarHTML(avatarData, name){
+  if(!avatarData) return esc((name||'?')[0].toUpperCase());
+  if(avatarData.type==='emoji') return avatarData.value||'😊';
+  if(avatarData.type==='image'&&avatarData.url) return `<img src="${avatarData.url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  return esc((name||'?')[0].toUpperCase());
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── SOLVER STATS ──────────────────────────────────────
 function renderSolverStats(){
@@ -1270,6 +1514,7 @@ function renderSolverStats(){
   for(const s of allSolves){ const v=s.variant||s.puzzleVariant||'Classic'; variantCount[v]=(variantCount[v]||0)+1; }
   const favVariant=Object.entries(variantCount).sort((a,b)=>b[1]-a[1])[0];
   document.getElementById('sFavVariant').textContent=favVariant?favVariant[0]:'Classic';
+  // Streaks count any day a puzzle was solved, including replays of the same puzzle.
   const {current,longest}=computeStreaks(allSolves);
   document.getElementById('sStreak').textContent=current;
   document.getElementById('sLongest').textContent=longest;
@@ -1329,6 +1574,23 @@ function renderSetterStats(){
 }
 
 // ── ACHIEVEMENTS ─────────────────────────────────────
+// Returns only the FIRST solve per unique puzzleId so that replaying a puzzle
+// never inflates solve counts or streaks toward achievements.
+function getUniqueSolves(solves){
+  const seen=new Set();
+  const sorted=[...solves].sort((a,b)=>{
+    const ta=a.solvedAt?.toDate?a.solvedAt.toDate().getTime():new Date(a.solvedAt||0).getTime();
+    const tb=b.solvedAt?.toDate?b.solvedAt.toDate().getTime():new Date(b.solvedAt||0).getTime();
+    return ta-tb;
+  });
+  return sorted.filter(s=>{
+    if(!s.puzzleId) return true; // AI / no-id puzzles are always unique
+    if(seen.has(s.puzzleId)) return false;
+    seen.add(s.puzzleId);
+    return true;
+  });
+}
+
 const ACHIEVEMENTS=[
   {id:'first_solve', icon:'🎉',name:'First Solve',   check:(s,p)=>s.length>=1},
   {id:'solve_10',    icon:'🔟',name:'10 Solves',     check:(s,p)=>s.length>=10},
@@ -1336,17 +1598,18 @@ const ACHIEVEMENTS=[
   {id:'solve_100',   icon:'💯',name:'100 Solves',    check:(s,p)=>s.length>=100},
   {id:'speed_demon', icon:'⚡',name:'Speed Demon',   check:(s,p)=>s.some(x=>x.timeSeconds>0&&x.timeSeconds<300)},
   {id:'perfectionist',icon:'✨',name:'No Mistakes',  check:(s,p)=>s.some(x=>(x.mistakes||0)===0)},
-  {id:'streak_3',    icon:'🔥',name:'3-Day Streak',  check:(s,p)=>computeStreaks(s).longest>=3},
-  {id:'streak_7',    icon:'🗓️',name:'Streak 7',      check:(s,p)=>computeStreaks(s).longest>=7},
-  {id:'streak_30',   icon:'📅',name:'Streak 30',     check:(s,p)=>computeStreaks(s).longest>=30},
+  {id:'streak_3',    icon:'🔥',name:'3-Day Streak',  check:(s,p,a)=>computeStreaks(a).longest>=3},
+  {id:'streak_7',    icon:'🗓️',name:'Streak 7',      check:(s,p,a)=>computeStreaks(a).longest>=7},
+  {id:'streak_30',   icon:'📅',name:'Streak 30',     check:(s,p,a)=>computeStreaks(a).longest>=30},
   {id:'setter',      icon:'🛠️',name:'Setter',        check:(s,p)=>p.length>=1},
   {id:'popular',     icon:'🌟',name:'Popular Puzzle',check:(s,p)=>p.some(x=>(x.solveCount||0)>=10)},
   {id:'all_diffs',   icon:'🎓',name:'All Difficulties',check:(s,p)=>['easy','medium','hard','expert'].every(d=>s.some(x=>(x.difficulty||'').toLowerCase()===d))},
 ];
 function renderAchievements(){
   const row=document.getElementById('badgesRow'); row.innerHTML='';
+  const uniqueSolves=getUniqueSolves(allSolves);
   for(const ach of ACHIEVEMENTS){
-    const earned=ach.check(allSolves,createdPuzzles);
+    const earned=ach.check(uniqueSolves,createdPuzzles,allSolves);
     const el=document.createElement('div');
     el.className='badge'+(earned?' earned':'');
     el.title=ach.name+(earned?' — Earned!':' — Not yet earned');
@@ -1357,7 +1620,7 @@ function renderAchievements(){
 
 // ── SOLVE HISTORY ─────────────────────────────────────
 window.setSolveSort=function(mode){
-  solveSort=mode;
+  solveSort=mode; solvePage=1;
   document.getElementById('sortDate').classList.toggle('active',mode==='date');
   document.getElementById('sortTime').classList.toggle('active',mode==='time');
   document.getElementById('sortDiff').classList.toggle('active',mode==='diff');
@@ -1367,18 +1630,121 @@ window.setSolveSort=function(mode){
 window.setSolveFilter=function(type,val){
   if(type==='diff') solveFilterDiff=val;
   else solveFilterVariant=val;
+  solvePage=1;
   const prefix=type==='diff'?'sfDiff':'sfVar';
   document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el=>el.classList.toggle('active',el.id===`${prefix}-${val}`));
   renderSolveHistory();
 };
 
+window.setUnsolvedFilter=function(type,val){
+  if(type==='diff') unsolvedFilterDiff=val;
+  else unsolvedFilterVariant=val;
+  unsolvedPage=1;
+  const prefix=type==='diff'?'ufDiff':'ufVar';
+  document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el=>el.classList.toggle('active',el.id===`${prefix}-${val}`));
+  renderUnsolvedHistory();
+};
+
 window.setCreatedFilter=function(type,val){
   if(type==='diff') createdFilterDiff=val;
   else createdFilterVariant=val;
+  createdPage=1;
   const prefix=type==='diff'?'cfDiff':'cfVar';
   document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el=>el.classList.toggle('active',el.id===`${prefix}-${val}`));
   renderCreatedPuzzles();
 };
+
+function renderPagination(container, currentPage, totalPages, gotoFn){
+  if(totalPages<=1){ container.innerHTML=''; return; }
+  const range=new Set([1,totalPages]);
+  for(let i=Math.max(1,currentPage-2);i<=Math.min(totalPages,currentPage+2);i++) range.add(i);
+  const sorted=[...range].sort((a,b)=>a-b);
+  let html='';
+  if(currentPage>1) html+=`<button class="pg-btn pg-nav" onclick="${gotoFn}(${currentPage-1})">&#8249; Prev</button>`;
+  else html+=`<button class="pg-btn pg-nav" disabled>&#8249; Prev</button>`;
+  let prev=0;
+  for(const p of sorted){
+    if(p-prev>1) html+=`<span class="pg-dots">…</span>`;
+    if(p===currentPage) html+=`<button class="pg-btn pg-current">${p}</button>`;
+    else html+=`<button class="pg-btn" onclick="${gotoFn}(${p})">${p}</button>`;
+    prev=p;
+  }
+  if(currentPage<totalPages) html+=`<button class="pg-btn pg-nav" onclick="${gotoFn}(${currentPage+1})">Next &#8250;</button>`;
+  else html+=`<button class="pg-btn pg-nav" disabled>Next &#8250;</button>`;
+  container.innerHTML=html;
+}
+
+window.goToSolvePage   =function(n){ solvePage=n;    renderSolveHistory();    document.getElementById('paneHistory').scrollIntoView({behavior:'smooth',block:'start'}); };
+window.goToUnsolvedPage=function(n){ unsolvedPage=n; renderUnsolvedHistory(); document.getElementById('paneUnsolved').scrollIntoView({behavior:'smooth',block:'start'}); };
+window.goToCreatedPage =function(n){ createdPage=n;  renderCreatedPuzzles();  document.getElementById('paneCreated').scrollIntoView({behavior:'smooth',block:'start'}); };
+
+function renderUnsolvedHistory(){
+  const list=document.getElementById('unsolvedList'); list.innerHTML='';
+  if(!allUnsolved.length){
+    list.innerHTML='<div class="empty-state"><div class="empty-icon">⏳</div><p>No puzzles in progress.<br>Start a puzzle and come back to resume it here.</p><a href="explore.html" class="btn-primary">Browse Puzzles</a></div>';
+    return;
+  }
+    // Time spent: Firestore `started` doc is the persistent source of truth
+    // (written every 10 s + on tab hide + on beforeunload by game.html).
+    // localStorage `sudoku_puzzle_times` is a live-session supplement for the
+    // current device, in case the most recent few seconds aren't in Firestore yet.
+    const savedTimeMap={};
+    if(isOwnProfile){
+      try{
+        const map=JSON.parse(localStorage.getItem('sudoku_puzzle_times')||'{}');
+        Object.assign(savedTimeMap,map);
+      }catch(e){}
+    }
+  let filtered=[...allUnsolved];
+  if(unsolvedFilterDiff!=='all') filtered=filtered.filter(p=>(p.difficulty||'').toLowerCase()===unsolvedFilterDiff);
+  if(unsolvedFilterVariant!=='all') filtered=filtered.filter(p=>(p.variant||p.type||'classic').toLowerCase()===unsolvedFilterVariant);
+  if(!filtered.length){
+    list.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><p>No in-progress puzzles match the selected filters.</p></div>';
+    return;
+  }
+  // Sort by most recently started
+  filtered.sort((a,b)=>{
+    const ta=a.startedAt?new Date(a.startedAt).getTime():0;
+    const tb=b.startedAt?new Date(b.startedAt).getTime():0;
+    return tb-ta;
+  });
+  const uTotalPages=Math.max(1,Math.ceil(filtered.length/ITEMS_PER_PAGE));
+  unsolvedPage=Math.min(Math.max(1,unsolvedPage),uTotalPages);
+  const uPageItems=filtered.slice((unsolvedPage-1)*ITEMS_PER_PAGE, unsolvedPage*ITEMS_PER_PAGE);
+  for(const p of uPageItems){
+    const item=document.createElement('div'); item.className='history-item';
+    const diff=(p.difficulty||'easy').toLowerCase();
+    const diffCap=diff[0].toUpperCase()+diff.slice(1);
+    const startedDate=p.startedAt?relDate(p.startedAt):'';
+    // Firestore seconds (persistent, survives logout/device switch) wins over
+    // localStorage seconds (live-session only, may be cleared by Safari ITP).
+    // Take the max so neither source can cause a value to go backwards.
+    const firestoreSeconds=p.secondsSpent||0;
+    const localSeconds=isOwnProfile?(savedTimeMap[p.id]||0):0;
+    const spentSeconds=Math.max(firestoreSeconds,localSeconds);
+    const timeLabel=spentSeconds>0?fmtTime(spentSeconds):'—';
+    const actionHtml=isOwnProfile
+      ?`<div class="hi-time">${timeLabel}</div><div style="font-size:.68rem;color:var(--text2);margin-top:2px">time spent</div><div style="color:var(--accent);font-size:.75rem;font-weight:700;margin-top:4px">▶ Resume</div>`
+      :`<div class="hi-time" style="color:var(--accent);font-size:.82rem;font-weight:700">▶ Play</div>`;
+    item.innerHTML=`
+      <div class="hi-grid" id="uhg-${escHtml(p.id)}"></div>
+      <div class="hi-info">
+        <div class="hi-name">${escHtml(p.name||'Untitled Puzzle')}</div>
+        <div class="hi-meta">
+          <span class="diff-badge diff-${diff}">${diffCap}</span>
+          <span style="color:var(--warning);font-weight:600">In Progress</span>
+          ${startedDate?`<span>${startedDate}</span>`:''}
+        </div>
+      </div>
+      <div class="hi-right">${actionHtml}</div>`;
+    item.onclick=()=>{ window.location.href='game.html#explore:'+encodeURIComponent(p.id); };
+    item.style.cursor='pointer';
+    list.appendChild(item);
+    const gridEl=document.getElementById('uhg-'+p.id);
+    if(gridEl) renderTinyGrid(gridEl, p.puzzle||'');
+  }
+  renderPagination(document.getElementById('unsolvedPagination'), unsolvedPage, uTotalPages, 'goToUnsolvedPage');
+}
 
 function renderSolveHistory(){
   const list=document.getElementById('historyList'); list.innerHTML='';
@@ -1399,7 +1765,26 @@ function renderSolveHistory(){
     const order={easy:0,medium:1,hard:2,expert:3};
     sorted.sort((a,b)=>(order[(a.difficulty||'').toLowerCase()]??4)-(order[(b.difficulty||'').toLowerCase()]??4));
   }
-  for(const s of sorted){
+  // Determine which solve was the first (chronologically) for each puzzle.
+  // allSolves is already ordered desc by solvedAt from the Firestore query, so
+  // reversing it gives reliable ascending order without re-sorting (avoids
+  // issues with Timestamp format differences or ties).
+  function _tsVal(s){ const t=s.solvedAt; if(!t)return 0; if(typeof t==='number')return t; if(t.seconds!=null)return t.seconds; if(t._seconds!=null)return t._seconds; if(t instanceof Date)return t.getTime()/1000; return 0; }
+  const _chronoAll=[...allSolves].sort((a,b)=>_tsVal(a)-_tsVal(b));
+  const _seenPuzzle=new Set();
+  const _firstSolveIds=new Set();
+  for(const s of _chronoAll){
+    // Use puzzleId as the grouping key; fall back to puzzleName for legacy solves without an id
+    const groupKey=s.puzzleId||(s.puzzleName?'name:'+s.puzzleName:'');
+    if(!groupKey)continue;
+    if(!_seenPuzzle.has(groupKey)){_seenPuzzle.add(groupKey);_firstSolveIds.add(s.id);}
+  }
+  // For the badge condition, compute each solve's groupKey so we can check if it's a repeat
+  function _solveGroupKey(s){ return s.puzzleId||(s.puzzleName?'name:'+s.puzzleName:''); }
+  const sTotalPages=Math.max(1,Math.ceil(sorted.length/ITEMS_PER_PAGE));
+  solvePage=Math.min(Math.max(1,solvePage),sTotalPages);
+  const sPageItems=sorted.slice((solvePage-1)*ITEMS_PER_PAGE, solvePage*ITEMS_PER_PAGE);
+  for(const s of sPageItems){
     const item=document.createElement('div'); item.className='history-item';
     const diff=(s.difficulty||'easy').toLowerCase();
     const diffCap=diff[0].toUpperCase()+diff.slice(1);
@@ -1411,6 +1796,7 @@ function renderSolveHistory(){
           <span class="diff-badge diff-${diff}">${diffCap}</span>
           ${s.mistakes!=null?`<span>⚠️ ${s.mistakes} mistake${s.mistakes!==1?'s':''}</span>`:''}
           ${s.solvedAt?`<span>${relDate(s.solvedAt)}</span>`:''}
+          ${(_solveGroupKey(s)&&!_firstSolveIds.has(s.id))?'<span class="hi-replay-badge">↩ Replay</span>':''}
         </div>
       </div>
       <div class="hi-right">
@@ -1430,6 +1816,7 @@ function renderSolveHistory(){
     const gridEl=document.getElementById('hg-'+s.id);
     if(gridEl) renderTinyGrid(gridEl, s.puzzle||'');
   }
+  renderPagination(document.getElementById('historyPagination'), solvePage, sTotalPages, 'goToSolvePage');
 }
 
 function renderTinyGrid(el, clueStr){
@@ -1506,7 +1893,10 @@ function renderCreatedPuzzles(){
     emp.innerHTML='<div class="empty-icon">🔍</div><p>No puzzles match the selected filters.</p>';
     grid.appendChild(emp); return;
   }
-  for(const p of filtered){
+  const cTotalPages=Math.max(1,Math.ceil(filtered.length/ITEMS_PER_PAGE));
+  createdPage=Math.min(Math.max(1,createdPage),cTotalPages);
+  const cPageItems=filtered.slice((createdPage-1)*ITEMS_PER_PAGE, createdPage*ITEMS_PER_PAGE);
+  for(const p of cPageItems){
     const card=document.createElement('div'); card.className='puzzle-card';
     const solves=p.solveCount||0;
     const rating=(typeof p.ratingAvg==='number'&&p.ratingCount>0)?'⭐ '+p.ratingAvg.toFixed(1):'Unrated';
@@ -1528,29 +1918,161 @@ function renderCreatedPuzzles(){
     grid.appendChild(card);
     card.addEventListener('click',()=>openCreatedPuzzleModal(p));
     const previewEl=document.getElementById('cp-'+p.id);
-    if(previewEl&&p.puzzle) renderCardGrid(previewEl,p.puzzle);
+    if(previewEl) renderPuzzlePreview(previewEl, p, 80);
   }
+  renderPagination(document.getElementById('createdPagination'), createdPage, cTotalPages, 'goToCreatedPage');
 }
 
-function renderCardGrid(container,clueStr){
+// ── SVG / CONSTRAINT HELPERS ──────────────────────────────────────────────
+function _keyRC(k){ const m=(k||'').match(/R(\d+)C(\d+)/); return m?[+m[1]-1,+m[2]-1]:null; }
+function _svgEl(tag,attrs){
+  const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const[k,v] of Object.entries(attrs)){
+    const a=k.replace(/([A-Z])/g,c=>'-'+c.toLowerCase());
+    el.setAttribute(a,String(v));
+  }
+  return el;
+}
+function _drawCage(svg,cells,stroke,fill,fillOp,cw,ch,dashed,label){
+  if(!cells||!cells.length) return;
+  const cellSet=new Set(cells);
+  if(fill!=='none') cells.forEach(k=>{ const rc=_keyRC(k); if(!rc) return; const[r,c]=rc; svg.appendChild(_svgEl('rect',{x:c*cw+2,y:r*ch+2,width:cw-4,height:ch-4,fill,fillOpacity:fillOp,rx:3})); });
+  const pad=3;
+  cells.forEach(k=>{
+    const rc=_keyRC(k); if(!rc) return; const[r,c]=rc;
+    const x0=c*cw+pad,y0=r*ch+pad,x1=x0+cw-pad*2,y1=y0+ch-pad*2;
+    [{x1:x0,y1:y0,x2:x1,y2:y0,nr:r-1,nc:c},{x1:x0,y1:y1,x2:x1,y2:y1,nr:r+1,nc:c},{x1:x0,y1:y0,x2:x0,y2:y1,nr:r,nc:c-1},{x1:x1,y1:y0,x2:x1,y2:y1,nr:r,nc:c+1}].forEach(e=>{
+      if(!cellSet.has(`R${e.nr+1}C${e.nc+1}`)){
+        const ln=_svgEl('line',{x1:e.x1,y1:e.y1,x2:e.x2,y2:e.y2,stroke,strokeWidth:1.2});
+        if(dashed) ln.setAttribute('stroke-dasharray','3 2');
+        svg.appendChild(ln);
+      }
+    });
+  });
+  if(label){ const rc=_keyRC(cells[0]); if(!rc) return; const[fr,fc]=rc; const t=_svgEl('text',{x:fc*cw+pad+2,y:fr*ch+pad+8,fill:stroke,fontSize:Math.max(5,cw*.2),fontWeight:'700',fontFamily:'Segoe UI,system-ui,sans-serif'}); t.textContent=label; svg.appendChild(t); }
+}
+
+// ── RICH PREVIEW RENDERER (grid + constraints + background) ──────────────
+function renderPuzzlePreview(container, p, size){
   container.innerHTML='';
+  const digits=(p.puzzle||'').replace(/\D/g,'').padEnd(81,'0');
+  const cw=size/9, ch=size/9;
+  let C=null;
+  try{ C=p.constraints?(typeof p.constraints==='string'?JSON.parse(p.constraints):p.constraints):null; }catch(e){}
+
   const wrap=document.createElement('div');
-  wrap.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:1.5px solid #374151;border-radius:4px;overflow:hidden;width:80px;height:80px;background:#fff;';
-  const digits=(clueStr||'').replace(/\D/g,'').padEnd(81,'0');
+  wrap.style.cssText=`position:relative;width:${size}px;height:${size}px;border:${size>100?'2':'1.5'}px solid #374151;border-radius:${size>100?'6':'4'}px;overflow:hidden;flex-shrink:0;box-shadow:${size>100?'0 4px 16px rgba(0,0,0,.10)':'none'};`;
+  if(p.backgroundImage){
+    wrap.style.backgroundImage=`linear-gradient(rgba(255,255,255,.78),rgba(255,255,255,.78)),url("${p.backgroundImage.replace(/"/g,'%22')}")`;
+    wrap.style.backgroundSize='cover';
+    wrap.style.backgroundPosition='center';
+    wrap.style.backgroundRepeat='no-repeat';
+  } else {
+    wrap.style.background='#fff';
+  }
+
+  // 9×9 grid
+  const gridDiv=document.createElement('div');
+  gridDiv.style.cssText='position:absolute;inset:0;display:grid;grid-template-rows:repeat(9,1fr);';
   for(let r=0;r<9;r++){
-    const row=document.createElement('div'); row.style.cssText='display:grid;grid-template-columns:repeat(9,1fr);';
+    const row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:repeat(9,1fr);';
     for(let c=0;c<9;c++){
       const cell=document.createElement('div');
       const n=parseInt(digits[r*9+c]);
-      const bR=(c===2||c===5)?'1px solid #6b7280':'.5px solid #e5e7eb';
-      const bB=(r===2||r===5)?'1px solid #6b7280':'.5px solid #e5e7eb';
-      cell.style.cssText=`display:flex;align-items:center;justify-content:center;border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:4.5px;font-weight:700;color:#1f2937;background:${n?'#f8f9fa':'#fff'};`;
+      const bR=(c===2||c===5)?'1px solid #6b7280':'0.5px solid #e5e7eb';
+      const bB=(r===2||r===5)?'1px solid #6b7280':'0.5px solid #e5e7eb';
+      const fs=size>100?7:4.5;
+      cell.style.cssText=`display:flex;align-items:center;justify-content:center;border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:${fs}px;font-weight:700;color:#1f2937;background:${n?(p.backgroundImage?'rgba(248,249,250,0.82)':'#f8f9fa'):'transparent'};`;
       if(n) cell.textContent=n;
       row.appendChild(cell);
     }
-    wrap.appendChild(row);
+    gridDiv.appendChild(row);
   }
+  wrap.appendChild(gridDiv);
+
+  // SVG constraint overlay
+  if(C){
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('viewBox',`0 0 ${size} ${size}`);
+    svg.setAttribute('width',size); svg.setAttribute('height',size);
+    svg.style.cssText='position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:10;';
+
+    // Diagonals
+    const gl=C.globals||{};
+    if(gl.diagonalpos) svg.appendChild(_svgEl('line',{x1:0,y1:size,x2:size,y2:0,stroke:'#6366f1',strokeWidth:1,opacity:.4,strokeDasharray:'4 2'}));
+    if(gl.diagonalneg) svg.appendChild(_svgEl('line',{x1:0,y1:0,x2:size,y2:size,stroke:'#6366f1',strokeWidth:1,opacity:.4,strokeDasharray:'4 2'}));
+
+    // Extra regions & killer cages
+    (C.extraRegions||[]).forEach(rgn=>_drawCage(svg,rgn.cells,'#f59e0b','#fef3c7',.25,cw,ch,false,''));
+    (C.killerCages||[]).forEach(cage=>_drawCage(svg,cage.cells,'#374151','none',0,cw,ch,true,cage.value));
+
+    // Odd/Even markers
+    (C.oddCells||[]).forEach(k=>{ const rc=_keyRC(k); if(!rc) return; svg.appendChild(_svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.3,fill:'none',stroke:'#9ca3af',strokeWidth:.8,opacity:.6})); });
+    (C.evenCells||[]).forEach(k=>{ const rc=_keyRC(k); if(!rc) return; svg.appendChild(_svgEl('rect',{x:rc[1]*cw+cw*.15,y:rc[0]*ch+ch*.15,width:cw*.7,height:ch*.7,fill:'none',stroke:'#9ca3af',strokeWidth:.8,rx:1.5,opacity:.6})); });
+
+    // Thermometers
+    (C.thermometers||[]).forEach(t=>{
+      if(!t.cells||t.cells.length<1) return;
+      if(t.cells.length>=2){
+        const pts=t.cells.map(k=>{ const rc=_keyRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean);
+        svg.appendChild(_svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'#d4d4d4',strokeWidth:cw*.27,strokeLinecap:'round',strokeLinejoin:'round'}));
+      }
+      const rc=_keyRC(t.cells[0]); if(!rc) return;
+      svg.appendChild(_svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.32,fill:'#d4d4d4',stroke:'#bbbbbb',strokeWidth:1.2}));
+    });
+
+    // Arrows
+    (C.arrows||[]).forEach(a=>{
+      const line=a.lines&&a.lines[0]; if(!line||line.length<2) return;
+      const brc=_keyRC((a.bulb&&a.bulb[0])||line[0]); if(!brc) return;
+      const bx=brc[1]*cw+cw/2, by=brc[0]*ch+ch/2, br=cw*.32;
+      const centers=line.map(k=>{ const rc=_keyRC(k); return rc?[rc[1]*cw+cw/2,rc[0]*ch+ch/2]:null; }).filter(Boolean);
+      if(centers.length>=2){
+        svg.appendChild(_svgEl('polyline',{points:centers.map(([x,y])=>`${x},${y}`).join(' '),fill:'none',stroke:'#aaaaaa',strokeWidth:1.4,strokeLinecap:'round',strokeLinejoin:'round'}));
+        const[lx,ly]=centers[centers.length-1],[px,py]=centers[centers.length-2];
+        const ang=Math.atan2(ly-py,lx-px),hl=cw*.21;
+        const p1x=lx-hl*Math.cos(ang-Math.PI/5),p1y=ly-hl*Math.sin(ang-Math.PI/5);
+        const p2x=lx-hl*Math.cos(ang+Math.PI/5),p2y=ly-hl*Math.sin(ang+Math.PI/5);
+        svg.appendChild(_svgEl('polyline',{points:`${p1x},${p1y} ${lx},${ly} ${p2x},${p2y}`,fill:'none',stroke:'#aaaaaa',strokeWidth:1.4,strokeLinecap:'round',strokeLinejoin:'round'}));
+      }
+      svg.appendChild(_svgEl('circle',{cx:bx,cy:by,r:br,fill:'white',stroke:'#aaaaaa',strokeWidth:1.4}));
+    });
+
+    // Colored lines
+    const dl=(cells,color,width)=>{ if(!cells||cells.length<2) return; const pts=cells.map(k=>{ const rc=_keyRC(k); return rc?`${rc[1]*cw+cw/2},${rc[0]*ch+ch/2}`:null; }).filter(Boolean); svg.appendChild(_svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:color,strokeWidth:width,strokeLinecap:'round',strokeLinejoin:'round',opacity:.85})); };
+    (C.renbans||[]).forEach(l=>dl(l.cells,'#7c3aed',cw*.16));
+    (C.whispers||[]).forEach(l=>dl(l.cells,'#22c55e',cw*.16));
+    (C.palindromes||[]).forEach(l=>dl(l.cells,'#f59e0b',cw*.16));
+    (C.betweens||[]).forEach(l=>{
+      dl(l.cells,'#0ea5e9',cw*.12);
+      [l.cells[0],l.cells[l.cells.length-1]].forEach(k=>{ const rc=_keyRC(k); if(!rc) return; svg.appendChild(_svgEl('circle',{cx:rc[1]*cw+cw/2,cy:rc[0]*ch+ch/2,r:cw*.25,fill:'white',stroke:'#0ea5e9',strokeWidth:1.5})); });
+    });
+
+    // XV labels
+    (C.xvs||[]).forEach(xv=>{
+      const rc1=_keyRC(xv.cells[0]),rc2=_keyRC(xv.cells[1]); if(!rc1||!rc2) return;
+      const mx=((rc1[1]+rc2[1])/2)*cw+cw/2, my=((rc1[0]+rc2[0])/2)*ch+ch/2;
+      svg.appendChild(_svgEl('circle',{cx:mx,cy:my,r:cw*.21,fill:'white',stroke:'none'}));
+      const t=_svgEl('text',{x:mx,y:my,fill:'#111827',fontSize:Math.max(7,cw*.36),fontWeight:'900',fontFamily:'Segoe UI,system-ui,sans-serif',textAnchor:'middle',dominantBaseline:'central'});
+      t.textContent=xv.type; svg.appendChild(t);
+    });
+
+    // Kropki dots
+    (C.kropkis||[]).forEach(kr=>{
+      const rc1=_keyRC(kr.cells[0]),rc2=_keyRC(kr.cells[1]); if(!rc1||!rc2) return;
+      const mx=((rc1[1]+rc2[1])/2)*cw+cw/2, my=((rc1[0]+rc2[0])/2)*ch+ch/2;
+      svg.appendChild(_svgEl('circle',{cx:mx,cy:my,r:cw*.14,fill:kr.type==='black'?'#111827':'#ffffff',stroke:'#374151',strokeWidth:1.2}));
+    });
+
+    wrap.appendChild(svg);
+  }
+
   container.appendChild(wrap);
+}
+
+function renderCardGrid(container,clueStr){
+  renderPuzzlePreview(container,{puzzle:clueStr},80);
 }
 
 window.editPuzzle=function(id,e){ e.stopPropagation(); window.location.href='create.html?edit='+encodeURIComponent(id); };
@@ -1559,32 +2081,9 @@ window.editPuzzle=function(id,e){ e.stopPropagation(); window.location.href='cre
 let cpModalPuzzle=null;
 function openCreatedPuzzleModal(p){
   cpModalPuzzle=p;
-  // Render preview grid
+  // Render rich preview (grid + constraints + background)
   const prevEl=document.getElementById('cpModalPreview');
-  prevEl.innerHTML='';
-  const wrap=document.createElement('div');
-  wrap.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:2px solid #374151;border-radius:6px;overflow:hidden;width:180px;height:180px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.1);';
-  renderCardGrid(wrap, p.puzzle||'');
-  // renderCardGrid puts a child div inside, but we want to use the wrap itself
-  // Actually, let's just build it inline
-  prevEl.innerHTML='';
-  const digits=(p.puzzle||'').replace(/\D/g,'').padEnd(81,'0');
-  const grid2=document.createElement('div');
-  grid2.style.cssText='display:grid;grid-template-rows:repeat(9,1fr);border:2px solid #374151;border-radius:6px;overflow:hidden;width:180px;height:180px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.1);';
-  for(let r=0;r<9;r++){
-    const row=document.createElement('div'); row.style.cssText='display:grid;grid-template-columns:repeat(9,1fr);';
-    for(let c=0;c<9;c++){
-      const cell=document.createElement('div');
-      const n=parseInt(digits[r*9+c]);
-      const bR=(c===2||c===5)?'1.5px solid #6b7280':'.5px solid #e5e7eb';
-      const bB=(r===2||r===5)?'1.5px solid #6b7280':'.5px solid #e5e7eb';
-      cell.style.cssText=`display:flex;align-items:center;justify-content:center;border-right:${c===8?'none':bR};border-bottom:${r===8?'none':bB};font-size:7px;font-weight:700;color:#1f2937;background:${n?'#f8f9fa':'#fff'};`;
-      if(n) cell.textContent=n;
-      row.appendChild(cell);
-    }
-    grid2.appendChild(row);
-  }
-  prevEl.appendChild(grid2);
+  renderPuzzlePreview(prevEl, p, 200);
   // Title & meta
   document.getElementById('cpModalTitle').textContent=p.name||'Untitled';
   const diff=p.difficulty||'';
@@ -1639,7 +2138,7 @@ document.getElementById('cpModalClose').addEventListener('click',closeCpModal);
 document.getElementById('cpModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeCpModal(); });
 
 function launchPuzzle(p){
-  const data={id:p.id||'',name:p.name||'',puzzle:p.puzzle||'',difficulty:p.difficulty||'',author:p.author||'',isAI:!!p.isAI,clueCount:p.clueCount||0,description:p.description||'',ratingAvg:p.ratingAvg||null,ratingCount:p.ratingCount||0,constraints:p.constraints||null,backgroundImage:p.backgroundImage||''};
+  const data={id:p.id||'',name:p.name||'',puzzle:p.puzzle||'',difficulty:p.difficulty||'',author:p.author||'',isAI:!!p.isAI,clueCount:p.clueCount||0,description:p.description||'',ratingAvg:p.ratingAvg||null,ratingCount:p.ratingCount||0,constraints:p.constraints||null,backgroundImage:p.backgroundImage||'',secondsSpent:p.secondsSpent||0};
   try{ sessionStorage.setItem('explorePuzzle',JSON.stringify(data)); }catch(e){}
   window.location.href='game.html#explore:'+encodeURIComponent(p.id||'');
 }
@@ -1647,10 +2146,22 @@ function launchPuzzle(p){
 // ── TABS ─────────────────────────────────────────────
 window.switchTab=function(tab){
   document.getElementById('paneHistory').classList.toggle('active',tab==='history');
+  document.getElementById('paneUnsolved').classList.toggle('active',tab==='unsolved');
   document.getElementById('paneCreated').classList.toggle('active',tab==='created');
   document.getElementById('tabBtnHistory').classList.toggle('active',tab==='history');
+  document.getElementById('tabBtnUnsolved').classList.toggle('active',tab==='unsolved');
   document.getElementById('tabBtnCreated').classList.toggle('active',tab==='created');
 };
 </script>
+
+<!-- Bottom Tab Bar -->
+<nav class="bottom-tab-bar">
+  <a class="tab-item" href="main.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><span class="tab-label">Home</span></a>
+  <a class="tab-item" href="explore.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><span class="tab-label">Explore</span></a>
+  <a class="tab-item center-tab" href="game.html#play"><div class="center-btn"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div><span class="tab-label">Play</span></a>
+  <a class="tab-item" href="create.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div><span class="tab-label">Create</span></a>
+  <a class="tab-item active" href="profile.html"><div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="tab-label">Profile</span></a>
+</nav>
+
 </body>
 </html>
