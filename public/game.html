@@ -925,7 +925,7 @@
 <script type="module">
 import { initializeApp } from './vendor/firebase/12.9.0/firebase-app.js';
 import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut } from './vendor/firebase/12.9.0/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction, query, orderBy, where, limit, startAfter, onSnapshot, updateDoc, increment, deleteDoc } from './vendor/firebase/12.9.0/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction, query, orderBy, where, limit, startAfter, onSnapshot, updateDoc, increment, deleteDoc, waitForPendingWrites } from './vendor/firebase/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
@@ -933,6 +933,8 @@ const auth = initializeAuth(app, { persistence: browserLocalPersistence });
 const db   = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
 });
+if (window.OfflineSync) window.OfflineSync.attach(db, waitForPendingWrites);
+else window.__offlineSyncPending = { db, waitForPendingWrites };
 
 const isGuest = new URLSearchParams(location.search).has('guest')
              || sessionStorage.getItem('sudokuGuest') === '1';
@@ -1048,6 +1050,7 @@ async function saveSolve(difficulty, timeSeconds, mistakes) {
   try {
     // Flatten current puzzle board to a clue string for the tiny grid in profile
     const puzzleStr = (puzzle||[]).flat().join('');
+    window.OfflineSync?.notifyWrite('Solve');
     await addDoc(collection(db, 'users', currentUser.uid, 'solves'), {
       difficulty, timeSeconds, mistakes,
       puzzleName: currentPuzzleName || '',
@@ -3489,6 +3492,7 @@ function updateCommentsInputUI(){
 async function submitComment(text){
   if(!text||!currentUser||!currentPuzzleId) return;
   const username = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
+  window.OfflineSync?.notifyWrite('Comment');
   await addDoc(collection(db,'puzzles',currentPuzzleId,'comments'),{
     text, uid:currentUser.uid, username,
     createdAt:serverTimestamp(), replyCount:0
@@ -3525,6 +3529,7 @@ window.postReply = async function(btn, commentId){
   btn.disabled=true;
   try{
     const username = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
+    window.OfflineSync?.notifyWrite('Reply');
     await addDoc(collection(db,'puzzles',currentPuzzleId,'comments',commentId,'replies'),{
       text, uid:currentUser.uid, username, createdAt:serverTimestamp()
     });
@@ -3542,6 +3547,7 @@ window.postReply = async function(btn, commentId){
 window.deleteComment = async function(commentId){
   if(!currentUser||!currentPuzzleId) return;
   if(!confirm('Delete this comment?')) return;
+  window.OfflineSync?.notifyWrite('Deleted comment');
   try{ await deleteDoc(doc(db,'puzzles',currentPuzzleId,'comments',commentId)); }
   catch(e){ console.error('Delete comment error:',e); }
 };

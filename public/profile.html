@@ -658,7 +658,7 @@
 <script type="module">
 import { initializeApp }        from './vendor/firebase/12.9.0/firebase-app.js';
 import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut, updateProfile } from './vendor/firebase/12.9.0/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, getDocs, getDoc, setDoc, updateDoc, doc, query, orderBy, where, limit, deleteDoc, deleteField, getCountFromServer, increment } from './vendor/firebase/12.9.0/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, getDocs, getDoc, setDoc, updateDoc, doc, query, orderBy, where, limit, deleteDoc, deleteField, getCountFromServer, increment, waitForPendingWrites } from './vendor/firebase/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
@@ -666,6 +666,8 @@ const auth = initializeAuth(app, { persistence: browserLocalPersistence });
 const db   = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
 });
+if (window.OfflineSync) window.OfflineSync.attach(db, waitForPendingWrites);
+else window.__offlineSyncPending = { db, waitForPendingWrites };
 
 // ── STATE ────────────────────────────────────────────
 let currentUser    = null;
@@ -1287,6 +1289,7 @@ window.saveName=async function(){
   nameErrEl.style.display='none';
   profileDoc.displayName=newName;
   try{
+    window.OfflineSync?.notifyWrite('Name');
     await setDoc(doc(db,'users',currentUser.uid),{displayName:newName,displayNameLower:newName.toLowerCase()},{merge:true});
     await updateProfile(currentUser,{displayName:newName});
   }catch(e){}
@@ -1318,7 +1321,7 @@ window.saveBio=async function(){
   document.getElementById('bioWrap').style.display='';
   document.getElementById('bioEditWrap').style.display='none';
   profileDoc.bio=newBio;
-  try{ await setDoc(doc(db,'users',currentUser.uid),{bio:newBio},{merge:true}); }catch(e){}
+  try{ window.OfflineSync?.notifyWrite('Bio'); await setDoc(doc(db,'users',currentUser.uid),{bio:newBio},{merge:true}); }catch(e){}
 };
 window.cancelBio=function(){
   document.getElementById('bioInput').value=profileDoc.bio||'';
@@ -1334,7 +1337,7 @@ document.getElementById('bioEditBtn').addEventListener('click',()=>{
 // ── PRIVACY TOGGLE ────────────────────────────────────
 window.togglePrivacy=async function(checked){
   profileDoc.isPrivate=checked;
-  try{ await setDoc(doc(db,'users',currentUser.uid),{isPrivate:checked},{merge:true}); }catch(e){}
+  try{ window.OfflineSync?.notifyWrite('Privacy'); await setDoc(doc(db,'users',currentUser.uid),{isPrivate:checked},{merge:true}); }catch(e){}
 };
 
 // ── FOLLOW / UNFOLLOW ─────────────────────────────────
@@ -1376,6 +1379,7 @@ async function toggleFollow(){
     }
     
     console.log('Writing target user followers:', updatedFollowers);
+    window.OfflineSync?.notifyWrite(newState ? 'Follow' : 'Unfollow');
     await setDoc(targetUserRef, { followers: updatedFollowers }, { merge: true });
     console.log('Target user followers updated successfully');
     
@@ -2113,6 +2117,7 @@ function openCreatedPuzzleModal(p){
   document.getElementById('cpConfirmYes').onclick=async()=>{
     try{
       // Delete puzzle document
+      window.OfflineSync?.notifyWrite('Delete puzzle');
       await deleteDoc(doc(db,'puzzles',p.id));
       // Delete solver sub-collection docs
       try{
