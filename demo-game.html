@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Sudoku — Game</title>
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg:#f8f9fa; --surface:#ffffff; --surface2:#f0f2f5; --surface3:#e4e6ea;
+      --accent:#2563eb; --accent2:#7c3aed; --text:#111827; --text2:#6b7280;
+      --error:#dc2626; --success:#16a34a; --border:#d1d5db;
+      --cell-ln:#e5e7eb; --box-ln:#6b7280;
+    }
+    html, body { overflow:hidden; height:100%; position:fixed; width:100%; }
+    body {
+      font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+      background:var(--bg); color:var(--text);
+      display:flex; flex-direction:column;
+      padding:0; margin:0; gap:0;
+    }
+
+    /* ── Mobile Top Bar ── */
+    .mobile-topbar {
+      display:flex; width:100%; background:var(--accent);
+      height:48px;
+      align-items:center; justify-content:space-between;
+      padding:0 14px;
+      flex-shrink:0; gap:8px; z-index:10;
+    }
+    .mobile-back-btn {
+      background:transparent; border:none; color:#fff;
+      font-size:1.3rem; cursor:pointer; padding:4px 8px;
+      border-radius:6px; line-height:1;
+    }
+    .mobile-puzzle-name {
+      flex:1; text-align:center; font-size:.95rem; font-weight:800;
+      color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .mobile-chat-btn, .mobile-gear-btn {
+      background:transparent; border:none; color:#fff;
+      font-size:1.2rem; cursor:pointer; padding:4px 6px;
+      border-radius:6px; line-height:1; flex-shrink:0;
+    }
+    .mobile-timer-wrap {
+      display:flex; align-items:center; gap:6px;
+      color:#fff; font-size:.9rem; font-weight:700;
+      font-variant-numeric:tabular-nums; white-space:nowrap;
+    }
+    .mobile-pause-btn {
+      background:transparent; border:none; color:#fff;
+      font-size:1.1rem; cursor:pointer; padding:4px; line-height:1;
+    }
+
+    /* ── Page Content (fills between topbar and controls) ── */
+    .page-content {
+      padding:0; gap:0; flex:1;
+      display:flex; flex-direction:column;
+      overflow:hidden;
+    }
+    .game-area {
+      flex-direction:column; align-items:center;
+      gap:0; padding:0; flex-shrink:0;
+      display:flex;
+    }
+    .board-wrap {
+      width:100%; align-items:center; gap:0;
+      display:flex; flex-direction:column;
+    }
+
+    /* ── Board ── */
+    .board {
+      display:grid; grid-template-rows:repeat(9,1fr);
+      border:3px solid #374151;
+      border-left:none; border-right:none; border-radius:0;
+      overflow:hidden;
+      width:min(100vw, 58vh); height:min(100vw, 58vh);
+      max-width:100vw;
+      background:var(--surface); user-select:none; touch-action:none;
+    }
+    .board-row { display:grid; grid-template-columns:repeat(9,1fr); }
+    .cell {
+      position:relative; display:flex; align-items:center; justify-content:center;
+      border-right:1px solid var(--cell-ln); border-bottom:1px solid var(--cell-ln);
+      cursor:pointer; -webkit-tap-highlight-color:transparent; overflow:hidden;
+    }
+    .cell:last-child { border-right:none; }
+    .board-row:last-child .cell { border-bottom:none; }
+    .cell.box-right { border-right:2px solid var(--box-ln) !important; }
+    .cell.box-bottom { border-bottom:2px solid var(--box-ln) !important; }
+    .cell::after {
+      content:''; position:absolute; inset:0; pointer-events:none; transition:background .07s;
+    }
+    .cell.selected::after { background:rgba(37,99,235,.20); }
+    .cell.peer::after { background:rgba(37,99,235,.05); }
+    .cell.same-val::after { background:rgba(37,99,235,.14); }
+    .cell-number {
+      position:relative;
+      font-size:clamp(24px, min(8.5vw, 5.1vh), 44px);
+      font-weight:400; line-height:1; pointer-events:none; z-index:20;
+    }
+    .cell.given .cell-number { color:#1f2937; }
+    .cell.filled .cell-number { color:var(--accent); }
+    .corner-notes { position:absolute; inset:0; pointer-events:none; z-index:20; }
+    .corner-notes span {
+      position:absolute;
+      font-size:clamp(10px, min(2vw, 1.2vh), 15px);
+      font-weight:800; color:var(--accent); line-height:1;
+    }
+    .cn-tl { top:6%; left:5%; }
+    .cn-tr { top:6%; right:5%; }
+    .cn-bl { bottom:6%; left:5%; }
+    .cn-br { bottom:6%; right:5%; }
+
+    /* ── Mobile Controls ── */
+    .mobile-controls {
+      display:flex; flex-direction:column; width:100%;
+      background:var(--surface); border-top:1px solid var(--border);
+      padding:6px 8px 10px;
+      gap:5px; flex-shrink:0;
+      margin-top:auto;
+    }
+    .mobile-mode-row {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:4px;
+    }
+    .mobile-mode-btn {
+      padding:5px 4px; border-radius:8px; border:1px solid var(--border);
+      background:var(--surface2); color:var(--text2); font-size:.68rem;
+      font-weight:700; cursor:pointer; text-align:center;
+    }
+    .mobile-mode-btn.active {
+      border-color:var(--accent); background:#dbeafe; color:var(--accent);
+    }
+    .mobile-mode-btn.active.m-corner { background:#fef3c7; color:#d97706; border-color:#d97706; }
+    .mobile-mode-btn.active.m-center { background:#dbeafe; color:var(--accent); border-color:var(--accent); }
+    .mobile-mode-btn.active.m-color { background:#dcfce7; color:#16a34a; border-color:#16a34a; }
+    .mobile-grid4 {
+      display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:4px;
+    }
+    .mobile-input-row {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:4px; grid-column:1/4;
+    }
+    .mobile-action-col {
+      grid-column:4; grid-row:1/4; display:flex; flex-direction:column; gap:4px;
+    }
+    .mobile-action-side {
+      flex:1; background:var(--surface2); border:1px solid var(--border);
+      border-radius:10px; color:var(--text2); font-size:1.1rem; font-weight:700;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+    }
+    .mobile-num-btn {
+      background:var(--accent); border:none; border-radius:10px; color:#fff;
+      font-size:1.3rem; font-weight:800; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      height:50px; padding:6px 0; line-height:1;
+    }
+    .mobile-num-btn.erase-mobile {
+      background:var(--surface2); color:var(--text2);
+      border:1px solid var(--border); font-size:1.1rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- MOBILE TOP BAR -->
+<div class="mobile-topbar">
+  <button class="mobile-back-btn">←</button>
+  <div class="mobile-puzzle-name">Gilded Wanderer</div>
+  <button class="mobile-chat-btn">💬</button>
+  <button class="mobile-gear-btn">⚙️</button>
+  <div class="mobile-timer-wrap">
+    <span>12:34</span>
+    <button class="mobile-pause-btn">⏸</button>
+  </div>
+</div>
+
+<!-- PAGE CONTENT -->
+<div class="page-content">
+  <div class="game-area">
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+    </div>
+  </div>
+
+  <!-- MOBILE CONTROLS -->
+  <div class="mobile-controls">
+    <div class="mobile-mode-row">
+      <button class="mobile-mode-btn active m-digit">✏️ Digit</button>
+      <button class="mobile-mode-btn m-corner">📐 Corner</button>
+      <button class="mobile-mode-btn m-center">◉ Centre</button>
+      <button class="mobile-mode-btn m-color">🎨 Color</button>
+    </div>
+    <div class="mobile-grid4">
+      <div class="mobile-input-row">
+        <button class="mobile-num-btn">1</button>
+        <button class="mobile-num-btn">2</button>
+        <button class="mobile-num-btn">3</button>
+      </div>
+      <div class="mobile-input-row">
+        <button class="mobile-num-btn">4</button>
+        <button class="mobile-num-btn">5</button>
+        <button class="mobile-num-btn">6</button>
+      </div>
+      <div class="mobile-input-row">
+        <button class="mobile-num-btn">7</button>
+        <button class="mobile-num-btn">8</button>
+        <button class="mobile-num-btn">9</button>
+      </div>
+      <div class="mobile-action-col">
+        <button class="mobile-action-side">↩</button>
+        <button class="mobile-action-side">↪</button>
+        <button class="mobile-num-btn erase-mobile">⌫</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const given = [
+  [5,3,0,0,7,0,0,0,0],
+  [6,0,0,1,9,5,0,0,0],
+  [0,9,8,0,0,0,0,6,0],
+  [8,0,0,0,6,0,0,0,3],
+  [4,0,0,8,0,3,0,0,1],
+  [7,0,0,0,2,0,0,0,6],
+  [0,6,0,0,0,0,2,8,0],
+  [0,0,0,4,1,9,0,0,5],
+  [0,0,0,0,8,0,0,7,9]
+];
+const solved = [
+  [5,3,4,6,7,8,9,1,2],
+  [6,7,2,1,9,5,3,4,8],
+  [1,9,8,3,4,2,5,6,7],
+  [8,5,9,7,6,1,4,2,3],
+  [4,2,6,8,5,3,7,9,1],
+  [7,1,3,9,2,4,8,5,6],
+  [9,6,1,5,3,7,2,8,4],
+  [2,8,7,4,1,9,6,3,5],
+  [3,4,5,2,8,6,1,7,9]
+];
+const corners = {
+  '0,2':[4],'0,5':[8],'0,7':[1],
+  '1,1':[7],'1,6':[3],
+  '2,3':[3],
+  '3,1':[5],'3,3':[7,9],
+  '5,3':[9],'5,5':[4],
+  '6,2':[1],
+  '7,1':[8],'7,6':[6],
+  '8,0':[3],'8,5':[6],
+};
+// Fill ~55% of blanks
+const progress = given.map((row,r) => row.map((v,c) => {
+  if (v !== 0) return v;
+  return ((r * 7 + c * 3) % 9 < 5) ? solved[r][c] : 0;
+}));
+const posMap = {0:'cn-tl',1:'cn-tr',2:'cn-bl',3:'cn-br'};
+const board = document.getElementById('board');
+const selR = 4, selC = 2;
+const selVal = progress[selR][selC] || solved[selR][selC];
+for (let r = 0; r < 9; r++) {
+  const rowDiv = document.createElement('div');
+  rowDiv.className = 'board-row';
+  for (let c = 0; c < 9; c++) {
+    const cell = document.createElement('div');
+    let cls = 'cell';
+    if (c === 2 || c === 5) cls += ' box-right';
+    if (r === 2 || r === 5) cls += ' box-bottom';
+    const val = progress[r][c];
+    if (r === selR && c === selC) cls += ' selected';
+    else if (r === selR || c === selC) cls += ' peer';
+    else if (val !== 0 && val === selVal) cls += ' same-val';
+    if (val !== 0) {
+      cls += given[r][c] !== 0 ? ' given' : ' filled';
+      cell.innerHTML = '<span class="cell-number">' + val + '</span>';
+    } else {
+      const key = r+','+c;
+      if (corners[key]) {
+        let h = '<div class="corner-notes">';
+        corners[key].forEach((n,i) => { h += '<span class="'+(posMap[i]||'cn-tl')+'">'+n+'</span>'; });
+        cell.innerHTML = h + '</div>';
+      }
+    }
+    cell.className = cls;
+    rowDiv.appendChild(cell);
+  }
+  board.appendChild(rowDiv);
+}
+</script>
+</body>
+</html>

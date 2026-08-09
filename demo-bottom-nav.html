@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iOS App Preview — Sudoku Social</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #2563eb;
+    --accent2: #7c3aed;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --tab-inactive: #9ca3af;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background: #111827;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 30px 20px;
+    color: #e5e7eb;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    background: linear-gradient(120deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    margin-bottom: 28px;
+  }
+
+  /* ── iPhone Frame ── */
+  .phone-frame {
+    width: 390px;
+    height: 844px;
+    background: #000;
+    border-radius: 50px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 30px 90px rgba(0,0,0,0.6), inset 0 0 0 3px #333;
+    flex-shrink: 0;
+  }
+
+  /* Dynamic Island */
+  .phone-frame::before {
+    content: '';
+    position: absolute;
+    top: 11px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 126px;
+    height: 36px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 200;
+  }
+
+  .screen {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    border-radius: 50px;
+    overflow: hidden;
+  }
+
+  /* Status bar behind Dynamic Island */
+  .status-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 54px;
+    background: #ffffff;
+    z-index: 50;
+    border-radius: 50px 50px 0 0;
+  }
+
+  /* Iframe pages */
+  .page-frame {
+    position: absolute;
+    top: 54px; left: 0;
+    width: 100%;
+    height: calc(100% - 54px);
+    border: none;
+    border-radius: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 1;
+  }
+  .page-frame.active {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 10;
+  }
+
+  /* ── Bottom Tab Bar ── */
+  .bottom-tab-bar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 6px 8px 28px;
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    z-index: 100;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+    border-radius: 0 0 50px 50px;
+  }
+
+  .tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s ease;
+    min-width: 56px;
+    padding: 4px 0;
+    background: none;
+    border: none;
+    font-family: inherit;
+  }
+  .tab-item:active { transform: scale(0.92); }
+
+  .tab-icon {
+    width: 26px; height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .tab-icon svg {
+    width: 24px; height: 24px;
+    stroke: var(--tab-inactive);
+    stroke-width: 1.8;
+    fill: none;
+    transition: stroke 0.2s, fill 0.2s;
+  }
+  .tab-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--tab-inactive);
+    transition: color 0.2s;
+    letter-spacing: 0.2px;
+  }
+
+  /* Active tab */
+  .tab-item.active .tab-icon svg {
+    stroke: var(--accent);
+    fill: var(--accent);
+    fill-opacity: 0.12;
+  }
+  .tab-item.active .tab-label {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .tab-item.active .tab-icon::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* Center Play button */
+  .tab-item.center-tab {
+    position: relative;
+    top: -14px;
+    margin: 0 4px;
+  }
+  .center-btn {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .tab-item.center-tab:active .center-btn {
+    transform: scale(0.92);
+    box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+  }
+  .center-btn svg {
+    width: 26px; height: 26px;
+    stroke: white;
+    stroke-width: 2;
+    fill: none;
+  }
+  .tab-item.center-tab .tab-label { margin-top: 4px; }
+  .tab-item.center-tab.active .tab-label { color: var(--accent); }
+  .tab-item.center-tab.active .tab-icon::after { display: none; }
+
+  /* ── Hint text ── */
+  .hint {
+    margin-top: 20px;
+    font-size: 0.8rem;
+    color: #6b7280;
+    text-align: center;
+    max-width: 380px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<h1>iOS App Preview</h1>
+<p class="subtitle">Your actual pages with bottom tab bar overlay — click tabs to navigate</p>
+
+<div class="phone-frame">
+  <div class="screen">
+    <div class="status-bar"></div>
+    <iframe class="page-frame active" id="frame-home"    src="public/main.html"></iframe>
+    <iframe class="page-frame"        id="frame-explore" src="about:blank"></iframe>
+    <iframe class="page-frame"        id="frame-play"    src="about:blank"></iframe>
+    <iframe class="page-frame"        id="frame-create"  src="about:blank"></iframe>
+    <iframe class="page-frame"        id="frame-profile" src="about:blank"></iframe>
+
+    <!-- Bottom Tab Bar -->
+    <div class="bottom-tab-bar">
+      <button class="tab-item active" data-page="home">
+        <div class="tab-icon">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <span class="tab-label">Home</span>
+      </button>
+      <button class="tab-item" data-page="explore">
+        <div class="tab-icon">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <span class="tab-label">Explore</span>
+      </button>
+      <button class="tab-item center-tab" data-page="play">
+        <div class="center-btn">
+          <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+        <span class="tab-label">Play</span>
+      </button>
+      <button class="tab-item" data-page="create">
+        <div class="tab-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+        <span class="tab-label">Create</span>
+      </button>
+      <button class="tab-item" data-page="profile">
+        <div class="tab-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <span class="tab-label">Profile</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<p class="hint">
+  Profile &amp; Play tabs use dummy pages with hardcoded data.<br>
+  Other tabs load your actual pages (may redirect due to auth locally).<br>
+  No source files were changed.
+</p>
+
+<script>
+  const pageSources = {
+    home:    'public/main.html',
+    explore: 'public/explore.html',
+    play:    'demo-game.html',
+    create:  'public/create.html',
+    profile: 'demo-profile.html'
+  };
+
+  const loaded = new Set(['home']);
+
+  document.querySelectorAll('.tab-item').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const page = tab.dataset.page;
+
+      // Update active tab
+      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      // Lazy-load iframe src on first visit
+      if (!loaded.has(page)) {
+        document.getElementById('frame-' + page).src = pageSources[page];
+        loaded.add(page);
+      }
+
+      // Show selected page frame
+      document.querySelectorAll('.page-frame').forEach(f => f.classList.remove('active'));
+      document.getElementById('frame-' + page).classList.add('active');
+
+      // Hide bottom tab bar on Play page (game has its own controls)
+      const tabBar = document.querySelector('.bottom-tab-bar');
+      const playFrame = document.getElementById('frame-play');
+      if (page === 'play') {
+        tabBar.style.display = 'none';
+        playFrame.style.height = 'calc(100% - 54px)';
+      } else {
+        tabBar.style.display = '';
+        playFrame.style.height = '';
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
