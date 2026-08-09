@@ -6,13 +6,12 @@ service cloud.firestore {
     // Anyone (including guests) can read puzzles
     match /puzzles/{puzzleId} {
       allow read: if true;
-      // Only authenticated users can create new puzzles
-      allow create: if request.auth != null;
-      // Only the puzzle author or an admin can update/delete
-      allow update: if request.auth != null && (
-        resource.data.authorUid == request.auth.uid ||
-        request.auth.uid == 'app-seed'
-      );
+      // Only verified users can create puzzles, and only as themselves
+      allow create: if request.auth != null
+        && request.auth.token.email_verified == true
+        && request.resource.data.authorUid == request.auth.uid;
+      // Only the puzzle author can update/delete
+      allow update: if request.auth != null && resource.data.authorUid == request.auth.uid;
       allow delete: if request.auth != null && resource.data.authorUid == request.auth.uid;
 
       // Solvers sub-collection: anyone can read, authenticated users can write their own
