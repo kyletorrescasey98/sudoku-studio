@@ -1,0 +1,12 @@
+{
+  "appId": "com.kylecasey.sudokusocial",
+  "appName": "Sudoku Social",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}
