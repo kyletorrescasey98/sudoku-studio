@@ -4,7 +4,7 @@
 // ============================================================
 export const firebaseConfig = {
   apiKey:            "AIzaSyBxxqqaD6tVbXiUuqKHfOImUOTyRx3gAeA",
-  authDomain:        "sudoku-459d3.firebaseapp.com",
+  authDomain:        "sudokusocial.web.app",
   projectId:         "sudoku-459d3",
   storageBucket:     "sudoku-459d3.firebasestorage.app",
   messagingSenderId: "40654864944",

@@ -24,6 +24,45 @@ function createPuzzle(sol,difficulty){const targets={easy:38,medium:30,hard:25,e
 function flattenPuzzle(arr){return arr.flat().join('');}
 function countClues(p){return p.flat().filter(v=>v!==0).length;}
 
+// ── Full logical solver (ensures no bifurcation needed) ───────
+const _rowCells=r=>Array.from({length:9},(_,j)=>r*9+j);
+const _colCells=c=>Array.from({length:9},(_,j)=>j*9+c);
+const _boxCells=b=>{const br=Math.floor(b/3)*3,bc=(b%3)*3,out=[];for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)out.push(r*9+c);return out;};
+const _cellBox=i=>Math.floor(Math.floor(i/9)/3)*3+Math.floor((i%9)/3);
+const _cellRow=i=>Math.floor(i/9);
+const _cellCol=i=>i%9;
+const _ALL_UNITS=[...Array.from({length:9},(_,r)=>_rowCells(r)),...Array.from({length:9},(_,c)=>_colCells(c)),...Array.from({length:9},(_,b)=>_boxCells(b))];
+function _buildCands(grid){const cands=Array.from({length:81},()=>new Set());for(let i=0;i<81;i++){if(grid[i]!==0)continue;const r=_cellRow(i),c=_cellCol(i),b=_cellBox(i);const seen=new Set();for(let j=0;j<9;j++)seen.add(grid[r*9+j]);for(let j=0;j<9;j++)seen.add(grid[j*9+c]);for(const bc of _boxCells(b))seen.add(grid[bc]);for(let n=1;n<=9;n++)if(!seen.has(n))cands[i].add(n);}return cands;}
+function _place(grid,cands,i,n){grid[i]=n;cands[i].clear();for(const j of[..._rowCells(_cellRow(i)),..._colCells(_cellCol(i)),..._boxCells(_cellBox(i))])cands[j].delete(n);}
+function* _subsets(arr,k){if(k===0){yield[];return;}for(let i=0;i<=arr.length-k;i++)for(const rest of _subsets(arr.slice(i+1),k-1))yield[arr[i],...rest];}
+function _union(sets){const u=new Set();for(const s of sets)for(const v of s)u.add(v);return u;}
+function _logicalStep(grid,cands){
+  for(let i=0;i<81;i++)if(grid[i]===0&&cands[i].size===1){_place(grid,cands,i,[...cands[i]][0]);return true;}
+  for(const unit of _ALL_UNITS){const empty=unit.filter(i=>grid[i]===0);for(let n=1;n<=9;n++){const p=empty.filter(i=>cands[i].has(n));if(p.length===1){_place(grid,cands,p[0],n);return true;}}}
+  for(const unit of _ALL_UNITS){const empty=unit.filter(i=>grid[i]===0);for(const k of[2,3,4])for(const combo of _subsets(empty,k)){const combined=_union(combo.map(i=>cands[i]));if(combined.size===k){let ch=false;for(const i of empty){if(combo.includes(i))continue;for(const n of combined)if(cands[i].has(n)){cands[i].delete(n);ch=true;}}if(ch)return true;}}}
+  for(const unit of _ALL_UNITS){const empty=unit.filter(i=>grid[i]===0);for(const k of[2,3,4]){const dc={};for(let n=1;n<=9;n++){const cells=empty.filter(i=>cands[i].has(n));if(cells.length>=2&&cells.length<=k)dc[n]=cells;}for(const combo of _subsets(Object.keys(dc).map(Number),k)){const covered=new Set(combo.flatMap(n=>dc[n]));if(covered.size===k){let ch=false;for(const i of covered)for(const n of[...cands[i]])if(!combo.includes(n)){cands[i].delete(n);ch=true;}if(ch)return true;}}}}
+  for(let b=0;b<9;b++){const bc=_boxCells(b).filter(i=>grid[i]===0);for(let n=1;n<=9;n++){const cells=bc.filter(i=>cands[i].has(n));if(cells.length<2)continue;let ch=false;const rows=new Set(cells.map(_cellRow)),cols=new Set(cells.map(_cellCol));if(rows.size===1)for(const i of _rowCells([...rows][0]))if(grid[i]===0&&!cells.includes(i)&&cands[i].has(n)){cands[i].delete(n);ch=true;}if(cols.size===1)for(const i of _colCells([...cols][0]))if(grid[i]===0&&!cells.includes(i)&&cands[i].has(n)){cands[i].delete(n);ch=true;}if(ch)return true;}}
+  for(let r=0;r<9;r++)for(let n=1;n<=9;n++){const cells=_rowCells(r).filter(i=>grid[i]===0&&cands[i].has(n));if(cells.length<2)continue;const boxes=new Set(cells.map(_cellBox));if(boxes.size===1){let ch=false;for(const i of _boxCells([...boxes][0]))if(grid[i]===0&&!cells.includes(i)&&cands[i].has(n)){cands[i].delete(n);ch=true;}if(ch)return true;}}
+  for(let c=0;c<9;c++)for(let n=1;n<=9;n++){const cells=_colCells(c).filter(i=>grid[i]===0&&cands[i].has(n));if(cells.length<2)continue;const boxes=new Set(cells.map(_cellBox));if(boxes.size===1){let ch=false;for(const i of _boxCells([...boxes][0]))if(grid[i]===0&&!cells.includes(i)&&cands[i].has(n)){cands[i].delete(n);ch=true;}if(ch)return true;}}
+  for(const fs of[2,3,4])for(let n=1;n<=9;n++){const rwn=[];for(let r=0;r<9;r++){const cols=_rowCells(r).filter(i=>grid[i]===0&&cands[i].has(n)).map(_cellCol);if(cols.length>=2&&cols.length<=fs)rwn.push({r,cols});}for(const combo of _subsets(rwn,fs)){const ac=new Set(combo.flatMap(x=>x.cols));if(ac.size===fs){let ch=false;for(const col of ac)for(const i of _colCells(col))if(grid[i]===0&&!combo.some(x=>x.r===_cellRow(i))&&cands[i].has(n)){cands[i].delete(n);ch=true;}if(ch)return true;}}const cwn=[];for(let c=0;c<9;c++){const rows=_colCells(c).filter(i=>grid[i]===0&&cands[i].has(n)).map(_cellRow);if(rows.length>=2&&rows.length<=fs)cwn.push({c,rows});}for(const combo of _subsets(cwn,fs)){const ar=new Set(combo.flatMap(x=>x.rows));if(ar.size===fs){let ch=false;for(const row of ar)for(const i of _rowCells(row))if(grid[i]===0&&!combo.some(x=>x.c===_cellCol(i))&&cands[i].has(n)){cands[i].delete(n);ch=true;}if(ch)return true;}}}
+  const sees=(i,j)=>i!==j&&(_cellRow(i)===_cellRow(j)||_cellCol(i)===_cellCol(j)||_cellBox(i)===_cellBox(j));
+  const bi=[];for(let i=0;i<81;i++)if(grid[i]===0&&cands[i].size===2)bi.push(i);
+  for(const pv of bi){const[A,B]=[...cands[pv]];for(const p1 of bi.filter(p=>p!==pv&&sees(p,pv)&&cands[p].has(A))){const[C]=[...cands[p1]].filter(x=>x!==A);for(const p2 of bi.filter(p=>p!==pv&&p!==p1&&sees(p,pv)&&cands[p].has(B)&&cands[p].has(C))){let ch=false;for(let i=0;i<81;i++)if(grid[i]===0&&i!==p1&&i!==p2&&cands[i].has(C)&&sees(i,p1)&&sees(i,p2)){cands[i].delete(C);ch=true;}if(ch)return true;}}}
+  for(let i=0;i<81;i++){if(grid[i]===0&&cands[i].size!==3)continue;const[A,B,C_]=[...cands[i]];for(const[zA,zB,zC]of[[A,B,C_],[A,C_,B],[B,C_,A]]){const pA=bi.filter(p=>sees(p,i)&&cands[p].has(zA)&&cands[p].has(zC));const pB=bi.filter(p=>sees(p,i)&&cands[p].has(zB)&&cands[p].has(zC));for(const pa of pA)for(const pb of pB){if(pa===pb)continue;let ch=false;for(let j=0;j<81;j++)if(grid[j]===0&&j!==i&&j!==pa&&j!==pb&&cands[j].has(zC)&&sees(j,i)&&sees(j,pa)&&sees(j,pb)){cands[j].delete(zC);ch=true;}if(ch)return true;}}}
+  return false;
+}
+function isSolvableLogically(puzzleArr){
+  const grid=puzzleArr.flat().map(Number);
+  const cands=_buildCands(grid);
+  let steps=0;
+  while(grid.includes(0)){if(!_logicalStep(grid,cands))return false;if(++steps>10000)return false;}
+  return true;
+}
+// Retry generation until a logically-solvable puzzle is produced
+function generateLogicalPuzzle(difficulty){
+  while(true){const sol=generateSolution();const puz=createPuzzle(sol,difficulty);if(isSolvableLogically(puz))return puz;}
+}
+
 // ── Name lists ────────────────────────────────────────────────
 const ADJECTIVES = [
   'Radiant','Crimson','Frozen','Eternal','Blazing',
@@ -108,8 +147,7 @@ for (const diff of difficulties) {
     const name = randomName();
     process.stdout.write(`  [${i+1}/${need}] Generating "${name}"… `);
     try {
-      const sol = generateSolution();
-      const puz = createPuzzle(sol, diff);
+      const puz = generateLogicalPuzzle(diff);
       const clueCount = countClues(puz);
 
       await addDoc(collection(db, 'puzzles'), {
