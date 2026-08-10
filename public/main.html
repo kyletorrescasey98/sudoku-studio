@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <script defer src="./vendor/offline-banner.js"></script>
   <title>Home — Sudoku Social</title>
   <meta name="description" content="Sudoku Social — Challenge your mind with engaging Sudoku puzzles" />
   <meta property="og:title" content="Sudoku Social" />
@@ -190,18 +189,6 @@
     .diff-hard:hover { background:#fed7aa; border-color:#fb923c; transform:scale(1.02); }
     .diff-expert { background:#ede9fe; color:#6d28d9; border-color:#ddd6fe; }
     .diff-expert:hover { background:#ddd6fe; border-color:#a78bfa; transform:scale(1.02); }
-    .diff-generate {
-      grid-column:1 / -1;
-      background:#f0f9ff; color:#0369a1; border-color:#bae6fd;
-    }
-    .diff-generate:hover { background:#bae6fd; border-color:#38bdf8; transform:scale(1.01); }
-    .diff-generate.busy { opacity:.6; cursor:progress; }
-    .guest-badge {
-      display:inline-flex; align-items:center; justify-content:center;
-      background:#e5e7eb; color:#374151;
-      border-radius:999px; padding:3px 10px;
-      font-size:.7rem; font-weight:700; letter-spacing:.4px;
-    }
 
     .modal-close-btn {
       background:var(--surface2); border:1px solid var(--border);
@@ -339,10 +326,6 @@
         💜 Expert
         <span class="diff-label">Master level</span>
       </button>
-      <button class="diff-btn diff-generate" id="generateBtn" onclick="generateOfflinePuzzle()">
-        🎲 Generate Puzzle
-        <span class="diff-label">Fresh puzzle, works offline</span>
-      </button>
     </div>
     <button class="modal-close-btn" onclick="closeDiffModal()">Cancel</button>
   </div>
@@ -370,51 +353,34 @@ const app  = initializeApp(firebaseConfig);
 const auth = initializeAuth(app, { persistence: browserLocalPersistence });
 
 let currentUser = null;
-const isGuest = new URLSearchParams(location.search).has('guest')
-             || sessionStorage.getItem('sudokuGuest') === '1';
-if (isGuest) sessionStorage.setItem('sudokuGuest', '1');
 
 // Returns the localStorage key scoped to the signed-in user so that
 // no two accounts on the same device can share puzzle state.
 function getLastPuzzleKey(){
-  if (currentUser) return 'lastPuzzle_' + currentUser.uid;
-  return 'lastPuzzle_guest';
+  return 'lastPuzzle_' + (currentUser ? currentUser.uid : 'guest');
 }
 
 onAuthStateChanged(auth, user => {
-  if (user && !user.emailVerified) {
+  if (!user) {
     window.location.replace('index.html');
     return;
   }
-  if (user) {
-    currentUser = user;
-    sessionStorage.removeItem('sudokuGuest');
-    const initial = (user.displayName || user.email || '?')[0].toUpperCase();
-    const el = document.getElementById('navAvatarEl');
-    if (el) el.textContent = initial;
-  } else if (isGuest) {
-    const el = document.getElementById('navAvatarEl');
-    if (el) { el.textContent = '?'; el.title = 'Guest'; }
-    const nav = document.getElementById('navUser') || document.querySelector('.nav-user');
-    if (nav && !nav.querySelector('.guest-badge')) {
-      const badge = document.createElement('span');
-      badge.className = 'guest-badge';
-      badge.textContent = 'Guest';
-      badge.style.marginRight = '8px';
-      nav.prepend(badge);
-    }
-  } else {
+  if (!user.emailVerified) {
     window.location.replace('index.html');
     return;
   }
+  currentUser = user;
+  // Set avatar initials
+  const initial = (user.displayName || user.email || '?')[0].toUpperCase();
+  const el = document.getElementById('navAvatarEl');
+  if (el) el.textContent = initial;
   refreshContinueButton();
 });
 
 window.handleSignOut = async () => {
-  const keyToRemove = getLastPuzzleKey();
-  if (currentUser) await signOut(auth);
-  localStorage.removeItem(keyToRemove);
-  sessionStorage.removeItem('sudokuGuest');
+  const keyToRemove = getLastPuzzleKey(); // capture before user is cleared
+  await signOut(auth);
+  localStorage.removeItem(keyToRemove);  // never bleed one account's puzzle into another
   window.location.href = 'index.html';
 };
 
@@ -517,27 +483,6 @@ window.closeNoPuzzleModal = () => {
 window.startNewWithDifficulty = (diff) => {
   localStorage.setItem('sudoku_newgame_difficulty', diff);
   window.location.href = 'game.html#play';
-};
-
-// ── Generate a fresh puzzle locally (works offline) ──
-window.generateOfflinePuzzle = async () => {
-  const btn = document.getElementById('generateBtn');
-  if (btn?.classList.contains('busy')) return;
-  const diff = window.prompt('Difficulty? (Easy, Medium, Hard, Expert)', 'Medium');
-  if (!diff) return;
-  btn?.classList.add('busy');
-  try {
-    const { generatePuzzle } = await import('./vendor/puzzle-gen.js');
-    // Yield to the UI so the busy state renders before the CPU work.
-    await new Promise(r => setTimeout(r, 20));
-    const p = generatePuzzle(diff);
-    sessionStorage.setItem('generatedPuzzle', JSON.stringify(p));
-    window.location.href = 'game.html#generated';
-  } catch (e) {
-    console.error('generator failed', e);
-    alert('Could not generate a puzzle. Please try again.');
-    btn?.classList.remove('busy');
-  }
 };
 
 // Refresh Continue state when returning from the game screen (bfcache/tab switch).

@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script defer src="./vendor/offline-banner.js"></script>
   <title>Profile — Sudoku Social</title>
   <meta name="description" content="View your Sudoku profile, stats, solve history and created puzzles" />
   <meta property="og:title" content="Sudoku Social - Profile" />
@@ -658,7 +657,7 @@
 <script type="module">
 import { initializeApp }        from './vendor/firebase/12.9.0/firebase-app.js';
 import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut, updateProfile } from './vendor/firebase/12.9.0/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, getDocs, getDoc, setDoc, updateDoc, doc, query, orderBy, where, limit, deleteDoc, deleteField, getCountFromServer, increment, waitForPendingWrites } from './vendor/firebase/12.9.0/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, getDocs, getDoc, setDoc, updateDoc, doc, query, orderBy, where, limit, deleteDoc, deleteField, getCountFromServer, increment } from './vendor/firebase/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
@@ -666,8 +665,6 @@ const auth = initializeAuth(app, { persistence: browserLocalPersistence });
 const db   = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
 });
-if (window.OfflineSync) window.OfflineSync.attach(db, waitForPendingWrites);
-else window.__offlineSyncPending = { db, waitForPendingWrites };
 
 // ── STATE ────────────────────────────────────────────
 let currentUser    = null;
@@ -1012,7 +1009,7 @@ onAuthStateChanged(auth, async user=>{
       const syncData = {};
       if(user.displayName) { syncData.displayName = user.displayName; syncData.displayNameLower = user.displayName.toLowerCase(); }
       if(user.email) syncData.email = user.email;
-      if(Object.keys(syncData).length) await setDoc(doc(db,'users',user.uid), syncData, { merge: true });
+      if(Object.keys(syncData).length) setDoc(doc(db,'users',user.uid), syncData, { merge: true }).catch(()=>{});
     }catch(e){}
 
     // Race loadProfile against a 12-second timeout (guards against Safari hanging on Firestore)
@@ -1026,10 +1023,14 @@ onAuthStateChanged(auth, async user=>{
     try{ renderAll(); }catch(_){}
   }finally{
     // Always hide the loading screen — no matter what went wrong
-    document.getElementById('loadingArea').style.display='none';
-    document.getElementById('contentArea').style.display='flex';
+    revealProfile();
   }
 });
+
+function revealProfile(){
+  document.getElementById('loadingArea').style.display='none';
+  document.getElementById('contentArea').style.display='flex';
+}
 
 // Global variable to track our follow status
 let ourFollowingData = {};
@@ -1065,6 +1066,10 @@ async function loadProfile(){
     profileDoc={}; 
     ourFollowingData = {};
   }
+
+  // Render core profile details immediately; history and rankings can continue loading.
+  renderAll();
+  revealProfile();
 
   try{
     const q=query(collection(db,'users',viewUid,'solves'),orderBy('solvedAt','desc'));
@@ -1289,7 +1294,6 @@ window.saveName=async function(){
   nameErrEl.style.display='none';
   profileDoc.displayName=newName;
   try{
-    window.OfflineSync?.notifyWrite('Name');
     await setDoc(doc(db,'users',currentUser.uid),{displayName:newName,displayNameLower:newName.toLowerCase()},{merge:true});
     await updateProfile(currentUser,{displayName:newName});
   }catch(e){}
@@ -1321,7 +1325,7 @@ window.saveBio=async function(){
   document.getElementById('bioWrap').style.display='';
   document.getElementById('bioEditWrap').style.display='none';
   profileDoc.bio=newBio;
-  try{ window.OfflineSync?.notifyWrite('Bio'); await setDoc(doc(db,'users',currentUser.uid),{bio:newBio},{merge:true}); }catch(e){}
+  try{ await setDoc(doc(db,'users',currentUser.uid),{bio:newBio},{merge:true}); }catch(e){}
 };
 window.cancelBio=function(){
   document.getElementById('bioInput').value=profileDoc.bio||'';
@@ -1337,7 +1341,7 @@ document.getElementById('bioEditBtn').addEventListener('click',()=>{
 // ── PRIVACY TOGGLE ────────────────────────────────────
 window.togglePrivacy=async function(checked){
   profileDoc.isPrivate=checked;
-  try{ window.OfflineSync?.notifyWrite('Privacy'); await setDoc(doc(db,'users',currentUser.uid),{isPrivate:checked},{merge:true}); }catch(e){}
+  try{ await setDoc(doc(db,'users',currentUser.uid),{isPrivate:checked},{merge:true}); }catch(e){}
 };
 
 // ── FOLLOW / UNFOLLOW ─────────────────────────────────
@@ -1379,7 +1383,6 @@ async function toggleFollow(){
     }
     
     console.log('Writing target user followers:', updatedFollowers);
-    window.OfflineSync?.notifyWrite(newState ? 'Follow' : 'Unfollow');
     await setDoc(targetUserRef, { followers: updatedFollowers }, { merge: true });
     console.log('Target user followers updated successfully');
     
@@ -2117,7 +2120,6 @@ function openCreatedPuzzleModal(p){
   document.getElementById('cpConfirmYes').onclick=async()=>{
     try{
       // Delete puzzle document
-      window.OfflineSync?.notifyWrite('Delete puzzle');
       await deleteDoc(doc(db,'puzzles',p.id));
       // Delete solver sub-collection docs
       try{

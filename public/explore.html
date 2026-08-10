@@ -4,7 +4,6 @@
   <meta charset="UTF-8"/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <script defer src="./vendor/offline-banner.js"></script>
   <title>Explore — Sudoku Social</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -812,7 +811,7 @@
 <script type="module">
 import { initializeApp } from './vendor/firebase/12.9.0/firebase-app.js';
 import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut } from './vendor/firebase/12.9.0/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, getDocs, getDoc, doc, setDoc, addDoc, query, where, orderBy, serverTimestamp, waitForPendingWrites } from './vendor/firebase/12.9.0/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, getDocs, getDoc, doc, setDoc, addDoc, query, where, orderBy, serverTimestamp } from './vendor/firebase/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
@@ -820,8 +819,6 @@ const auth = initializeAuth(app, { persistence: browserLocalPersistence });
 const db   = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
 });
-if (window.OfflineSync) window.OfflineSync.attach(db, waitForPendingWrites);
-else window.__offlineSyncPending = { db, waitForPendingWrites };
 
 const isGuest = new URLSearchParams(location.search).has('guest') || sessionStorage.getItem('sudokuGuest') === '1';
 if (isGuest) sessionStorage.setItem('sudokuGuest', '1');

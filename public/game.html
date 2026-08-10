@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <script defer src="./vendor/offline-banner.js"></script>
   <title>Sudoku</title>
   <meta name="description" content="Play Sudoku - Challenge your mind with engaging number puzzles" />
   <meta property="og:title" content="Sudoku Social - Play Game" />
@@ -925,7 +924,7 @@
 <script type="module">
 import { initializeApp } from './vendor/firebase/12.9.0/firebase-app.js';
 import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut } from './vendor/firebase/12.9.0/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction, query, orderBy, where, limit, startAfter, onSnapshot, updateDoc, increment, deleteDoc, waitForPendingWrites } from './vendor/firebase/12.9.0/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction, query, orderBy, where, limit, startAfter, onSnapshot, updateDoc, increment, deleteDoc } from './vendor/firebase/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
@@ -933,8 +932,6 @@ const auth = initializeAuth(app, { persistence: browserLocalPersistence });
 const db   = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
 });
-if (window.OfflineSync) window.OfflineSync.attach(db, waitForPendingWrites);
-else window.__offlineSyncPending = { db, waitForPendingWrites };
 
 const isGuest = new URLSearchParams(location.search).has('guest')
              || sessionStorage.getItem('sudokuGuest') === '1';
@@ -1050,7 +1047,6 @@ async function saveSolve(difficulty, timeSeconds, mistakes) {
   try {
     // Flatten current puzzle board to a clue string for the tiny grid in profile
     const puzzleStr = (puzzle||[]).flat().join('');
-    window.OfflineSync?.notifyWrite('Solve');
     await addDoc(collection(db, 'users', currentUser.uid, 'solves'), {
       difficulty, timeSeconds, mistakes,
       puzzleName: currentPuzzleName || '',
@@ -2556,21 +2552,6 @@ new ResizeObserver(()=>renderGameConstraints()).observe(document.getElementById(
 // #explore:id) from launching a second concurrent loadExplorePuzzle call.
 let _loadExplorePuzzleInFlight = false;
 
-window.loadGeneratedPuzzle=async function(){
-  document.getElementById('loading').classList.add('show');
-  let p;
-  try{ p=JSON.parse(sessionStorage.getItem('generatedPuzzle')||'null'); }catch(e){ p=null; }
-  sessionStorage.removeItem('generatedPuzzle');
-  if(!p){
-    document.getElementById('loading').classList.remove('show');
-    if(_authResolved) playLastOrNew();
-    else _pendingPlayRequest = true;
-    return;
-  }
-  communityPuzzles=[p];
-  await window.loadCommunityPuzzle(0);
-};
-
 window.loadExplorePuzzle=async function(){
   if(_loadExplorePuzzleInFlight) return;
   _loadExplorePuzzleInFlight = true;
@@ -3492,7 +3473,6 @@ function updateCommentsInputUI(){
 async function submitComment(text){
   if(!text||!currentUser||!currentPuzzleId) return;
   const username = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
-  window.OfflineSync?.notifyWrite('Comment');
   await addDoc(collection(db,'puzzles',currentPuzzleId,'comments'),{
     text, uid:currentUser.uid, username,
     createdAt:serverTimestamp(), replyCount:0
@@ -3529,7 +3509,6 @@ window.postReply = async function(btn, commentId){
   btn.disabled=true;
   try{
     const username = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
-    window.OfflineSync?.notifyWrite('Reply');
     await addDoc(collection(db,'puzzles',currentPuzzleId,'comments',commentId,'replies'),{
       text, uid:currentUser.uid, username, createdAt:serverTimestamp()
     });
@@ -3547,7 +3526,6 @@ window.postReply = async function(btn, commentId){
 window.deleteComment = async function(commentId){
   if(!currentUser||!currentPuzzleId) return;
   if(!confirm('Delete this comment?')) return;
-  window.OfflineSync?.notifyWrite('Deleted comment');
   try{ await deleteDoc(doc(db,'puzzles',currentPuzzleId,'comments',commentId)); }
   catch(e){ console.error('Delete comment error:',e); }
 };
@@ -3691,7 +3669,6 @@ function handleInitialHash(){
   try{
     if(window.location.hash.startsWith('#explore')){window.loadExplorePuzzle();return;}
     if(window.location.hash.startsWith('#shared:')){loadSharedPuzzle();return;}
-    if(window.location.hash==='#generated'){window.loadGeneratedPuzzle();return;}
     if(window.location.hash==='#search'){window.location.replace('explore.html');return;}
     if(window.location.hash==='#play'){
       // playLastOrNew() needs currentUser to be resolved first so we know
@@ -3708,7 +3685,6 @@ function handleInitialHash(){
 window.addEventListener('hashchange',()=>{
   if(window.location.hash.startsWith('#explore'))window.loadExplorePuzzle();
   else if(window.location.hash.startsWith('#shared:'))loadSharedPuzzle();
-  else if(window.location.hash==='#generated')window.loadGeneratedPuzzle();
   else if(window.location.hash==='#search')window.showSearchOverlay();
   else if(window.location.hash==='#play')playLastOrNew();
   else window.location.replace('explore.html');

@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <script defer src="./vendor/offline-banner.js"></script>
   <title>Sudoku &mdash; Sign In</title>
   <meta name="description" content="Sign in to Sudoku Studio - Challenge your mind with engaging Sudoku puzzles" />
   <meta property="og:title" content="Sudoku Studio - Sign In" />
@@ -25,8 +24,7 @@
       --accent:#2563eb; --accent2:#7c3aed; --text:#111827; --text2:#6b7280;
       --error:#dc2626; --success:#16a34a; --border:#d1d5db;
     }
-    html, body { overflow:hidden; height:100%; }
-    body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom); }
+    body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:calc(24px + env(safe-area-inset-top)) 16px 24px; }
     .logo { font-size:2.2rem; font-weight:900; letter-spacing:10px; text-transform:uppercase; background:linear-gradient(120deg,var(--accent) 30%,var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin:6px 0 4px; text-align:center; }
     .tagline { font-size:.65rem; color:var(--text2); letter-spacing:3px; text-transform:uppercase; text-align:center; margin-bottom:32px; }
     .card { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:32px 36px; width:100%; max-width:400px; box-shadow:0 4px 24px rgba(0,0,0,.07); max-height:calc(100vh - 180px); overflow-y:auto; }
@@ -96,43 +94,33 @@
       <button class="btn btn-primary" id="su-btn" onclick="signUp()">Create Account</button>
       <div class="msg" id="su-msg"></div>
     </div>
-
-    <div class="play-guest">
-      Want to try first? <a onclick="enterGuestMode()">Play as Guest →</a>
-    </div>
   </div>
 
   <script type="module">
     import { initializeApp } from './vendor/firebase/12.9.0/firebase-app.js';
-    import { initializeAuth, browserLocalPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, onAuthStateChanged, updateProfile } from './vendor/firebase/12.9.0/firebase-auth.js';
-    import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, doc, setDoc, serverTimestamp, collection, query, where, getDocs } from './vendor/firebase/12.9.0/firebase-firestore.js';
+    import { initializeAuth, browserLocalPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, onAuthStateChanged, updateProfile, signOut } from './vendor/firebase/12.9.0/firebase-auth.js';
+    import { getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs } from './vendor/firebase/12.9.0/firebase-firestore.js';
     import { firebaseConfig } from './firebase-config.js';
 
     const app  = initializeApp(firebaseConfig);
     const auth = initializeAuth(app, { persistence: browserLocalPersistence });
-    const db   = initializeFirestore(app, {
-      localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
-    });
+    const db   = getFirestore(app);
     let signingUp = false;
+    const REQUEST_TIMEOUT_MS = 15000;
 
-    // Guest → account migration keys copied on signup so guest progress isn't lost.
-    const GUEST_MIGRATE_KEYS = ['lastPuzzle_guest','solvedPuzzles_guest'];
-
-    window.enterGuestMode = function() {
-      sessionStorage.setItem('sudokuGuest', '1');
-      window.location.href = 'main.html?guest=1';
-    };
+    function withTimeout(promise) {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => {
+          const error = new Error('Request timed out');
+          error.code = 'auth/request-timeout';
+          reject(error);
+        }, REQUEST_TIMEOUT_MS))
+      ]);
+    }
 
     // Redirect if already signed in (skip during active signup so updateProfile can finish)
-    onAuthStateChanged(auth, user => {
-      if(user && !signingUp) {
-        if(user.emailVerified) {
-          window.location.href = 'main.html';
-        } else {
-          showVerificationPending(user);
-        }
-      }
-    });
+    onAuthStateChanged(auth, user => { if(user && user.emailVerified && !signingUp) window.location.href = 'main.html'; });
 
     window.switchTab = function(tab) {
       document.getElementById('form-signin').style.display = tab==='signin' ? '' : 'none';
@@ -159,14 +147,17 @@
       if(!email || !pass) { showMsg('si-msg','Please fill in all fields.','error'); return; }
       setLoading('si-btn', true);
       try {
-        const cred = await signInWithEmailAndPassword(auth, email, pass);
+        const cred = await withTimeout(signInWithEmailAndPassword(auth, email, pass));
         if(!cred.user.emailVerified) {
-          showVerificationPending(cred.user);
+          await withTimeout(sendEmailVerification(cred.user));
+          await signOut(auth);
+          showMsg('si-msg','Please verify your email. We sent you a new verification link.','error');
           setLoading('si-btn', false);
           return;
         }
         window.location.href = 'main.html';
       } catch(e) {
+        console.error('Sign in failed:', e);
         showMsg('si-msg', friendlyError(e.code), 'error');
         setLoading('si-btn', false);
       }
@@ -182,10 +173,10 @@
       // Check for duplicate display name (case-insensitive)
       // Two queries: displayNameLower (new accounts) + displayName (legacy accounts)
       try {
-        const [snapLower, snapExact] = await Promise.all([
+        const [snapLower, snapExact] = await withTimeout(Promise.all([
           getDocs(query(collection(db,'users'), where('displayNameLower','==',name.toLowerCase()))),
           getDocs(query(collection(db,'users'), where('displayName','==',name)))
-        ]);
+        ]));
         const taken = !snapLower.empty || !snapExact.empty;
         if(taken) {
           showMsg('su-msg','That name is already taken. Please choose a different name.','error');
@@ -195,136 +186,42 @@
       } catch(_) {}
       signingUp = true;
       try {
-        const cred = await createUserWithEmailAndPassword(auth, email, pass);
-        await updateProfile(cred.user, { displayName: name });
-        await setDoc(doc(db,'users',cred.user.uid),{ displayName: name, displayNameLower: name.toLowerCase(), email: email, createdAt: serverTimestamp() },{ merge: true });
-        // Migrate any guest progress on this device to the new account.
-        for (const k of GUEST_MIGRATE_KEYS) {
-          const v = localStorage.getItem(k);
-          if (v == null) continue;
-          const target = k.replace(/_guest$/, '_' + cred.user.uid);
-          if (localStorage.getItem(target) == null) localStorage.setItem(target, v);
-          localStorage.removeItem(k);
-        }
-        sessionStorage.removeItem('sudokuGuest');
-        await sendEmailVerification(cred.user);
+        const cred = await withTimeout(createUserWithEmailAndPassword(auth, email, pass));
+        await withTimeout(updateProfile(cred.user, { displayName: name }));
+        await withTimeout(setDoc(doc(db,'users',cred.user.uid),{ displayName: name, displayNameLower: name.toLowerCase(), email: email, createdAt: serverTimestamp() },{ merge: true }));
+        await withTimeout(sendEmailVerification(cred.user));
+        await signOut(auth);
         signingUp = false;
-        showVerificationPending(cred.user);
+        switchTab('signin');
+        document.getElementById('si-email').value = email;
+        showMsg('si-msg','Account created. Check your email to verify it, then sign in.','success');
+        setLoading('su-btn', false);
       } catch(e) {
+        console.error('Create account failed:', e);
+        signingUp = false;
         showMsg('su-msg', friendlyError(e.code), 'error');
         setLoading('su-btn', false);
       }
     };
 
-    let forgotSending = false;
     window.forgotPassword = async function() {
-      if(forgotSending) return;
       const email = document.getElementById('si-email').value.trim();
       if(!email) { showMsg('si-msg','Enter your email above first.','error'); return; }
-      forgotSending = true;
-      const link = document.querySelector('.forgot');
-      if(link) { link.textContent = 'Sending…'; link.style.pointerEvents = 'none'; link.style.opacity = '0.5'; }
       try {
-        await sendPasswordResetEmail(auth, email);
+        await withTimeout(sendPasswordResetEmail(auth, email));
         showMsg('si-msg', 'Password reset email sent!', 'success');
       } catch(e) {
+        console.error('Password reset failed:', e);
         showMsg('si-msg', friendlyError(e.code), 'error');
-      } finally {
-        if(link) { link.textContent = 'Forgot password?'; link.style.pointerEvents = ''; link.style.opacity = ''; }
-        forgotSending = false;
       }
     };
 
     // Enter key support
     document.addEventListener('keydown', e => {
       if(e.key !== 'Enter') return;
-      const signinForm = document.getElementById('form-signin');
-      const signupForm = document.getElementById('form-signup');
-      if(!signinForm || !signupForm) return; // forms replaced by verification screen
-      const signinVisible = signinForm.style.display !== 'none';
+      const signinVisible = document.getElementById('form-signin').style.display !== 'none';
       if(signinVisible) window.signIn(); else window.signUp();
     });
-
-    let verifyPollTimer = null;
-    function stopVerifyPoll() {
-      if (verifyPollTimer) { clearInterval(verifyPollTimer); verifyPollTimer = null; }
-    }
-    function showVerificationPending(user) {
-      document.querySelector('.card').innerHTML = `
-        <div style="text-align:center;padding:16px 0">
-          <div style="font-size:2.5rem;margin-bottom:12px">📧</div>
-          <h2 style="font-size:1.1rem;margin-bottom:8px">Verify your email</h2>
-          <p style="font-size:.85rem;color:var(--text2);margin-bottom:20px;line-height:1.5">
-            We sent a verification link to<br><strong>${user.email}</strong><br>Please check your inbox and click the link to continue.
-          </p>
-          <button class="btn btn-primary" id="resend-btn" style="margin-bottom:12px" onclick="window.resendVerification()">Resend verification email</button>
-          <div class="msg" id="verify-msg"></div>
-          <p style="font-size:.73rem;color:var(--text2);margin-top:16px" id="verify-status">
-            Waiting for verification…
-          </p>
-          <p style="font-size:.73rem;color:var(--text2);margin-top:8px">
-            Wrong email? <a href="#" style="color:var(--accent);font-weight:600;text-decoration:none" onclick="window.handleSignOut();return false;">Sign out</a>
-          </p>
-        </div>
-      `;
-      // Auto-detect verification without requiring the user to reload the page.
-      stopVerifyPoll();
-      verifyPollTimer = setInterval(async () => {
-        const u = auth.currentUser;
-        if (!u) { stopVerifyPoll(); return; }
-        try {
-          await u.reload();
-          if (u.emailVerified) {
-            stopVerifyPoll();
-            window.location.href = 'main.html';
-          }
-        } catch(_) { /* offline; try again next tick */ }
-      }, 3000);
-      // Also check immediately when the app regains focus (e.g. user returns from Mail/Safari).
-      window.addEventListener('focus', pokeVerify);
-      document.addEventListener('visibilitychange', pokeVerify);
-    }
-    async function pokeVerify() {
-      if (document.visibilityState === 'hidden') return;
-      const u = auth.currentUser;
-      if (!u) return;
-      try {
-        await u.reload();
-        if (u.emailVerified) {
-          stopVerifyPoll();
-          window.location.href = 'main.html';
-        }
-      } catch(_) {}
-    }
-
-    window.resendVerification = async function() {
-      const user = auth.currentUser;
-      if(!user) return;
-      const btn = document.getElementById('resend-btn');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-sm"></span>Sending…';
-      try {
-        await sendEmailVerification(user);
-        const el = document.getElementById('verify-msg');
-        el.textContent = 'Verification email sent!';
-        el.className = 'msg success';
-        btn.innerHTML = 'Resend verification email';
-        btn.disabled = false;
-      } catch(e) {
-        const el = document.getElementById('verify-msg');
-        el.textContent = e.code === 'auth/too-many-requests' ? 'Too many attempts. Please wait a moment.' : 'Failed to send. Try again later.';
-        el.className = 'msg error';
-        btn.innerHTML = 'Resend verification email';
-        btn.disabled = false;
-      }
-    };
-
-    window.handleSignOut = async function() {
-      stopVerifyPoll();
-      const { signOut } = await import('./vendor/firebase/12.9.0/firebase-auth.js');
-      await signOut(auth);
-      window.location.reload();
-    };
 
     function friendlyError(code) {
       const map = {
@@ -337,6 +234,7 @@
         'auth/popup-closed-by-user':   'Sign-in popup was closed.',
         'auth/too-many-requests':      'Too many attempts. Please try again later.',
         'auth/network-request-failed': 'Network error. Check your connection.',
+        'auth/request-timeout':        'The request timed out. Check your connection and try again.',
       };
       return map[code] || 'Something went wrong. Please try again.';
     }
