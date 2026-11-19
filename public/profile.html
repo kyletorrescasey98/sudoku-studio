@@ -655,16 +655,44 @@
 </div>
 
 <script type="module">
-import { initializeApp }        from './vendor/firebase/12.9.0/firebase-app.js';
-import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut, updateProfile } from './vendor/firebase/12.9.0/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, getDocs, getDoc, setDoc, updateDoc, doc, query, orderBy, where, limit, deleteDoc, deleteField, getCountFromServer, increment } from './vendor/firebase/12.9.0/firebase-firestore.js';
+import { initializeApp }        from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signOut, updateProfile } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
+import { getFirestore, collection, getDocs, getDoc, setDoc, updateDoc, doc, query, orderBy, where, limit, deleteDoc, deleteField, getCountFromServer, increment } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
-const auth = initializeAuth(app, { persistence: browserLocalPersistence });
-const db   = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
-});
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// users/* is publicly readable, so a plain HTTPS read avoids the SDK's streaming channel, which stalls in the iOS WebView.
+function decodeFsValue(v){
+  if('stringValue' in v) return v.stringValue;
+  if('booleanValue' in v) return v.booleanValue;
+  if('integerValue' in v) return Number(v.integerValue);
+  if('doubleValue' in v) return v.doubleValue;
+  if('timestampValue' in v) return v.timestampValue;
+  if('nullValue' in v) return null;
+  if('arrayValue' in v) return (v.arrayValue.values||[]).map(decodeFsValue);
+  if('mapValue' in v) return decodeFsFields(v.mapValue.fields||{});
+  return undefined;
+}
+function decodeFsFields(fields){
+  const out={};
+  for(const k of Object.keys(fields)) out[k]=decodeFsValue(fields[k]);
+  return out;
+}
+async function readUserDoc(uid){
+  try{
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(),10000);
+    const res=await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/users/${encodeURIComponent(uid)}`,{signal:ctrl.signal});
+    clearTimeout(t);
+    if(res.status===404) return {exists:false,data:{}};
+    if(res.ok){ const j=await res.json(); return {exists:true,data:decodeFsFields(j.fields||{})}; }
+  }catch(_){}
+  const snap=await getDoc(doc(db,'users',uid));
+  return {exists:snap.exists(),data:snap.exists()?snap.data():{}};
+}
 
 // ── STATE ────────────────────────────────────────────
 let currentUser    = null;
@@ -1012,11 +1040,7 @@ onAuthStateChanged(auth, async user=>{
       if(Object.keys(syncData).length) setDoc(doc(db,'users',user.uid), syncData, { merge: true }).catch(()=>{});
     }catch(e){}
 
-    // Race loadProfile against a 12-second timeout (guards against Safari hanging on Firestore)
-    await Promise.race([
-      loadProfile(),
-      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Profile load timeout')),12000))
-    ]);
+    await loadProfile();
   }catch(e){
     console.error('Profile load error:', e);
     // Still render whatever partial data we have so the page isn't frozen
@@ -1039,8 +1063,8 @@ let ourFollowingData = {};
 async function loadProfile(){
   try{
     // Always load the target user's profile data
-    const snap=await getDoc(doc(db,'users',viewUid));
-    profileDoc=snap.exists()?snap.data():{};
+    const snap=await readUserDoc(viewUid);
+    profileDoc=snap.data;
     console.log(`Loaded profile for user ${viewUid} (${isOwnProfile ? 'own' : 'other'} profile):`, profileDoc);
     console.log('Their followers:', profileDoc.followers);
     console.log('Their following:', profileDoc.following);
@@ -1048,9 +1072,9 @@ async function loadProfile(){
     // If viewing someone else's profile, also load our own following data
     if (!isOwnProfile && currentUser) {
       try {
-        const ourSnap = await getDoc(doc(db,'users',currentUser.uid));
-        if(ourSnap.exists()) {
-          ourFollowingData = ourSnap.data().following || {};
+        const ourSnap = await readUserDoc(currentUser.uid);
+        if(ourSnap.exists) {
+          ourFollowingData = ourSnap.data.following || {};
           console.log('Our following data:', ourFollowingData);
         }
       } catch(e) {
@@ -1460,8 +1484,7 @@ window.openFollowModal = async function openFollowModal(type){
   const rowArr = new Array(uids.length).fill('');
   await Promise.all(uids.map(async (uid, i) => {
     try{
-      const snap = await getDoc(doc(db,'users',uid));
-      const data = snap.exists() ? snap.data() : {};
+      const data = (await readUserDoc(uid)).data;
       let name = data.displayName || data.name || data.fullName || data.username || data.email?.split('@')[0] || '';
       // Last resort: pull name from a solve record (same fallback the profile page uses)
       if(!name){

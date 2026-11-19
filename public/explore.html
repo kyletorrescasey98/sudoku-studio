@@ -811,17 +811,12 @@
 <script type="module">
 import { initializeApp } from './vendor/firebase/12.9.0/firebase-app.js';
 import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut } from './vendor/firebase/12.9.0/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, getDocs, getDoc, doc, setDoc, addDoc, query, where, orderBy, serverTimestamp } from './vendor/firebase/12.9.0/firebase-firestore.js';
+import { getFirestore, initializeFirestore, collection, getDocs, getDoc, doc, setDoc, addDoc, query, where, orderBy, serverTimestamp } from './vendor/firebase/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
 const auth = initializeAuth(app, { persistence: browserLocalPersistence });
-const db   = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
-});
-
-const isGuest = new URLSearchParams(location.search).has('guest') || sessionStorage.getItem('sudokuGuest') === '1';
-if (isGuest) sessionStorage.setItem('sudokuGuest', '1');
+const db   = initializeFirestore(app, { experimentalForceLongPolling: true });
 
 let currentUser = null;
 let allPuzzles  = [];
@@ -948,38 +943,32 @@ window.openUserProfile = async function(uid){
 }
 
 // ── AUTH ──────────────────────────────────────────────
-onAuthStateChanged(auth, async user => {
+onAuthStateChanged(auth, user => {
   if (user && !user.emailVerified) { window.location.href='index.html'; return; }
   if (user) {
     currentUser = user;
-    sessionStorage.removeItem('sudokuGuest');
     const av = document.getElementById('navAvatarEl');
     if(av){ av.textContent = (user.displayName||user.email||'U')[0].toUpperCase(); av.onclick=()=>{ window.location.href='profile.html'; }; }
     // Sync displayName & email to Firestore so other users can see it on profile pages
-    try{
-      const syncData = {};
-      if(user.displayName) { syncData.displayName = user.displayName; syncData.displayNameLower = user.displayName.toLowerCase(); }
-      if(user.email) syncData.email = user.email;
-      if(Object.keys(syncData).length) await setDoc(doc(db,'users',user.uid), syncData, { merge: true });
-    }catch(e){}
-    try {
-      const solvesSnap = await getDocs(collection(db, `users/${user.uid}/solves`));
+    const syncData = {};
+    if(user.displayName) { syncData.displayName = user.displayName; syncData.displayNameLower = user.displayName.toLowerCase(); }
+    if(user.email) syncData.email = user.email;
+    if(Object.keys(syncData).length) setDoc(doc(db,'users',user.uid), syncData, { merge: true }).catch(()=>{});
+    getDocs(collection(db, `users/${user.uid}/solves`)).then(solvesSnap => {
       solvesSnap.docs.forEach(d => { const data = d.data(); if(data.puzzleId) completedMap[data.puzzleId] = data; });
-    } catch(e) {}
-  } else if (isGuest) {
-    const av = document.getElementById('navAvatarEl');
-    if(av){ av.textContent = '?'; av.title = 'Guest'; }
+      buildPage();
+    }).catch(()=>{});
   } else {
     window.location.href = 'index.html'; return;
   }
-  await loadAllPuzzles();
+  allPuzzles = [...DEFAULT_PUZZLES];
   buildPage();
+  loadAllPuzzles().then(buildPage);
 });
 
 window.handleSignOut = async () => {
   localStorage.removeItem('lastPuzzle_' + (currentUser ? currentUser.uid : 'guest'));
   await signOut(auth);
-  sessionStorage.removeItem('sudokuGuest');
   window.location.href = 'index.html';
 };
 

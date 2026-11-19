@@ -30,7 +30,6 @@
     .nav-logo { font-size:1.1rem; font-weight:900; letter-spacing:6px; text-transform:uppercase; background:linear-gradient(120deg,var(--accent) 30%,var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
     .nav-right { display:flex; align-items:center; gap:10px; }
     .nav-user { font-size:.78rem; color:var(--text2); font-weight:600; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .guest-badge { font-size:.68rem; background:#fef3c7; color:#92400e; border:1px solid #fcd34d; border-radius:999px; padding:2px 8px; font-weight:700; }
     .nav-btn { padding:5px 12px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:.75rem; font-weight:600; cursor:pointer; transition:all .15s; text-decoration:none; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
     .nav-btn:hover { border-color:var(--accent); color:var(--accent); }
     .page-content { display:flex; flex-direction:column; align-items:center; padding:0 12px; gap:10px; width:100%; }
@@ -812,9 +811,6 @@
         <div class="puzzle-empty">Start typing to search...</div>
       </div>
     </div>
-    <div id="guestWelcomeNote" style="display:none; font-size:.72rem; color:var(--text2); margin-top:12px; line-height:1.5; text-align:center;">
-      Playing as guest — <a href="index.html" style="color:var(--accent);">sign in</a> to save your history.
-    </div>
   </div>
 </div>
 <!-- Synchronous: hide overlay before first paint when navigating to #play or #explore -->
@@ -924,18 +920,12 @@
 <script type="module">
 import { initializeApp } from './vendor/firebase/12.9.0/firebase-app.js';
 import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut } from './vendor/firebase/12.9.0/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction, query, orderBy, where, limit, startAfter, onSnapshot, updateDoc, increment, deleteDoc } from './vendor/firebase/12.9.0/firebase-firestore.js';
+import { getFirestore, initializeFirestore, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction, query, orderBy, where, limit, startAfter, onSnapshot, updateDoc, increment, deleteDoc } from './vendor/firebase/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const app  = initializeApp(firebaseConfig);
 const auth = initializeAuth(app, { persistence: browserLocalPersistence });
-const db   = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
-});
-
-const isGuest = new URLSearchParams(location.search).has('guest')
-             || sessionStorage.getItem('sudokuGuest') === '1';
-if (isGuest) sessionStorage.setItem('sudokuGuest', '1');
+const db   = initializeFirestore(app, { experimentalForceLongPolling: true });
 
 // Open a user's profile if public. Fetch the user doc to respect privacy.
 window.openUserProfile = async function(uid){
@@ -963,37 +953,30 @@ function getLastPuzzleKey(){
   return 'lastPuzzle_' + (currentUser ? currentUser.uid : 'guest');
 }
 
-onAuthStateChanged(auth, async user => {
+onAuthStateChanged(auth, user => {
   if (user && !user.emailVerified) { window.location.href='index.html'; return; }
   if (user) {
     currentUser = user;
-    sessionStorage.removeItem('sudokuGuest');
     document.getElementById('navUser').textContent = '👤 ' + (user.displayName || user.email);
     // Sync displayName & email to Firestore so other users can see it on profile pages
-    try{
-      const syncData = {};
-      if(user.displayName) { syncData.displayName = user.displayName; syncData.displayNameLower = user.displayName.toLowerCase(); }
-      if(user.email) syncData.email = user.email;
-      if(Object.keys(syncData).length) await setDoc(doc(db,'users',user.uid), syncData, { merge: true });
-    }catch(e){}
+    const syncData = {};
+    if(user.displayName) { syncData.displayName = user.displayName; syncData.displayNameLower = user.displayName.toLowerCase(); }
+    if(user.email) syncData.email = user.email;
+    if(Object.keys(syncData).length) setDoc(doc(db,'users',user.uid), syncData, { merge: true }).catch(()=>{});
     // Pre-warm the local solved-puzzle cache from Firestore so that
     // startNewGameWithDifficulty always has accurate data even when
     // Firestore is unreachable later (e.g. spotty mobile connectivity).
-    try{
-      const solvesSnap=await getDocs(collection(db,'users',user.uid,'solves'));
+    getDocs(collection(db,'users',user.uid,'solves')).then(solvesSnap=>{
       solvesSnap.docs.forEach(d=>{
         const pid=d.data().puzzleId;
         if(pid) addLocalSolvedId(pid);
       });
-    }catch(e){ /* offline — localStorage cache will still be used */ }
+    }).catch(()=>{ /* offline — localStorage cache will still be used */ });
     // Re-run loadSolvers now that auth is resolved, so the backfill
     // can run even if loadSolvers was called before the user was known.
     if(currentPuzzleId){
       if(typeof window.loadSolvers === 'function') window.loadSolvers(currentPuzzleId);
     }
-  } else if (isGuest) {
-    document.getElementById('navUser').innerHTML = '<span class="guest-badge">Guest</span>';
-    document.getElementById('guestWelcomeNote').style.display = '';
   } else {
     window.location.href = 'index.html';
     return; // don't fire pending play — we're redirecting
@@ -1011,7 +994,6 @@ onAuthStateChanged(auth, async user => {
 window.handleSignOut = async () => {
   const keyToRemove = getLastPuzzleKey(); // capture before user is cleared
   await signOut(auth);
-  sessionStorage.removeItem('sudokuGuest');
   localStorage.removeItem(keyToRemove);  // never bleed one account's puzzle into another
   window.location.href = 'index.html';
 };
@@ -2633,7 +2615,7 @@ window.initComments = function(puzzleId){
   }
 
   // Load likes in parallel — onSnapshot callback waits for this before rendering
-  const likesReady = (currentUser && !isGuest)
+  const likesReady = currentUser
     ? Promise.all([loadMyCommentLikes(puzzleId), loadMyReplyLikes(puzzleId)])
     : Promise.resolve();
 
@@ -2990,7 +2972,7 @@ function buildCommentHTML(c){
     </div>
     <div class="comment-actions">
       <button class="comment-like-btn${myLikedComments.has(c.id)?' liked':''}" onclick="window.toggleCommentLike('${esc(c.id)}')">${myLikedComments.has(c.id)?'&#x2665;':'&#x2661;'} ${c.likeCount||0}</button>
-      ${currentUser&&!isGuest?`<button class="comment-reply-btn" onclick="window.toggleReplyForm(this)">&#x21A9; Reply</button>`:''}
+      ${currentUser?`<button class="comment-reply-btn" onclick="window.toggleReplyForm(this)">&#x21A9; Reply</button>`:''}
       ${canDelete?`<button class="comment-reply-btn" style="color:var(--error)" onclick="window.deleteComment('${esc(c.id)}')">Delete</button>`:''}
     </div>
     <div class="reply-form" id="rf-${esc(c.id)}">
@@ -3012,7 +2994,7 @@ function buildCommentHTML(c){
 
 function buildRepliesInner(commentId, replies, lastDoc){
   if(!replies.length) return '<div class="comments-empty" style="font-size:.7rem;padding:4px 0;">No replies yet.</div>';
-  const canReply = !!(currentUser && !isGuest);
+  const canReply = !!currentUser;
   let html = replies.map(r=>{
     const eid = esc(r.id||'');
     const euser = esc(r.username||'user');
@@ -3183,7 +3165,7 @@ function updateReplyLikeButtonsUI(commentId, replyId, liked){
 }
 
 window.toggleCommentLike = async function(commentId){
-  if(!currentUser || isGuest || !currentPuzzleId) return;
+  if(!currentUser || !currentPuzzleId) return;
   const likeRef = doc(db,'users',currentUser.uid,'commentLikes',commentId);
   const commentRef = doc(db,'puzzles',currentPuzzleId,'comments',commentId);
   if(myLikedComments.has(commentId)){
@@ -3220,7 +3202,7 @@ window.toggleCommentLike = async function(commentId){
 };
 
 window.toggleReplyLike = async function(commentId, replyId){
-  if(!currentUser || isGuest || !currentPuzzleId) return;
+  if(!currentUser || !currentPuzzleId) return;
   const likeRef = doc(db,'users',currentUser.uid,'replyLikes',replyId);
   const replyRef = doc(db,'puzzles',currentPuzzleId,'comments',commentId,'replies',replyId);
   if(myLikedReplies.has(replyId)){
@@ -3448,7 +3430,7 @@ setTimeout(attachAllMentionAutocompletes, 500);
 
 /* Show/hide the textarea+post button vs sign-in note */
 function updateCommentsInputUI(){
-  const signed = !!(currentUser && !isGuest);
+  const signed = !!currentUser;
   const hasPuzzle = !!currentPuzzleId;
 
   const desktopTA   = document.getElementById('commentsTextarea');
