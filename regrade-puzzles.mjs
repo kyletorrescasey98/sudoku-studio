@@ -10,6 +10,18 @@ const puzzles = JSON.parse(readFileSync('./puzzles-dump.json', 'utf8'));
 const aiPuzzles = puzzles.filter(p => p.isAI === true || p.authorUid === 'app-seed');
 console.error(`Found ${aiPuzzles.length} AI-generated puzzles to grade (SE system).\n`);
 
+// ── Tier assignment ──────────────────────────────────────────────────────────
+// Technique bands leave Hard empty, so Easy/Medium/Hard are cut by rank: hardest technique first,
+// then total step effort, then fewer clues. Expert stays reserved for puzzles that need XY-Wing or harder.
+const EXPERT_MIN_ER = 4.0;
+const graded = aiPuzzles.map(p => ({ p, grade: gradePuzzle(p.puzzle) }));
+const ranked = graded.filter(x => x.grade.er < EXPERT_MIN_ER).sort((a, b) =>
+  a.grade.er - b.grade.er || a.grade.er_sum - b.grade.er_sum
+  || (b.p.clueCount ?? 0) - (a.p.clueCount ?? 0) || a.p.id.localeCompare(b.p.id));
+const tierOf = new Map();
+ranked.forEach((x, i) => tierOf.set(x.p.id, ['Easy', 'Medium', 'Hard'][Math.floor(i * 3 / ranked.length)]));
+for (const x of graded) if (x.grade.er >= EXPERT_MIN_ER) tierOf.set(x.p.id, 'Expert');
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 const results = [];
@@ -19,12 +31,11 @@ const appDistro = {};
 let changed = 0, btCount = 0;
 let highest = { er: 0 }, lowest = { er: Infinity };
 
-for (const p of aiPuzzles) {
-  const grade = gradePuzzle(p.puzzle);
-  const result = { id: p.id, name: p.name, clueCount: p.clueCount, old_difficulty: p.difficulty, ...grade };
+for (const { p, grade } of graded) {
+  const result = { id: p.id, name: p.name, clueCount: p.clueCount, old_difficulty: p.difficulty, ...grade, technique_tier: grade.app_difficulty, app_difficulty: tierOf.get(p.id) };
   results.push(result);
   const oldD = p.difficulty || 'Unknown';
-  const newD = grade.app_difficulty;
+  const newD = result.app_difficulty;
   if (!oldNewCross[oldD]) oldNewCross[oldD] = {};
   oldNewCross[oldD][newD] = (oldNewCross[oldD][newD] || 0) + 1;
   seDistro[grade.difficulty] = (seDistro[grade.difficulty] || 0) + 1;
