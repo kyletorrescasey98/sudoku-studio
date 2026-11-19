@@ -82,6 +82,9 @@ export const ER_NAMES = {
   5.0: 'Naked Quad',
   5.2: 'Jellyfish',
   5.4: 'Hidden Quad',
+  6.5: 'Short Chain',
+  7.0: 'Medium Chain',
+  8.0: 'Long Chain',
   10.0: 'Backtracking',
 };
 
@@ -90,6 +93,7 @@ const LABELS = {
   2.0: 'Hidden Pair', 2.3: 'Naked Single', 2.5: 'Hidden Triple', 2.6: 'Pointing', 2.8: 'Claiming',
   3.0: 'Naked Pair', 3.2: 'X-Wing', 3.4: 'Hidden Pair', 3.6: 'Naked Triple', 3.8: 'Swordfish',
   4.0: 'Hidden Triple', 4.2: 'XY-Wing', 4.4: 'XYZ-Wing', 5.0: 'Naked Quad', 5.2: 'Jellyfish', 5.4: 'Hidden Quad',
+  6.5: 'Chain', 7.0: 'Chain', 8.0: 'Chain',
 };
 
 export function cellName(i) { return `R${cellRow(i) + 1}C${cellCol(i) + 1}`; }
@@ -492,6 +496,90 @@ function findXYZWing(grid, cands) {
   return null;
 }
 
+// ── Alternating inference chains ─────────────────────────────────────────────
+// Node = cell*9 + (digit-1). Strong link: at least one of the pair is true. Weak link: at most one is.
+// A chain X0 = X1 - X2 = X3 ... = Xk proves X0 or Xk is true, so any candidate weakly linked to both is false.
+// This covers Skyscraper, 2-String Kite, Turbot Fish, W-Wing, X-Chain and XY-Chain.
+
+const MAX_CHAIN_NODES = 16;
+function nodeCell(v) { return Math.floor(v / 9); }
+function nodeDigit(v) { return (v % 9) + 1; }
+function weakLinked(a, b) {
+  if (a === b) return false;
+  const ca = nodeCell(a), cb = nodeCell(b);
+  return ca === cb || (nodeDigit(a) === nodeDigit(b) && sees(ca, cb));
+}
+
+function chainStep(grid, cands, path, elims) {
+  const nodes = path.length;
+  const digits = new Set(path.map(nodeDigit));
+  let strongInCell = true;
+  for (let i = 0; i + 1 < nodes; i += 2) if (nodeCell(path[i]) !== nodeCell(path[i + 1])) strongInCell = false;
+  const kind = digits.size === 1 ? 'X-Chain' : strongInCell ? 'XY-Chain' : 'Chain';
+  const er = nodes <= 6 ? 6.5 : nodes <= 10 ? 7.0 : 8.0;
+  const first = path[0], last = path[nodes - 1];
+  const say = v => `${cellName(nodeCell(v))} ${nodeDigit(v)}`;
+  const parts = path.slice(1).map((v, i) => i % 2 === 0
+    ? `${cellName(nodeCell(v))} must be ${nodeDigit(v)}`
+    : `${cellName(nodeCell(v))} can't be ${nodeDigit(v)}`);
+  const removal = joinList(elims.map(e => `${e.digit} from ${cellName(e.cell)}`));
+  const single = checkElimsCreateSingle(grid, cands, elims);
+  return makeStep(er, {
+    technique: kind, label: kind,
+    digit: digits.size === 1 ? [...digits][0] : undefined,
+    digits: [...digits], eliminations: elims, place: single,
+    pattern: [...new Set(path.map(nodeCell))],
+    nudge: `Look for a chain through ${digitList(digits)}.`,
+    explanation: `If ${say(first)} is false, then ${parts.join(', so ')}. So either ${say(first)} or ${say(last)} is true. Remove ${removal}.` + forced(single),
+  });
+}
+
+function findChain(grid, cands) {
+  const strong = Array.from({length: 729}, () => []);
+  const link = (a, b) => { strong[a].push(b); strong[b].push(a); };
+  for (let i = 0; i < 81; i++)
+    if (grid[i] === 0 && cands[i].size === 2) { const [a, b] = [...cands[i]]; link(i * 9 + a - 1, i * 9 + b - 1); }
+  for (const u of ALL_UNITS)
+    for (let n = 1; n <= 9; n++) {
+      const cs = u.cells.filter(i => grid[i] === 0 && cands[i].has(n));
+      if (cs.length === 2) link(cs[0] * 9 + n - 1, cs[1] * 9 + n - 1);
+    }
+  const linked = [];
+  for (let v = 0; v < 729; v++) if (strong[v].length) linked.push(v);
+  const live = [];
+  for (let i = 0; i < 81; i++) if (grid[i] === 0) for (const n of cands[i]) live.push(i * 9 + n - 1);
+
+  let best = null;
+  for (const s of linked) {
+    const seen = new Set([s]);
+    let frontier = [];
+    for (const x of strong[s]) if (!seen.has(x)) { seen.add(x); frontier.push([s, x]); }
+    while (frontier.length) {
+      const next = [];
+      for (const path of frontier) {
+        const v = path[path.length - 1];
+        if (!best || path.length < best.length) {
+          const elims = [];
+          for (const z of live)
+            if (z !== s && z !== v && weakLinked(s, z) && weakLinked(v, z)) elims.push({ cell: nodeCell(z), digit: nodeDigit(z) });
+          if (elims.length) { best = path; best.elims = elims; continue; }
+        }
+        if (path.length + 2 > MAX_CHAIN_NODES || (best && path.length + 2 >= best.length)) continue;
+        for (const w of linked) {
+          if (!weakLinked(v, w)) continue;
+          for (const x of strong[w]) {
+            if (seen.has(x) || x === v) continue;
+            seen.add(x);
+            next.push([...path, w, x]);
+          }
+        }
+      }
+      frontier = next;
+    }
+  }
+  return best ? chainStep(grid, cands, best, best.elims) : null;
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 const FINDERS = [
@@ -516,6 +604,7 @@ const FINDERS = [
   (g, c) => findNakedSubset(g, c, 4),
   (g, c) => findFish(g, c, 4),
   (g, c) => findHiddenSubset(g, c, 4),
+  (g, c) => findChain(g, c),
 ];
 
 // grid: 81 numbers (0 = empty); cands: 81 Sets. Neither is modified.
@@ -540,6 +629,7 @@ export function gradePuzzle(puzzleStr) {
   const techniqueCounts = {};
   let requiresBacktracking = false;
   let steps = 0;
+  let erSum = 0;
 
   while (grid.includes(0)) {
     const step = findNextStep(grid, cands);
@@ -552,6 +642,7 @@ export function gradePuzzle(puzzleStr) {
     }
     applyStep(grid, cands, step);
     if (step.er > maxER) maxER = step.er;
+    erSum += step.er;
     techniquesUsed.add(step.technique);
     techniqueCounts[step.technique] = (techniqueCounts[step.technique] || 0) + 1;
     if (++steps > 10000) { maxER = 10.0; requiresBacktracking = true; break; }
@@ -573,7 +664,7 @@ export function gradePuzzle(puzzleStr) {
   else                   appDifficulty = 'Expert';
 
   return {
-    er: maxER, difficulty, app_difficulty: appDifficulty,
+    er: maxER, er_sum: Math.round(erSum * 10) / 10, difficulty, app_difficulty: appDifficulty,
     hardest_technique: ER_NAMES[maxER] || 'Unknown',
     techniques_used: [...techniquesUsed],
     technique_counts: techniqueCounts,
