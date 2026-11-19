@@ -557,7 +557,7 @@
       <button class="mobile-settings-action danger" ontouchend="event.preventDefault();closeMobileSettings();confirmRestart()" onclick="closeMobileSettings();confirmRestart()">
         <span class="ms-action-icon">&#x1F504;</span>Restart
       </button>
-      <button class="mobile-settings-action" ontouchend="event.preventDefault();closeMobileSettings();showHint()" onclick="closeMobileSettings();showHint()">
+      <button class="mobile-settings-action" id="mobileSettingsHintBtn" ontouchend="event.preventDefault();closeMobileSettings();showHint()" onclick="closeMobileSettings();showHint()">
         <span class="ms-action-icon">&#x1F4A1;</span>Hint
       </button>
     </div>
@@ -706,7 +706,7 @@
         <div class="panel-label">Actions</div>
         <div class="action-row">
           <button class="action-btn" onclick="eraseCell()">&#x232B; Erase</button>
-          <button class="action-btn" onclick="showHint()">&#x1F4A1; Hint</button>
+          <button class="action-btn" id="desktopHintBtn" onclick="showHint()">&#x1F4A1; Hint</button>
         </div>
         <div class="action-row">
           <button class="action-btn" onclick="clearColors()">&#x1F6AB; Clear Colors</button>
@@ -971,7 +971,7 @@ import { initializeApp } from './vendor/firebase/12.9.0/firebase-app.js';
 import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut } from './vendor/firebase/12.9.0/firebase-auth.js';
 import { getFirestore, initializeFirestore, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction, query, orderBy, where, limit, startAfter, onSnapshot, updateDoc, increment, deleteDoc } from './vendor/firebase/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
-import { buildCands, findNextStep, cellName } from './logic-solver.js';
+import { buildCands, findNextStep, applyStep, cellName } from './logic-solver.js';
 
 const app  = initializeApp(firebaseConfig);
 const auth = initializeAuth(app, { persistence: browserLocalPersistence });
@@ -1540,14 +1540,17 @@ async function submitWinRating(){
 }
 
 // ── Teaching hints ──
-// activeHint: {kind:'step'|'wrong'|'notes'|'stuck', level, step, cands, cell, sig}
-// sig is a snapshot of digits + centre notes; any change to either closes the hint.
-function hintSig(){
-  let s='';
-  for(let r=0;r<9;r++)for(let c=0;c<9;c++)s+=board[r][c]+[...notes[r][c].center].sort().join('')+',';
-  return s;
-}
+// activeHint: {kind:'step'|'wrong'|'stuck', level, chain:[{step,cands}], idx, cell, sig}
+// Hints use placed digits only, never the player's notes; sig snapshots the digits so any change closes the hint.
+function hintSig(){return board.flat().join('');}
 function hintRankable(){return !!(currentUser&&currentPuzzleId);}
+// Hints are only verified against app-made puzzles; community puzzles may have variant rules or several solutions
+function hintsAvailable(){return !!currentPuzzleIsAI;}
+function updateHintAvailability(){
+  const on=hintsAvailable();
+  for(const id of ['mobileHintBtn','mobileSettingsHintBtn','desktopHintBtn']){const b=document.getElementById(id);if(b)b.style.display=on?'':'none';}
+  if(!on&&activeHint){activeHint=null;updateHintBanner();}
+}
 function hasVariantRules(gc){
   if(!gc)return false;
   return Object.entries(gc).some(([k,v])=>k==='globals'?Object.values(v||{}).some(Boolean):Array.isArray(v)&&v.length>0);
@@ -1587,7 +1590,7 @@ function syncAttemptFromFirestore(puzzleId){
 }
 
 window.showHint=function(){
-  if(gameWon||!puzzle.length)return;
+  if(gameWon||!puzzle.length||!hintsAvailable())return;
   if(activeHint){window.hintPrimary();return;}
   if(attemptRanked&&hintRankable()){document.getElementById('hintWarnOverlay').classList.add('show');return;}
   startHint();
@@ -1602,19 +1605,19 @@ function startHint(){
   for(let r=0;r<9;r++)for(let c=0;c<9;c++){
     if(!isGiven(r,c)&&board[r][c]&&board[r][c]!==solution[r][c])return setHint({kind:'wrong',cell:r*9+c,level:1,sig});
   }
-  // Centre notes narrow the candidates; standard techniques stay sound on variants, they just get stuck sooner
+  // Eliminations don't change the board, so walk them as a chain until a digit can be placed
   const grid=board.flat();
   const cands=buildCands(grid);
-  for(let i=0;i<81;i++){
-    if(grid[i])continue;
-    const r=Math.floor(i/9),c=i%9,cen=notes[r][c].center;
-    if(!cen.size)continue;
-    if(!cen.has(solution[r][c]))return setHint({kind:'notes',cell:i,level:1,sig});
-    for(const n of [...cands[i]])if(!cen.has(n))cands[i].delete(n);
+  const chain=[];
+  while(chain.length<50){
+    const step=findNextStep(grid,cands);
+    if(!step)break;
+    chain.push({step,cands:cands.map(s=>new Set(s))});
+    if(step.place)break;
+    applyStep(grid,cands,step);
   }
-  const step=findNextStep(grid,cands);
-  if(!step)return setHint({kind:'stuck',level:1,sig});
-  setHint({kind:'step',step,cands,level:1,sig});
+  if(!chain.length||!chain[chain.length-1].step.place)return setHint({kind:'stuck',level:1,sig});
+  setHint({kind:'step',chain,idx:0,level:1,sig});
 }
 
 function setHint(h){activeHint=h;updateHintBanner();renderBoard();}
@@ -1628,7 +1631,6 @@ function updateHintBanner(){
   if(!h)return;
   let tag='Hint',msg='',primary='',secondary='✕';
   if(h.kind==='wrong'){tag='Mistake';msg=`${cellName(h.cell)} doesn't match the solution.`;primary='Clear it';}
-  else if(h.kind==='notes'){tag='Check your notes';msg=`Your centre notes in ${cellName(h.cell)} are missing a candidate.`;primary='Fix notes';}
   else if(h.kind==='stuck'){
     tag='Stuck';
     msg=hasVariantRules(gameParsedConstraints)
@@ -1636,8 +1638,13 @@ function updateHintBanner(){
       :'No standard technique applies here…';
     primary='Reveal a cell';secondary='Keep trying';
   }
-  else if(h.level===1){msg=h.step.nudge;primary='Show me';}
-  else{tag=h.step.label;msg=h.step.explanation;primary='Apply';}
+  else if(h.level===1){msg=h.chain[0].step.nudge;primary='Show me';}
+  else{
+    const s=h.chain[h.idx].step,n=h.chain.length;
+    tag=(n>1?`Step ${h.idx+1}/${n} · `:'')+s.label;
+    msg=s.explanation;
+    primary=h.idx<n-1?'Next':'Apply';
+  }
   document.getElementById('hintTag').textContent='💡 '+tag;
   document.getElementById('hintMsg').textContent=msg;
   document.getElementById('hintPrimaryBtn').textContent=primary;
@@ -1649,13 +1656,14 @@ window.dismissHint=function(){activeHint=null;updateHintBanner();render();};
 window.hintPrimary=function(){
   const h=activeHint;
   if(!h||gameWon)return;
-  if(h.kind==='step'&&h.level===1){h.level=2;updateHintBanner();renderBoard();return;}
+  if(h.kind==='step'&&(h.level===1||h.idx<h.chain.length-1)){
+    if(h.level===1)h.level=2;else h.idx++;
+    updateHintBanner();renderBoard();return;
+  }
   activeHint=null;updateHintBanner();
   saveUndo();
   if(h.kind==='wrong'){
     const r=Math.floor(h.cell/9),c=h.cell%9;board[r][c]=0;
-  }else if(h.kind==='notes'){
-    const r=Math.floor(h.cell/9),c=h.cell%9;notes[r][c].center=new Set(buildCands(board.flat())[h.cell]);
   }else if(h.kind==='stuck'){
     revealCell();
   }else{
@@ -1665,18 +1673,10 @@ window.hintPrimary=function(){
 };
 
 function applyHintStep(h){
-  const s=h.step;
-  for(const{cell,digit}of s.eliminations){
-    const nt=notes[Math.floor(cell/9)][cell%9];
-    // Cells without centre notes get the hint's candidates, otherwise the next hint repeats this step
-    if(!nt.center.size)for(const n of h.cands[cell])nt.center.add(n);
-    nt.center.delete(digit);nt.corner.delete(digit);
-  }
-  if(s.place){
-    const r=Math.floor(s.place.cell/9),c=s.place.cell%9,v=s.place.value;
-    board[r][c]=v;notes[r][c].corner.clear();notes[r][c].center.clear();
-    removePeerNote(r,c,v);selected={row:r,col:c};multiSel=new Set([key(r,c)]);
-  }
+  const{cell,value:v}=h.chain[h.chain.length-1].step.place;
+  const r=Math.floor(cell/9),c=cell%9;
+  board[r][c]=v;notes[r][c].corner.clear();notes[r][c].center.clear();
+  removePeerNote(r,c,v);selected={row:r,col:c};multiSel=new Set([key(r,c)]);
 }
 
 function revealCell(){
@@ -1697,9 +1697,9 @@ function hintDecor(){
   const d={layer:new Map(),elim:new Map(),keep:new Map(),ghost:new Map()};
   const h=activeHint;
   if(!h)return d;
-  if(h.kind==='wrong'||h.kind==='notes'){d.layer.set(h.cell,h.kind==='wrong'?'wrong':'place');return d;}
+  if(h.kind==='wrong'){d.layer.set(h.cell,'wrong');return d;}
   if(h.kind!=='step')return d;
-  const s=h.step;
+  const{step:s,cands}=h.chain[h.level<2?0:h.idx];
   for(const u of s.units)for(const i of u.cells)d.layer.set(i,'unit');
   if(h.level<2){
     // Naked singles have no unit, so point at the cell itself
@@ -1715,7 +1715,7 @@ function hintDecor(){
   for(const i of s.pattern){d.layer.set(i,'pattern');d.keep.set(i,ds);}
   if(s.place)d.layer.set(s.place.cell,'place');
   for(const i of new Set([...s.pattern,...d.elim.keys()])){
-    if(board[Math.floor(i/9)][i%9]===0&&!notes[Math.floor(i/9)][i%9].center.size)d.ghost.set(i,h.cands[i]);
+    if(board[Math.floor(i/9)][i%9]===0)d.ghost.set(i,cands[i]);
   }
   return d;
 }
@@ -1795,7 +1795,7 @@ window.togglePauseTimer=function(){
 const CORNER_SLOTS=['cn-tl','cn-tc','cn-tr','cn-ml','cn-mr','cn-bl','cn-bc','cn-br'];
 let saveDelay;
 
-function render(){if(activeHint&&activeHint.sig!==hintSig()){activeHint=null;updateHintBanner();}renderBoard();renderGameConstraints();updateNumpadHighlight();bindBoardTouch();clearTimeout(saveDelay);saveDelay=setTimeout(()=>savePuzzleState(),500);}
+function render(){updateHintAvailability();if(activeHint&&activeHint.sig!==hintSig()){activeHint=null;updateHintBanner();}renderBoard();renderGameConstraints();updateNumpadHighlight();bindBoardTouch();clearTimeout(saveDelay);saveDelay=setTimeout(()=>savePuzzleState(),500);}
 
 // Immediately flush any pending debounced save so that the current puzzle's
 // full progress (board + notes + colors) is persisted before we switch away.
@@ -1978,7 +1978,7 @@ function renderBoard(){
       if(val){const s=document.createElement('span');s.className='cell-number';s.textContent=val;cell.appendChild(s);}
       else{
         const cen=notes[r][c].center;
-        if(cen.size>0){const div=document.createElement('div');div.className='centre-notes';[...cen].sort((a,b)=>a-b).forEach(n=>{const s=document.createElement('span');s.className='cn-digit'+(showConflicts&&noteConflicts(r,c,n)?' note-conflict':'')+hintCls(n);s.textContent=n;div.appendChild(s);});cell.appendChild(div);}
+        if(cen.size>0&&!HD.ghost.has(ci)){const div=document.createElement('div');div.className='centre-notes';[...cen].sort((a,b)=>a-b).forEach(n=>{const s=document.createElement('span');s.className='cn-digit'+(showConflicts&&noteConflicts(r,c,n)?' note-conflict':'');s.textContent=n;div.appendChild(s);});cell.appendChild(div);}
         else if(HD.ghost.has(ci)){const div=document.createElement('div');div.className='centre-notes ghost';[...HD.ghost.get(ci)].sort((a,b)=>a-b).forEach(n=>{const s=document.createElement('span');s.className='cn-digit'+hintCls(n);s.textContent=n;div.appendChild(s);});cell.appendChild(div);}
         const cor=notes[r][c].corner;
         if(cor.size>0){const div=document.createElement('div');div.className='corner-notes';[...cor].sort((a,b)=>a-b).forEach((n,i)=>{const s=document.createElement('span');s.className=(CORNER_SLOTS[i]||'cn-br')+(showConflicts&&noteConflicts(r,c,n)?' note-conflict':'');s.textContent=n;div.appendChild(s);});cell.appendChild(div);}
