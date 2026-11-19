@@ -129,6 +129,24 @@
     .confirm-no:hover  { filter:brightness(.95); }
     .confirm-yes { background:var(--error); color:#fff; }
     .confirm-yes:hover { filter:brightness(1.1); }
+    .confirm-yes.accent { background:var(--accent); }
+    /* Teaching hints */
+    .hint-banner { display:none; width:min(576px,100%); box-sizing:border-box; background:#fffbeb; border:1px solid #fcd34d; border-radius:10px; padding:9px 11px; gap:10px; align-items:center; }
+    .hint-banner.show { display:flex; }
+    .hint-text { flex:1; min-width:0; font-size:.82rem; color:#78350f; line-height:1.35; }
+    .hint-tag { display:block; font-size:.68rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:#b45309; margin-bottom:2px; }
+    .hint-actions { display:flex; gap:6px; flex-shrink:0; }
+    .hint-btn { padding:7px 11px; border-radius:8px; border:1px solid #fcd34d; background:#fff; color:#92400e; font-size:.78rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+    .hint-btn.primary { background:#f59e0b; border-color:#f59e0b; color:#fff; }
+    .hint-layer { position:absolute; inset:0; pointer-events:none; z-index:5; }
+    .hint-layer.unit    { background:rgba(250,204,21,.20); }
+    .hint-layer.pattern { background:rgba(16,185,129,.20); box-shadow:inset 0 0 0 2px rgba(16,185,129,.8); }
+    .hint-layer.elim    { box-shadow:inset 0 0 0 2px rgba(220,38,38,.55); }
+    .hint-layer.place   { background:rgba(37,99,235,.16); box-shadow:inset 0 0 0 3px var(--accent); }
+    .hint-layer.wrong   { background:rgba(220,38,38,.16); box-shadow:inset 0 0 0 3px var(--error); }
+    .cn-digit.hint-elim { color:var(--error) !important; text-decoration:line-through; text-decoration-thickness:2px; }
+    .cn-digit.hint-keep { color:#059669 !important; }
+    .centre-notes.ghost .cn-digit { color:#94a3b8; }
     .puzzle-title-card { background:linear-gradient(135deg,rgba(37,99,235,.07),rgba(124,58,237,.07)); border:1px solid var(--accent); border-radius:11px; padding:14px 14px 12px; display:flex; flex-direction:column; gap:4px; }
     .puzzle-title-name { font-size:1.45rem; font-weight:900; background:linear-gradient(120deg,var(--accent) 30%,var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1.2; word-break:break-word; }
     .puzzle-title-meta { font-size:.7rem; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
@@ -210,6 +228,8 @@
       .game-area { flex-direction:column; align-items:center; gap:0; padding:0; flex-shrink:0; }
       .board-wrap { width:100vw; align-items:center; gap:0; }
       .board { width:min(100vw, 58vh) !important; height:min(100vw, 58vh) !important; max-width:100vw; border-radius:0; border-left:none; border-right:none; }
+      body.hint-open .board { width:min(100vw, 50vh) !important; height:min(100vw, 50vh) !important; }
+      .hint-banner { width:100%; border-radius:0; border-left:none; border-right:none; padding:7px 10px; }
       /* Digits fill ~78% of cell height — cell = board/9 = min(100vw,58vh)/9 */
       .cell-number { font-size:clamp(24px, min(8.5vw, 5.1vh), 44px); font-weight:400; }
       .side-panel { display:none; }
@@ -469,6 +489,10 @@
     .sb-medal { font-size:.95rem; flex-shrink:0; }
     .sb-rank-num { width:18px; text-align:center; font-size:.67rem; font-weight:700; color:var(--text2); flex-shrink:0; }
     .sb-time { font-size:.72rem; font-weight:700; color:var(--success,#16a34a); flex-shrink:0; font-variant-numeric:tabular-nums; }
+    .solver-divider { display:flex; align-items:center; gap:8px; margin:6px 2px 2px; font-size:.62rem; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--text2); }
+    .solver-divider::before, .solver-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+    .solver-tag { font-size:.62rem; font-weight:700; color:#92400e; background:#fef3c7; border-radius:999px; padding:2px 7px; flex-shrink:0; white-space:nowrap; }
+    .sb-item.unranked, .lb-row.unranked { opacity:.8; }
     .sb-more-btn { width:100%; margin-top:6px; padding:9px; background:transparent; border:1px dashed var(--border); border-radius:8px; font-size:.78rem; font-weight:700; color:var(--accent); cursor:pointer; }
     .sb-more-btn:hover { background:var(--surface2); border-color:var(--accent); }
     /* ── Share toast ── */
@@ -486,6 +510,7 @@
   <button class="mobile-back-btn" ontouchend="event.preventDefault();window.location.href='main.html'" onclick="window.location.href='main.html'">&#x2190;</button>
   <div class="mobile-puzzle-name" id="mobilePuzzleName">Sudoku</div>
   <!-- gear moved to left of timer for easier reach -->
+  <button class="mobile-chat-btn" id="mobileHintBtn" ontouchend="event.preventDefault();showHint()" onclick="showHint()" aria-label="Hint">&#x1F4A1;</button>
   <button class="mobile-chat-btn" id="mobileChatBtn" ontouchend="event.preventDefault();openMobileComments()" onclick="openMobileComments()" aria-label="Comments">&#x1F4AC;</button>
   <button class="mobile-gear-btn" id="mobileGearBtn" ontouchend="event.preventDefault();openMobileSettings()" onclick="openMobileSettings()" aria-label="Settings">&#x2699;&#xFE0F;</button>
   <div class="mobile-timer-wrap">
@@ -531,6 +556,9 @@
       </button>
       <button class="mobile-settings-action danger" ontouchend="event.preventDefault();closeMobileSettings();confirmRestart()" onclick="closeMobileSettings();confirmRestart()">
         <span class="ms-action-icon">&#x1F504;</span>Restart
+      </button>
+      <button class="mobile-settings-action" ontouchend="event.preventDefault();closeMobileSettings();showHint()" onclick="closeMobileSettings();showHint()">
+        <span class="ms-action-icon">&#x1F4A1;</span>Hint
       </button>
     </div>
   </div>
@@ -639,6 +667,13 @@
         <div class="board" id="board"></div>
         <svg class="constraint-svg" id="constraintSvg" xmlns="http://www.w3.org/2000/svg"></svg>
       </div>
+      <div class="hint-banner" id="hintBanner">
+        <div class="hint-text"><span class="hint-tag" id="hintTag"></span><span id="hintMsg"></span></div>
+        <div class="hint-actions">
+          <button class="hint-btn primary" id="hintPrimaryBtn" onclick="hintPrimary()"></button>
+          <button class="hint-btn" id="hintSecondaryBtn" onclick="dismissHint()"></button>
+        </div>
+      </div>
       <div class="constraint-chips" id="constraintChips"></div>
     </div>
     <div class="side-panel">
@@ -671,6 +706,7 @@
         <div class="panel-label">Actions</div>
         <div class="action-row">
           <button class="action-btn" onclick="eraseCell()">&#x232B; Erase</button>
+          <button class="action-btn" onclick="showHint()">&#x1F4A1; Hint</button>
         </div>
         <div class="action-row">
           <button class="action-btn" onclick="clearColors()">&#x1F6AB; Clear Colors</button>
@@ -849,10 +885,23 @@
   <div class="confirm-card">
     <div class="confirm-icon">&#x1F504;</div>
     <div class="confirm-title">Restart Puzzle?</div>
-    <div class="confirm-sub">All your progress and the timer will be reset. This cannot be undone.</div>
+    <div class="confirm-sub">All your progress and the timer will be reset. This cannot be undone.<span id="restartRankNote" style="display:none"><br><br>Restarting also removes this puzzle from leaderboard eligibility.</span></div>
     <div class="confirm-btns">
       <button class="confirm-no" onclick="closeRestartConfirm()">No, Keep Going</button>
       <button class="confirm-yes" onclick="restartPuzzle()">Yes, Restart</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hint leaderboard warning -->
+<div class="overlay" id="hintWarnOverlay" onclick="if(event.target===this)closeHintWarning()">
+  <div class="confirm-card">
+    <div class="confirm-icon">&#x1F4A1;</div>
+    <div class="confirm-title">Use a hint?</div>
+    <div class="confirm-sub">Using hints removes this solve from the leaderboard. Your solve will still be saved to your history.</div>
+    <div class="confirm-btns">
+      <button class="confirm-no" onclick="closeHintWarning()">Cancel</button>
+      <button class="confirm-yes accent" onclick="confirmHintWarning()">Use Hint</button>
     </div>
   </div>
 </div>
@@ -922,6 +971,7 @@ import { initializeApp } from './vendor/firebase/12.9.0/firebase-app.js';
 import { initializeAuth, browserLocalPersistence, onAuthStateChanged, signOut } from './vendor/firebase/12.9.0/firebase-auth.js';
 import { getFirestore, initializeFirestore, collection, addDoc, serverTimestamp, getDocs, doc, getDoc, setDoc, runTransaction, query, orderBy, where, limit, startAfter, onSnapshot, updateDoc, increment, deleteDoc } from './vendor/firebase/12.9.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
+import { buildCands, findNextStep, cellName } from './logic-solver.js';
 
 const app  = initializeApp(firebaseConfig);
 const auth = initializeAuth(app, { persistence: browserLocalPersistence });
@@ -1026,11 +1076,21 @@ async function saveSolve(difficulty, timeSeconds, mistakes) {
   removePuzzleProgress(currentPuzzleId);
   // Record in localStorage immediately (offline-safe)
   addLocalSolvedId(currentPuzzleId);
+  // The started doc also carries ranked:false, so a restart or hint survives cleared local storage
+  let ranked = attemptRanked;
+  if(ranked && currentPuzzleId){
+    try{
+      const st = await getDoc(doc(db,'users',currentUser.uid,'started',currentPuzzleId));
+      if(st.exists() && st.data().ranked===false) ranked = false;
+    }catch(_){}
+  }
+  const attemptInfo = { ranked, hintsUsed, assisted: attemptAssisted, restarted: attemptRestarted };
   try {
     // Flatten current puzzle board to a clue string for the tiny grid in profile
     const puzzleStr = (puzzle||[]).flat().join('');
     await addDoc(collection(db, 'users', currentUser.uid, 'solves'), {
       difficulty, timeSeconds, mistakes,
+      ...attemptInfo,
       puzzleName: currentPuzzleName || '',
       puzzleId: currentPuzzleId || '',
       puzzle: puzzleStr || '',
@@ -1048,7 +1108,8 @@ async function saveSolve(difficulty, timeSeconds, mistakes) {
           await setDoc(solverRef,{
             name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous',
             solvedAt: serverTimestamp(),
-            timeSeconds: timeSeconds
+            timeSeconds: timeSeconds,
+            ...attemptInfo
           });
           // Increment the solve counter on the puzzle document
           try{ await updateDoc(doc(db,'puzzles',currentPuzzleId),{solveCount:increment(1)}); }catch(_){}
@@ -1073,6 +1134,9 @@ let timerInterval=null,seconds=0,gameWon=false,mistakeCount=0,isDragging=false,t
 let currentDifficulty='medium';
 let currentPuzzleAuthor='App',currentPuzzleAuthorUid=null,currentPuzzleIsAI=true,currentPuzzleName='',currentPuzzleId='',currentPuzzleDescription='',currentPuzzleBackgroundImage='',communityPuzzles=[];
 let preGameContinueHandler=null;
+// Leaderboard eligibility for the current attempt. Any hint or a restart makes it unranked.
+let hintsUsed=0,attemptRanked=true,attemptAssisted=false,attemptRestarted=false;
+let activeHint=null;
 let currentPuzzleRatingAvg=null,currentPuzzleRatingCount=0;
 let selectedWinRating=0,currentUserExistingRating=null;
 
@@ -1318,6 +1382,7 @@ window.clearColors=function(){saveUndo();cellColor=Array.from({length:9},()=>Arr
 
 window.confirmRestart=function(){
   if(!puzzle||!puzzle.length)return;
+  document.getElementById('restartRankNote').style.display=(attemptRanked&&hintRankable())?'':'none';
   document.getElementById('restartOverlay').classList.add('show');
 };
 window.closeRestartConfirm=function(){
@@ -1334,13 +1399,14 @@ window.restartPuzzle=function(){
   notes=Array.from({length:9},()=>Array.from({length:9},()=>({corner:new Set(),center:new Set()})));
   cellColor=Array.from({length:9},()=>Array(9).fill(null));
   undoStack=[];redoStack=[];selected=null;multiSel=new Set();
+  activeHint=null;updateHintBanner();
   timerPaused=false;
   updateTimer();
   const pbtn=document.getElementById('pauseBtn');
   if(pbtn){pbtn.textContent='⏸️ Pause';pbtn.classList.remove('btn-primary');}
   render();
   startTimer();
-  savePuzzleState();
+  markUnranked('restart');
 };
 
 function checkWin(){
@@ -1355,7 +1421,12 @@ function checkWin(){
 
 function showWin(){
   const diff=currentDifficulty;
-  document.getElementById('winStats').innerHTML='<strong>Difficulty:</strong> '+diff[0].toUpperCase()+diff.slice(1)+'<br><strong>By:</strong> '+currentPuzzleAuthor+'<br><strong>Time:</strong> '+fmtTime(seconds)+'<br><strong>Mistakes:</strong> '+mistakeCount;
+  let rankNote='';
+  if(!attemptRanked&&hintRankable()){
+    const why=attemptAssisted?('Solved with '+hintsUsed+' hint'+(hintsUsed!==1?'s':'')):'Restarted';
+    rankNote='<br><span style="color:#b45309;font-weight:700">'+why+' · not ranked</span>';
+  }
+  document.getElementById('winStats').innerHTML='<strong>Difficulty:</strong> '+diff[0].toUpperCase()+diff.slice(1)+'<br><strong>By:</strong> '+esc(currentPuzzleAuthor)+'<br><strong>Time:</strong> '+fmtTime(seconds)+'<br><strong>Mistakes:</strong> '+mistakeCount+rankNote;
   document.getElementById('winSaveMsg').classList.remove('show');
   document.getElementById('winOverlay').classList.add('show');
   setupWinRatingUI();
@@ -1468,15 +1539,185 @@ async function submitWinRating(){
   }
 }
 
+// ── Teaching hints ──
+// activeHint: {kind:'step'|'wrong'|'notes'|'stuck', level, step, cands, cell, sig}
+// sig is a snapshot of digits + centre notes; any change to either closes the hint.
+function hintSig(){
+  let s='';
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++)s+=board[r][c]+[...notes[r][c].center].sort().join('')+',';
+  return s;
+}
+function hintRankable(){return !!(currentUser&&currentPuzzleId);}
+function hasVariantRules(gc){
+  if(!gc)return false;
+  return Object.entries(gc).some(([k,v])=>k==='globals'?Object.values(v||{}).some(Boolean):Array.isArray(v)&&v.length>0);
+}
+
+function markUnranked(reason){
+  const flag=reason==='hint'?'assisted':'restarted';
+  const changed=attemptRanked||(flag==='assisted'?!attemptAssisted:!attemptRestarted);
+  attemptRanked=false;
+  if(flag==='assisted')attemptAssisted=true;else attemptRestarted=true;
+  if(changed&&currentUser&&currentPuzzleId){
+    setDoc(doc(db,'users',currentUser.uid,'started',currentPuzzleId),{ranked:false,[flag]:true},{merge:true}).catch(()=>{});
+  }
+  savePuzzleState();
+}
+
+function resetAttemptState(saved){
+  hintsUsed=(saved&&saved.hintsUsed)||0;
+  attemptRanked=!saved||saved.ranked!==false;
+  attemptAssisted=!!(saved&&saved.assisted);
+  attemptRestarted=!!(saved&&saved.restarted);
+  activeHint=null;updateHintBanner();
+}
+
+// Pull the ranked flag from Firestore in case local progress was cleared.
+function syncAttemptFromFirestore(puzzleId){
+  if(!currentUser||!puzzleId)return;
+  getDoc(doc(db,'users',currentUser.uid,'started',puzzleId)).then(st=>{
+    if(currentPuzzleId!==puzzleId||!st.exists())return;
+    const d=st.data();
+    if(d.ranked===false){
+      attemptRanked=false;
+      attemptAssisted=attemptAssisted||!!d.assisted;
+      attemptRestarted=attemptRestarted||!!d.restarted;
+    }
+  }).catch(()=>{});
+}
+
 window.showHint=function(){
-  if(gameWon)return;
-  const wrong=[];
-  for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!isGiven(r,c)&&board[r][c]!==solution[r][c])wrong.push([r,c]);
-  if(!wrong.length)return;
-  const[r,c]=wrong[Math.floor(Math.random()*wrong.length)];
-  saveUndo();board[r][c]=solution[r][c];notes[r][c].corner.clear();notes[r][c].center.clear();
-  removePeerNote(r,c,solution[r][c]);selected={row:r,col:c};multiSel=new Set([key(r,c)]);
+  if(gameWon||!puzzle.length)return;
+  if(activeHint){window.hintPrimary();return;}
+  if(attemptRanked&&hintRankable()){document.getElementById('hintWarnOverlay').classList.add('show');return;}
+  startHint();
+};
+window.closeHintWarning=function(){document.getElementById('hintWarnOverlay').classList.remove('show');};
+window.confirmHintWarning=function(){window.closeHintWarning();startHint();};
+
+function startHint(){
+  hintsUsed++;
+  markUnranked('hint');
+  const sig=hintSig();
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    if(!isGiven(r,c)&&board[r][c]&&board[r][c]!==solution[r][c])return setHint({kind:'wrong',cell:r*9+c,level:1,sig});
+  }
+  // Centre notes narrow the candidates; standard techniques stay sound on variants, they just get stuck sooner
+  const grid=board.flat();
+  const cands=buildCands(grid);
+  for(let i=0;i<81;i++){
+    if(grid[i])continue;
+    const r=Math.floor(i/9),c=i%9,cen=notes[r][c].center;
+    if(!cen.size)continue;
+    if(!cen.has(solution[r][c]))return setHint({kind:'notes',cell:i,level:1,sig});
+    for(const n of [...cands[i]])if(!cen.has(n))cands[i].delete(n);
+  }
+  const step=findNextStep(grid,cands);
+  if(!step)return setHint({kind:'stuck',level:1,sig});
+  setHint({kind:'step',step,cands,level:1,sig});
+}
+
+function setHint(h){activeHint=h;updateHintBanner();renderBoard();}
+
+function updateHintBanner(){
+  const el=document.getElementById('hintBanner');
+  if(!el)return;
+  const h=activeHint;
+  document.body.classList.toggle('hint-open',!!h);
+  el.classList.toggle('show',!!h);
+  if(!h)return;
+  let tag='Hint',msg='',primary='',secondary='✕';
+  if(h.kind==='wrong'){tag='Mistake';msg=`${cellName(h.cell)} doesn't match the solution.`;primary='Clear it';}
+  else if(h.kind==='notes'){tag='Check your notes';msg=`Your centre notes in ${cellName(h.cell)} are missing a candidate.`;primary='Fix notes';}
+  else if(h.kind==='stuck'){
+    tag='Stuck';
+    msg=hasVariantRules(gameParsedConstraints)
+      ?'No standard technique applies here. Hints don\'t cover this puzzle\'s extra rules.'
+      :'No standard technique applies here…';
+    primary='Reveal a cell';secondary='Keep trying';
+  }
+  else if(h.level===1){msg=h.step.nudge;primary='Show me';}
+  else{tag=h.step.label;msg=h.step.explanation;primary='Apply';}
+  document.getElementById('hintTag').textContent='💡 '+tag;
+  document.getElementById('hintMsg').textContent=msg;
+  document.getElementById('hintPrimaryBtn').textContent=primary;
+  document.getElementById('hintSecondaryBtn').textContent=secondary;
+}
+
+window.dismissHint=function(){activeHint=null;updateHintBanner();render();};
+
+window.hintPrimary=function(){
+  const h=activeHint;
+  if(!h||gameWon)return;
+  if(h.kind==='step'&&h.level===1){h.level=2;updateHintBanner();renderBoard();return;}
+  activeHint=null;updateHintBanner();
+  saveUndo();
+  if(h.kind==='wrong'){
+    const r=Math.floor(h.cell/9),c=h.cell%9;board[r][c]=0;
+  }else if(h.kind==='notes'){
+    const r=Math.floor(h.cell/9),c=h.cell%9;notes[r][c].center=new Set(buildCands(board.flat())[h.cell]);
+  }else if(h.kind==='stuck'){
+    revealCell();
+  }else{
+    applyHintStep(h);
+  }
   checkWin();render();
+};
+
+function applyHintStep(h){
+  const s=h.step;
+  for(const{cell,digit}of s.eliminations){
+    const nt=notes[Math.floor(cell/9)][cell%9];
+    // Cells without centre notes get the hint's candidates, otherwise the next hint repeats this step
+    if(!nt.center.size)for(const n of h.cands[cell])nt.center.add(n);
+    nt.center.delete(digit);nt.corner.delete(digit);
+  }
+  if(s.place){
+    const r=Math.floor(s.place.cell/9),c=s.place.cell%9,v=s.place.value;
+    board[r][c]=v;notes[r][c].corner.clear();notes[r][c].center.clear();
+    removePeerNote(r,c,v);selected={row:r,col:c};multiSel=new Set([key(r,c)]);
+  }
+}
+
+function revealCell(){
+  let target=-1;
+  if(selected&&board[selected.row][selected.col]===0)target=selected.row*9+selected.col;
+  if(target<0){
+    const cands=buildCands(board.flat());let best=10;
+    for(let i=0;i<81;i++)if(board[Math.floor(i/9)][i%9]===0&&cands[i].size<best){best=cands[i].size;target=i;}
+  }
+  if(target<0)return;
+  const r=Math.floor(target/9),c=target%9,v=solution[r][c];
+  board[r][c]=v;notes[r][c].corner.clear();notes[r][c].center.clear();
+  removePeerNote(r,c,v);selected={row:r,col:c};multiSel=new Set([key(r,c)]);
+}
+
+// Per-cell highlight info for the active hint, keyed by cell index 0–80
+function hintDecor(){
+  const d={layer:new Map(),elim:new Map(),keep:new Map(),ghost:new Map()};
+  const h=activeHint;
+  if(!h)return d;
+  if(h.kind==='wrong'||h.kind==='notes'){d.layer.set(h.cell,h.kind==='wrong'?'wrong':'place');return d;}
+  if(h.kind!=='step')return d;
+  const s=h.step;
+  for(const u of s.units)for(const i of u.cells)d.layer.set(i,'unit');
+  if(h.level<2){
+    // Naked singles have no unit, so point at the cell itself
+    if(!s.units.length&&s.place)d.layer.set(s.place.cell,'unit');
+    return d;
+  }
+  for(const{cell,digit}of s.eliminations){
+    if(!d.elim.has(cell))d.elim.set(cell,new Set());
+    d.elim.get(cell).add(digit);
+    d.layer.set(cell,'elim');
+  }
+  const ds=new Set(s.digits);
+  for(const i of s.pattern){d.layer.set(i,'pattern');d.keep.set(i,ds);}
+  if(s.place)d.layer.set(s.place.cell,'place');
+  for(const i of new Set([...s.pattern,...d.elim.keys()])){
+    if(board[Math.floor(i/9)][i%9]===0&&!notes[Math.floor(i/9)][i%9].center.size)d.ghost.set(i,h.cands[i]);
+  }
+  return d;
 }
 
 window.setMode=function(mode){
@@ -1554,7 +1795,7 @@ window.togglePauseTimer=function(){
 const CORNER_SLOTS=['cn-tl','cn-tc','cn-tr','cn-ml','cn-mr','cn-bl','cn-bc','cn-br'];
 let saveDelay;
 
-function render(){renderBoard();renderGameConstraints();updateNumpadHighlight();bindBoardTouch();clearTimeout(saveDelay);saveDelay=setTimeout(()=>savePuzzleState(),500);}
+function render(){if(activeHint&&activeHint.sig!==hintSig()){activeHint=null;updateHintBanner();}renderBoard();renderGameConstraints();updateNumpadHighlight();bindBoardTouch();clearTimeout(saveDelay);saveDelay=setTimeout(()=>savePuzzleState(),500);}
 
 // Immediately flush any pending debounced save so that the current puzzle's
 // full progress (board + notes + colors) is persisted before we switch away.
@@ -1707,6 +1948,7 @@ function gameDrawCage(svg,cells,stroke,fill,fillOp,cw,ch,dashed,label){
 function renderBoard(){
   const boardEl=document.getElementById('board');boardEl.innerHTML='';
   const selNum=selected?board[selected.row][selected.col]:0;
+  const HD=hintDecor();
   for(let r=0;r<9;r++){
     const rowEl=document.createElement('div');rowEl.className='board-row';
     for(let c=0;c<9;c++){
@@ -1730,10 +1972,14 @@ function renderBoard(){
       cell.className=cls.join(' ');
       const col=cellColor[r][c];
       if(col){const cd=document.createElement('div');cd.className='cell-color';cd.style.background=col+'66';cell.appendChild(cd);}
+      const ci=r*9+c;
+      if(HD.layer.has(ci)){const hl=document.createElement('div');hl.className='hint-layer '+HD.layer.get(ci);cell.appendChild(hl);}
+      const hintCls=n=>(HD.elim.get(ci)?.has(n)?' hint-elim':HD.keep.get(ci)?.has(n)?' hint-keep':'');
       if(val){const s=document.createElement('span');s.className='cell-number';s.textContent=val;cell.appendChild(s);}
       else{
         const cen=notes[r][c].center;
-        if(cen.size>0){const div=document.createElement('div');div.className='centre-notes';[...cen].sort((a,b)=>a-b).forEach(n=>{const s=document.createElement('span');s.className='cn-digit'+(showConflicts&&noteConflicts(r,c,n)?' note-conflict':'');s.textContent=n;div.appendChild(s);});cell.appendChild(div);}
+        if(cen.size>0){const div=document.createElement('div');div.className='centre-notes';[...cen].sort((a,b)=>a-b).forEach(n=>{const s=document.createElement('span');s.className='cn-digit'+(showConflicts&&noteConflicts(r,c,n)?' note-conflict':'')+hintCls(n);s.textContent=n;div.appendChild(s);});cell.appendChild(div);}
+        else if(HD.ghost.has(ci)){const div=document.createElement('div');div.className='centre-notes ghost';[...HD.ghost.get(ci)].sort((a,b)=>a-b).forEach(n=>{const s=document.createElement('span');s.className='cn-digit'+hintCls(n);s.textContent=n;div.appendChild(s);});cell.appendChild(div);}
         const cor=notes[r][c].corner;
         if(cor.size>0){const div=document.createElement('div');div.className='corner-notes';[...cor].sort((a,b)=>a-b).forEach((n,i)=>{const s=document.createElement('span');s.className=(CORNER_SLOTS[i]||'cn-br')+(showConflicts&&noteConflicts(r,c,n)?' note-conflict':'');s.textContent=n;div.appendChild(s);});cell.appendChild(div);}
       }
@@ -2108,7 +2354,8 @@ function savePuzzleState(){
           notes:notes.map(r=>r.map(c=>({corner:[...c.corner],center:[...c.center]}))),
           cellColor:cellColor.map(r=>[...r]),
           seconds:seconds,
-          mistakeCount:mistakeCount
+          mistakeCount:mistakeCount,
+          hintsUsed,ranked:attemptRanked,assisted:attemptAssisted,restarted:attemptRestarted
         });
       }
     }
@@ -2122,6 +2369,7 @@ function savePuzzleState(){
       name:currentPuzzleName,description:currentPuzzleDescription,backgroundImage:currentPuzzleBackgroundImage||'',
       ratingAvg:currentPuzzleRatingAvg,ratingCount:currentPuzzleRatingCount,
       seconds:seconds,mistakeCount:mistakeCount,
+      hintsUsed,ranked:attemptRanked,assisted:attemptAssisted,restarted:attemptRestarted,
       constraints:gameParsedConstraints?JSON.stringify(gameParsedConstraints):null
     }));
   }catch(e){console.error('Error saving puzzle:',e);}
@@ -2142,6 +2390,7 @@ window.startNewGame=function(showIntro=false){
     currentDifficulty='medium';currentPuzzleName='';currentPuzzleId='';currentPuzzleAuthor='App';currentPuzzleIsAI=true;currentPuzzleDescription='';currentPuzzleBackgroundImage='';
     currentPuzzleRatingAvg=null;currentPuzzleRatingCount=0;
     gameParsedConstraints=null;
+    resetAttemptState(null);
     solution=generateSolution();puzzle=createPuzzle(solution,currentDifficulty);board=puzzle.map(r=>[...r]);
     notes=Array.from({length:9},()=>Array.from({length:9},()=>({corner:new Set(),center:new Set()})));
     cellColor=Array.from({length:9},()=>Array(9).fill(null));
@@ -2221,6 +2470,7 @@ window.playLastOrNew=function(){
       currentPuzzleRatingAvg=(typeof p.ratingAvg==='number')?p.ratingAvg:null;
       currentPuzzleRatingCount=(typeof p.ratingCount==='number')?p.ratingCount:0;
       seconds=p.seconds||0;mistakeCount=p.mistakeCount||0;
+      resetAttemptState(p);
       try{gameParsedConstraints=p.constraints?JSON.parse(p.constraints):null;}catch{gameParsedConstraints=null;}
       applyGameBoardBackground();
       gameWon=false;selected=null;multiSel=new Set();
@@ -2506,13 +2756,16 @@ window.loadCommunityPuzzle=async function(idx){
     if(!cellColor.length) cellColor=Array.from({length:9},()=>Array(9).fill(null));
     seconds=src.seconds||0;
     mistakeCount=src.mistakeCount||0;
+    resetAttemptState(src);
   } else {
     // Restore seconds from per-puzzle time map (survives switching between puzzles)
     // or from the pre-loaded Firestore value passed via sessionStorage
     const savedTimes=getPuzzleTimes();
     seconds=savedTimes[p.id]||p.secondsSpent||0;
     mistakeCount=0;
+    resetAttemptState(null);
   }
+  syncAttemptFromFirestore(p.id);
 
   updateTimer();updatePuzzleNameDisplay();
   const pbtn=document.getElementById('pauseBtn');
@@ -2753,10 +3006,8 @@ window.loadSolvers = async function(puzzleId){
       _displayName: avatarMap[s.uid]?.displayName || s.name
     }));
     
-    // Fastest-time solvers first, untimed appended after
-    const timed   = enrichedRaw.filter(s=>s.timeSeconds!=null).sort((a,b)=>a.timeSeconds-b.timeSeconds);
-    const untimed = enrichedRaw.filter(s=>s.timeSeconds==null);
-    solversData = [...timed,...untimed];
+    // Ranked solvers by fastest time, then untimed, then unranked (hints/restart)
+    solversData = orderSolvers(enrichedRaw);
     renderSolvers();
 
     // Backfill: add a missing solver record OR patch a missing timeSeconds on an existing one
@@ -2785,7 +3036,7 @@ window.loadSolvers = async function(puzzleId){
               // Patch (or create) the solver record with the time from the user's solve log
               await setDoc(doc(db,'puzzles',puzzleId,'solvers',me.uid),{
                 name: me.displayName || me.email?.split('@')[0] || 'Anonymous',
-                ...(needsCreate ? {solvedAt: solveDoc.solvedAt || serverTimestamp()} : {}),
+                ...(needsCreate ? {solvedAt: solveDoc.solvedAt || serverTimestamp(), ...unrankedFields(solveDoc)} : {}),
                 timeSeconds: solveDoc.timeSeconds
               },{merge:true});
               if(!solveDoc.puzzleId){
@@ -2794,24 +3045,21 @@ window.loadSolvers = async function(puzzleId){
               // Reload so the patched time shows up
               const snap2 = await getDocs(query(collection(db,'puzzles',puzzleId,'solvers'),orderBy('solvedAt','desc')));
               const raw2 = snap2.docs.map(d=>({uid:d.id,...d.data()}));
-              const timed2   = raw2.filter(s=>s.timeSeconds!=null).sort((a,b)=>a.timeSeconds-b.timeSeconds);
-              const untimed2 = raw2.filter(s=>s.timeSeconds==null);
-              solversData = [...timed2,...untimed2];
+              solversData = orderSolvers(raw2);
               renderSolvers();
             } else if(needsCreate){
               // No time available — just create the record without one
               await setDoc(doc(db,'puzzles',puzzleId,'solvers',me.uid),{
                 name: me.displayName || me.email?.split('@')[0] || 'Anonymous',
-                solvedAt: solveDoc.solvedAt || serverTimestamp()
+                solvedAt: solveDoc.solvedAt || serverTimestamp(),
+                ...unrankedFields(solveDoc)
               },{merge:true});
               if(!solveDoc.puzzleId){
                 try{ await setDoc(prevSnap.docs[0].ref,{puzzleId},{merge:true}); }catch(_){}
               }
               const snap2 = await getDocs(query(collection(db,'puzzles',puzzleId,'solvers'),orderBy('solvedAt','desc')));
               const raw2 = snap2.docs.map(d=>({uid:d.id,...d.data()}));
-              const timed2   = raw2.filter(s=>s.timeSeconds!=null).sort((a,b)=>a.timeSeconds-b.timeSeconds);
-              const untimed2 = raw2.filter(s=>s.timeSeconds==null);
-              solversData = [...timed2,...untimed2];
+              solversData = orderSolvers(raw2);
               renderSolvers();
             }
           }
@@ -2821,9 +3069,26 @@ window.loadSolvers = async function(puzzleId){
   }catch(e){ console.error('loadSolvers:',e); }
 };
 
+function isRankedSolver(s){ return s.ranked !== false; }  // legacy records without the field count as ranked
+function orderSolvers(list){
+  const ranked = list.filter(isRankedSolver);
+  const timed = ranked.filter(s=>s.timeSeconds!=null).sort((a,b)=>a.timeSeconds-b.timeSeconds);
+  const untimed = ranked.filter(s=>s.timeSeconds==null);
+  return [...timed, ...untimed, ...list.filter(s=>!isRankedSolver(s))];
+}
+function unrankedFields(solveDoc){
+  return solveDoc.ranked===false ? {ranked:false, assisted:!!solveDoc.assisted, restarted:!!solveDoc.restarted, hintsUsed:solveDoc.hintsUsed||0} : {};
+}
+function unrankedTag(s){ return s.assisted ? 'Hints used' : s.restarted ? 'Restarted' : 'Unranked'; }
+function solverCounts(){
+  const ranked = solversData.filter(isRankedSolver).length;
+  return { total: solversData.length, ranked, unranked: solversData.length - ranked };
+}
+const SOLVER_DIVIDER = '<div class="solver-divider">Unranked</div>';
+
 function renderSolvers(){
-  const total = solversData.length;
-  const countTxt = total ? total+' solver'+(total!==1?'s':'') : '';
+  const { total, ranked: rankedCount, unranked: unrankedCount } = solverCounts();
+  const countTxt = !total ? '' : unrankedCount ? `${rankedCount} ranked · ${unrankedCount} unranked` : total+' solver'+(total!==1?'s':'');
   const el = document.getElementById('solvedByCount');
   if(el) el.textContent = countTxt;
   const mEl = document.getElementById('mobileSolvedByCount');
@@ -2834,12 +3099,14 @@ function renderSolvers(){
   const itemsHtml = top10.length
     ? top10.map((s,i)=>{
         const name = s._displayName || s.name || 'Anonymous';
-        const timeStr = formatSolveTime(s.timeSeconds);
+        const isRanked = i < rankedCount;
+        const timeStr = isRanked ? formatSolveTime(s.timeSeconds) : null;
         const dateStr = s.solvedAt ? timeAgo(s.solvedAt) : '';
         const clickAttr = s.uid ? ` onclick="openUserProfile('${esc(s.uid)}')"` : '';
-        const rankEl = i<3 ? `<span class="sb-medal">${medals[i]}</span>` : `<span class="sb-rank-num">${i+1}</span>`;
+        const rankEl = !isRanked ? '<span class="sb-rank-num"></span>' : i<3 ? `<span class="sb-medal">${medals[i]}</span>` : `<span class="sb-rank-num">${i+1}</span>`;
         const avatarHtml = renderAvatarToHtml(s._avatarData, name, 'sb-avatar');
-        return `<div class="sb-item">${rankEl}${avatarHtml}<div class="sb-name"${clickAttr} style="cursor:${s.uid?'pointer':'default'}">${esc(name)}</div>${timeStr?`<div class="sb-time">${esc(timeStr)}</div>`:''}<div class="sb-date">${esc(dateStr)}</div></div>`;
+        const tail = isRanked ? (timeStr?`<div class="sb-time">${esc(timeStr)}</div>`:'') : `<span class="solver-tag">${esc(unrankedTag(s))}</span>`;
+        return `${i===rankedCount?SOLVER_DIVIDER:''}<div class="sb-item${isRanked?'':' unranked'}">${rankEl}${avatarHtml}<div class="sb-name"${clickAttr} style="cursor:${s.uid?'pointer':'default'}">${esc(name)}</div>${tail}<div class="sb-date">${esc(dateStr)}</div></div>`;
       }).join('')
     : '<div class="comments-empty">No solves recorded yet.</div>';
 
@@ -2862,7 +3129,10 @@ window.openLeaderboard = function(){
   const overlay = document.getElementById('lbOverlay');
   if(overlay) overlay.classList.add('open');
   const countEl = document.getElementById('lbTotalCount');
-  if(countEl) countEl.textContent = solversData.length+' solver'+(solversData.length!==1?'s':'')+' · Fastest times first';
+  if(countEl){
+    const { total, ranked, unranked } = solverCounts();
+    countEl.textContent = (unranked ? `${ranked} ranked · ${unranked} unranked` : total+' solver'+(total!==1?'s':''))+' · Fastest times first';
+  }
   renderLeaderboardPage(true);
 };
 
@@ -2882,17 +3152,22 @@ function renderLeaderboardPage(reset){
   const start = lbPage * LB_PAGE_SIZE;
   const end = start + LB_PAGE_SIZE;
   const page = solversData.slice(start, end);
+  const rankedCount = solverCounts().ranked;
   if(reset) list.innerHTML = '';
   page.forEach((s,i)=>{
     const rank = start + i;
+    const isRanked = rank < rankedCount;
     const name = s._displayName || s.name || 'Anonymous';
     const timeStr = formatSolveTime(s.timeSeconds) || '—';
     const dateStr = s.solvedAt ? timeAgo(s.solvedAt) : '';
     const clickAttr = s.uid ? ` onclick="openUserProfile('${esc(s.uid)}')" style="cursor:pointer"` : '';
-    const rankEl = rank<3 ? `<span class="lb-medal">${medals[rank]}</span>` : `<span class="lb-rank-num">${rank+1}</span>`;
+    const rankEl = !isRanked ? '<span class="lb-rank-num"></span>' : rank<3 ? `<span class="lb-medal">${medals[rank]}</span>` : `<span class="lb-rank-num">${rank+1}</span>`;
     const avatarHtml = renderAvatarToHtml(s._avatarData, name, 'lb-av');
+    const tail = isRanked
+      ? `<div class="lb-time${s.timeSeconds!=null?' lb-time-set':''}">${esc(timeStr)}</div>`
+      : `<span class="solver-tag">${esc(unrankedTag(s))}</span>`;
     list.insertAdjacentHTML('beforeend',
-      `<div class="lb-row">${rankEl}${avatarHtml}<div class="lb-info"><div class="lb-name"${clickAttr}>${esc(name)}</div>${dateStr?`<div class="lb-date">${esc(dateStr)}</div>`:''}</div><div class="lb-time${s.timeSeconds!=null?' lb-time-set':''}">${esc(timeStr)}</div></div>`
+      `${rank===rankedCount?SOLVER_DIVIDER:''}<div class="lb-row${isRanked?'':' unranked'}">${rankEl}${avatarHtml}<div class="lb-info"><div class="lb-name"${clickAttr}>${esc(name)}</div>${dateStr?`<div class="lb-date">${esc(dateStr)}</div>`:''}</div>${tail}</div>`
     );
   });
   const loadMoreBtn = document.getElementById('lbLoadMore');

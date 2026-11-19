@@ -1131,7 +1131,7 @@ async function loadProfile(){
       const rankMap={};
       solverSnaps.forEach((snap,i)=>{
         const id=uniquePuzzleIds[i];
-        const raw=snap.docs.map(d=>({uid:d.id,...d.data()}));
+        const raw=snap.docs.map(d=>({uid:d.id,...d.data()})).filter(s=>s.ranked!==false);  // hint/restart solves aren't ranked
         const timed=raw.filter(s=>s.timeSeconds!=null).sort((a,b)=>a.timeSeconds-b.timeSeconds);
         const untimed=raw.filter(s=>s.timeSeconds==null);
         const sorted=[...timed,...untimed];
