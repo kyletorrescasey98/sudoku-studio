@@ -510,12 +510,34 @@ function weakLinked(a, b) {
   return ca === cb || (nodeDigit(a) === nodeDigit(b) && sees(ca, cb));
 }
 
+function sharedLine(a, b) {
+  if (cellRow(a) === cellRow(b)) return ROWS[cellRow(a)];
+  if (cellCol(a) === cellCol(b)) return COLS[cellCol(a)];
+  return BOXES[cellBox(a)];
+}
+
+// Names the shapes players know; anything else stays a generic chain.
+function chainShape(path) {
+  const cells = path.map(nodeCell), digits = new Set(path.map(nodeDigit));
+  if (digits.size === 1 && path.length === 4) {
+    const u1 = sharedLine(cells[0], cells[1]), u2 = sharedLine(cells[2], cells[3]);
+    if (u1.type !== 'box' && u1.type === u2.type) return { name: 'Skyscraper', units: [u1, u2] };
+    if (u1.type !== 'box' && u2.type !== 'box') return { name: '2-String Kite', units: [u1, u2] };
+    return { name: 'Turbot Fish', units: [u1, u2] };
+  }
+  if (digits.size === 2 && path.length === 6 && cells[0] === cells[1] && cells[4] === cells[5]
+      && nodeDigit(path[2]) === nodeDigit(path[3]) && cells[2] !== cells[3])
+    return { name: 'W-Wing', units: [sharedLine(cells[2], cells[3])] };
+  return null;
+}
+
 function chainStep(grid, cands, path, elims) {
   const nodes = path.length;
   const digits = new Set(path.map(nodeDigit));
   let strongInCell = true;
   for (let i = 0; i + 1 < nodes; i += 2) if (nodeCell(path[i]) !== nodeCell(path[i + 1])) strongInCell = false;
-  const kind = digits.size === 1 ? 'X-Chain' : strongInCell ? 'XY-Chain' : 'Chain';
+  const shape = chainShape(path);
+  const kind = shape ? shape.name : digits.size === 1 ? 'X-Chain' : strongInCell ? 'XY-Chain' : 'Chain';
   const er = nodes <= 6 ? 6.5 : nodes <= 10 ? 7.0 : 8.0;
   const first = path[0], last = path[nodes - 1];
   const say = v => `${cellName(nodeCell(v))} ${nodeDigit(v)}`;
@@ -524,13 +546,18 @@ function chainStep(grid, cands, path, elims) {
     : `${cellName(nodeCell(v))} can't be ${nodeDigit(v)}`);
   const removal = joinList(elims.map(e => `${e.digit} from ${cellName(e.cell)}`));
   const single = checkElimsCreateSingle(grid, cands, elims);
+  const [A, B, C, D] = path.map(nodeCell), d = nodeDigit(path[0]);
+  const plain = digits.size === 1 && nodes === 4
+    ? `In ${unitName(shape.units[0])}, ${d} can only go in ${cellName(A)} or ${cellName(B)}. In ${unitName(shape.units[1])}, it can only go in ${cellName(C)} or ${cellName(D)}. ${cellName(B)} and ${cellName(C)} see each other, so they can't both be ${d}. That means ${cellName(A)} or ${cellName(D)} is ${d}, so remove ${removal}.`
+    : null;
   return makeStep(er, {
     technique: kind, label: kind,
     digit: digits.size === 1 ? [...digits][0] : undefined,
     digits: [...digits], eliminations: elims, place: single,
     pattern: [...new Set(path.map(nodeCell))],
-    nudge: `Look for a chain through ${digitList(digits)}.`,
-    explanation: `If ${say(first)} is false, then ${parts.join(', so ')}. So either ${say(first)} or ${say(last)} is true. Remove ${removal}.` + forced(single),
+    units: shape ? shape.units : [],
+    nudge: shape ? `Look for ${article(kind)} ${kind}${digits.size === 1 ? ` on ${d}` : ''}.` : `Look for a chain through ${digitList(digits)}.`,
+    explanation: (plain || `If ${say(first)} is false, then ${parts.join(', so ')}. So either ${say(first)} or ${say(last)} is true. Remove ${removal}.`) + forced(single),
   });
 }
 
